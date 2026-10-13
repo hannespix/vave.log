@@ -36,3 +36,9 @@ Verbleibende, geprüfte Hinweise:
 5. SMTP für Teamversand, Backup/Restore und Betriebsverantwortung einrichten. Mehrverbindungs-/Konkurrenztests bleiben von den Einverbindungs-SQL-Tests getrennt.
 
 Die Anwendung ist mit dem Backend verbunden. Vollständiger Produktivbetrieb bleibt bis zu diesen Liveprüfungen unbestätigt. Details: docs/operations.md.
+
+## Auth-E-Mails / Rückleitung (weiterer Stand 13.10.2026)
+- 13 deutsche Supabase-HTML-Vorlagen in App-Farben, statischer VAVE.LOG-Wortmarke und ohne externe Medien vorbereitet. Quelle: `scripts/build-auth-emails.mjs`; erzeugte Vorlagen, Betreffe und reiner Template-PATCH unter `supabase/`; lokale Vorschau: `docs/email-preview.html`.
+- Noch nicht in Supabase aktiviert. Für das neue Free-Projekt ist eigener SMTP erforderlich (Anbieteränderung 03.06.2026). Kein SMTP-Zugang und kein Auth-Management-Zugriff verfügbar; keine Testmails versendet.
+- Gemeldetes `Cannot GET /?code=…` zusammen mit localhost:3000 weist auf die Supabase-Standardrückleitung hin. Site URL und Redirect-Allowlist im Dashboard noch durch Besitzer zu bestätigen. Die Chrome-DevTools-CSP-Meldung ist kein Anlass, die App-CSP zu lockern. Bereits erfolgte E-Mail-Bestätigung zuerst durch normalen Login prüfen.
+- Anleitung mit exakten Werten und Aktivierungsschritten: `docs/auth-email-setup.md`. Branding ändert keine Freigaben, Anmeldeverfahren oder Benachrichtigungsschalter; Workspace-Einladungen bleiben ohne automatischen Mailversand.

@@ -12,6 +12,8 @@ Migrationen aus `supabase/migrations/` mit der Supabase CLI (`supabase link`, `s
 ## Auth
 In Supabase Auth die Site URL auf `APP_URL` setzen, nur die exakten Callback-URLs für diese Installation freigeben. E-Mail-Bestätigung aktivieren, anonymen Login deaktivieren. Für reale Teamanmeldungen eigenen SMTP-Dienst einrichten; Standard-Mailversand ist begrenzt. Auth-Rate-Limits und Passwortschutz einschalten, sinnvolle Token-Laufzeit (z. B. 15 Minuten) konfigurieren. Selbstregistrierung nach Einrichtung bei Bedarf einschränken. Der erste verifiziert angemeldete Benutzer erstellt seinen Workspace und wird ausschließlich dort owner.
 
+Die konkreten Produktions-Redirects, Hilfe bei `Cannot GET` auf localhost und alle 13 gebrandeten Auth-E-Mails stehen in [Auth-E-Mail-Einrichtung](auth-email-setup.md). Neue Free-Projekte benötigen seit 3. Juni 2026 einen eigenen SMTP-Dienst, um Vorlagen anpassen zu können. Die Dateien im Repository sind vorbereitet; GitHub/Sites aktiviert sie nicht automatisch in Supabase.
+
 Einladungen sind als E-Mail-Zuordnung gespeichert, schicken aber bewusst keine Nachricht aus dieser Anwendung. Owner teilt den App-Link; der Empfänger meldet sich mit der bestätigten eingeladenen E-Mail an. `accept_invitations` fügt ihn dem Workspace hinzu. Rolle kommt aus der Einladung, nie aus Nutzermetadaten.
 
 ## MCP / OAuth

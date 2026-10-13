@@ -1,0 +1,54 @@
+{
+  "confirmation": {
+    "dashboard": "Confirm sign up",
+    "subject": "VAVE.LOG – Bestätige deine E-Mail-Adresse"
+  },
+  "invite": {
+    "dashboard": "Invite user",
+    "subject": "VAVE.LOG – Deine Einladung"
+  },
+  "magic_link": {
+    "dashboard": "Magic link",
+    "subject": "VAVE.LOG – Dein Anmeldelink"
+  },
+  "recovery": {
+    "dashboard": "Reset password",
+    "subject": "VAVE.LOG – Passwort zurücksetzen"
+  },
+  "email_change": {
+    "dashboard": "Change email address",
+    "subject": "VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen"
+  },
+  "reauthentication": {
+    "dashboard": "Reauthentication",
+    "subject": "VAVE.LOG – Dein Sicherheitscode"
+  },
+  "password_changed_notification": {
+    "dashboard": "Password changed",
+    "subject": "VAVE.LOG – Dein Passwort wurde geändert"
+  },
+  "email_changed_notification": {
+    "dashboard": "Email address changed",
+    "subject": "VAVE.LOG – Deine E-Mail-Adresse wurde geändert"
+  },
+  "phone_changed_notification": {
+    "dashboard": "Phone number changed",
+    "subject": "VAVE.LOG – Deine Telefonnummer wurde geändert"
+  },
+  "identity_linked_notification": {
+    "dashboard": "Sign-in method linked",
+    "subject": "VAVE.LOG – Eine Anmeldemethode wurde verknüpft"
+  },
+  "identity_unlinked_notification": {
+    "dashboard": "Sign-in method removed",
+    "subject": "VAVE.LOG – Eine Anmeldemethode wurde entfernt"
+  },
+  "mfa_factor_enrolled_notification": {
+    "dashboard": "Verification method added",
+    "subject": "VAVE.LOG – Eine Sicherheitsmethode wurde hinzugefügt"
+  },
+  "mfa_factor_unenrolled_notification": {
+    "dashboard": "Verification method removed",
+    "subject": "VAVE.LOG – Eine Sicherheitsmethode wurde entfernt"
+  }
+}

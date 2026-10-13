@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VAVE.LOG – E-Mail-Vorlagen</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f8f9f6;color:#1b1b1b;font-family:Arial,Helvetica,sans-serif;line-height:1.6}main{max-width:660px;margin:40px auto;padding:0 16px}header{margin-bottom:36px}header h1{font-size:36px;line-height:1.15;letter-spacing:-1px;margin-bottom:12px}header p,section>p{color:#5f655a;font-size:14px}nav{display:flex;flex-wrap:wrap;gap:8px}nav a{color:#641dff;border:1px solid #e0d5ff;background:white;padding:5px 10px;border-radius:6px;font-size:12px;text-decoration:none}section{margin:48px 0;scroll-margin-top:24px}section>h2{font-size:17px;margin-bottom:4px}section>p{margin-top:0}@media(max-width:480px){.email-pad{padding-left:24px!important;padding-right:24px!important}.email-title{font-size:28px!important;line-height:34px!important;overflow-wrap:anywhere}}
+</style></head><body><main><header><p>VAVE.LOG / E-MAILS</p><h1>Auch im Postfach<br>unverkennbar VAVE.</h1><p id="preview-note">Vorschau aller 13 Vorlagen. Die Links versenden nichts und melden niemanden an. Der gezeigte Code ist ein Beispiel. Die Vorlagen sind erst nach Einrichtung des Mailversands und Übernahme in Supabase aktiv.</p><nav><a href="#confirmation">Confirm sign up</a><a href="#invite">Invite user</a><a href="#magic_link">Magic link</a><a href="#recovery">Reset password</a><a href="#email_change">Change email address</a><a href="#reauthentication">Reauthentication</a><a href="#password_changed_notification">Password changed</a><a href="#email_changed_notification">Email address changed</a><a href="#phone_changed_notification">Phone number changed</a><a href="#identity_linked_notification">Sign-in method linked</a><a href="#identity_unlinked_notification">Sign-in method removed</a><a href="#mfa_factor_enrolled_notification">Verification method added</a><a href="#mfa_factor_unenrolled_notification">Verification method removed</a></nav></header>
+<section id="confirmation"><h2>Confirm sign up</h2><p>Betreff: VAVE.LOG – Bestätige deine E-Mail-Adresse</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEIN ACCOUNT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Einmal bestätigen.<br>Dann kann es losgehen.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Willkommen bei VAVE.LOG. Mit einem Klick bestätigst du deine E-Mail-Adresse und schließt deine Registrierung ab.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Öffne den Link möglichst im selben Browser, in dem du deinen Account erstellt hast.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="#preview-note" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">E-Mail-Adresse bestätigen</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Link ist nur einmal und zeitlich begrenzt gültig. Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="#preview-note" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">https://dein-projekt.supabase.co/auth/v1/verify?…</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du hast keinen Account erstellt? Dann ignoriere diese Nachricht. Ohne deine Bestätigung wird die Registrierung nicht abgeschlossen.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="invite"><h2>Invite user</h2><p>Betreff: VAVE.LOG – Deine Einladung</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE EINLADUNG</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Dein Zugang<br>zu VAVE.LOG.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Du wurdest eingeladen, einen Account bei VAVE.LOG anzulegen. Über den folgenden Link nimmst du die Einladung an.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Der Zugang zu einem Workspace wird separat von dessen Administration vergeben.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="#preview-note" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">Einladung annehmen</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Link ist nur einmal und zeitlich begrenzt gültig. Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="#preview-note" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">https://dein-projekt.supabase.co/auth/v1/verify?…</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du hast diese Einladung nicht erwartet? Kläre sie mit der einladenden Person, bevor du den Link öffnest.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="magic_link"><h2>Magic link</h2><p>Betreff: VAVE.LOG – Dein Anmeldelink</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE ANMELDUNG</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Ein Klick.<br>Du bist drin.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Du hast einen Anmeldelink für VAVE.LOG angefordert. Öffne ihn möglichst im selben Browser, in dem du die Anmeldung begonnen hast.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="#preview-note" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">Bei VAVE.LOG anmelden</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Link ist nur einmal und zeitlich begrenzt gültig. Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="#preview-note" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">https://dein-projekt.supabase.co/auth/v1/verify?…</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du hast diesen Link nicht angefordert? Ignoriere die Nachricht und gib den Link nicht weiter.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="recovery"><h2>Reset password</h2><p>Betreff: VAVE.LOG – Passwort zurücksetzen</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEIN PASSWORT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Ein neues Passwort.<br>Für deinen Account.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Du hast angefordert, dein Passwort zurückzusetzen. Über den folgenden Link kannst du ein neues Passwort festlegen.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Öffne den Link im selben Browser, in dem du ihn angefordert hast.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="#preview-note" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">Neues Passwort festlegen</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Link ist nur einmal und zeitlich begrenzt gültig. Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="#preview-note" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">https://dein-projekt.supabase.co/auth/v1/verify?…</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du hast kein neues Passwort angefordert? Ignoriere diese Nachricht. Dein bisheriges Passwort bleibt gültig.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="email_change"><h2>Change email address</h2><p>Betreff: VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE E-MAIL-ADRESSE</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Neue Adresse.<br>Einmal bestätigen.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Für deinen VAVE.LOG-Account wurde eine Änderung der E-Mail-Adresse angefordert. Bestätige die Änderung über den folgenden Link.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Wenn du je eine Bestätigung an deine bisherige und deine neue Adresse erhältst, öffne bitte beide Links.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="#preview-note" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">Änderung bestätigen</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Link ist nur einmal und zeitlich begrenzt gültig. Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="#preview-note" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">https://dein-projekt.supabase.co/auth/v1/verify?…</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du hast diese Änderung nicht angefordert? Bestätige sie nicht. Öffne VAVE.LOG über deine bekannte Adresse und prüfe deinen Account.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="reauthentication"><h2>Reauthentication</h2><p>Betreff: VAVE.LOG – Dein Sicherheitscode</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">SICHERHEITSBESTÄTIGUNG</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Kurz bestätigen.<br>Sicher weitermachen.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Gib diesen Code in der VAVE.LOG-Abfrage ein, die du gerade geöffnet hast. So bestätigst du die angeforderte Aktion.</p>
+<div style="margin:26px 0;padding:20px 12px;background:#e8ffb9;border:1px solid #d8edb0;border-radius:8px;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:30px;line-height:40px;letter-spacing:5px;color:#1b1b1b;">123456</div><p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">Der Code ist nur einmal und zeitlich begrenzt gültig.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Teile diesen Code mit niemandem. Du hast keine Aktion gestartet? Ignoriere diese Nachricht.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Dein Account<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="password_changed_notification"><h2>Password changed</h2><p>Betreff: VAVE.LOG – Dein Passwort wurde geändert</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Dein Passwort wurde geändert.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das Passwort für deinen VAVE.LOG-Account wurde geändert.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="email_changed_notification"><h2>Email address changed</h2><p>Betreff: VAVE.LOG – Deine E-Mail-Adresse wurde geändert</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Deine E-Mail-Adresse wurde geändert.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Die E-Mail-Adresse deines VAVE.LOG-Accounts wurde geändert.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="phone_changed_notification"><h2>Phone number changed</h2><p>Betreff: VAVE.LOG – Deine Telefonnummer wurde geändert</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Deine Telefonnummer wurde geändert.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Die hinterlegte Telefonnummer deines VAVE.LOG-Accounts wurde geändert.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="identity_linked_notification"><h2>Sign-in method linked</h2><p>Betreff: VAVE.LOG – Eine Anmeldemethode wurde verknüpft</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Eine Anmeldemethode wurde verknüpft.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Deinem VAVE.LOG-Account wurde eine weitere Anmeldemethode hinzugefügt.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="identity_unlinked_notification"><h2>Sign-in method removed</h2><p>Betreff: VAVE.LOG – Eine Anmeldemethode wurde entfernt</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Eine Anmeldemethode wurde entfernt.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Eine Anmeldemethode wurde aus deinem VAVE.LOG-Account entfernt.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="mfa_factor_enrolled_notification"><h2>Verification method added</h2><p>Betreff: VAVE.LOG – Eine Sicherheitsmethode wurde hinzugefügt</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Eine Sicherheitsmethode wurde hinzugefügt.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Für deinen VAVE.LOG-Account wurde eine weitere Methode zur Anmeldebestätigung eingerichtet.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+<section id="mfa_factor_unenrolled_notification"><h2>Verification method removed</h2><p>Betreff: VAVE.LOG – Eine Sicherheitsmethode wurde entfernt</p><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">DEINE KONTO-SICHERHEIT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">Eine Sicherheitsmethode wurde entfernt.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Eine Methode zur Anmeldebestätigung wurde aus deinem VAVE.LOG-Account entfernt.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Das warst du selbst? Dann ist nichts weiter zu tun.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Du warst das nicht? Öffne VAVE.LOG über deine bekannte Adresse, sichere deinen Account mit einem neuen Passwort und informiere die Person, die deinen Workspace verwaltet. Wenn du keinen Zugriff mehr hast, wende dich direkt an diese Person.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Sicherheitsbenachrichtigung<br>Automatische Nachricht zu deinem VAVE.LOG-Konto.</td></tr>
+</table></section>
+</main></body></html>
