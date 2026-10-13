@@ -16,3 +16,6 @@ VAVE Schwarz/Weiß, Violett #641dff, Limette #e8ffb9; Readex Pro lokal. Original
 
 ## Nachweise / Auslieferung
 Versionierte Migrationen, ausführbare Datenbanktests mit echtem PostgreSQL (PGlite für lokale CI), API-/MCP-Tests, UI-Browsertests, Typecheck, Produktionsbuild und Dependency-Audit. Dockerfile, CI und Betriebsanleitung einschließlich Backup/Restore, OAuth, SMTP, HTTPS, Migrationen, Smoke-Test und Grenzen. Code wird in vave.log gespeichert. Produktivbetrieb wird erst behauptet, wenn echte Supabase-Konfiguration und Live-Authentifizierung geprüft sind; fehlende Zugänge werden präzise benannt.
+
+## Ergänzung aus unabhängiger Sicherheitsprüfung
+Eine Rolle `disabled` ermöglicht Offboarding ohne Verlust historischer Buchungen. Owner kann Teamzugang deaktivieren (nie den letzten Owner). Dabei wird ein laufender Timer ohne Buchung verworfen und der Vorgang auditiert; die UI verlangt eine ausdrückliche Bestätigung. Zugriffsprüfung und Timer-Locks berücksichtigen parallel gestartete Timer. Eine erneute Einladung aktiviert deaktivierte Konten nicht stillschweigend.

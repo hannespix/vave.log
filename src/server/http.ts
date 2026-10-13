@@ -48,7 +48,12 @@ export function createHttpHandler(config:Config,deps:Deps={}){
   return {userId,service:createService(client)};
  });
  const calls=new Map<string,{since:number;count:number}>();
- return async(request:Request):Promise<Response>=>{
+ const attempts=new Map<string,{since:number;count:number}>();
+ let totalAttempts={since:Date.now(),count:0};
+ const limited=()=>json({error:'Zu viele Anfragen. Bitte kurz warten.'},429,{'retry-after':'60'});
+ // The adapter supplies a platform-verified IP. Never trust forwarded headers here.
+ // Missing client identity shares one conservative bucket, rather than failing open.
+ return async(request:Request,trustedClientKey='shared'):Promise<Response>=>{
   const url=new URL(request.url);const path=url.pathname;
   if((request.headers.get('host')||url.host)!==origin.host)return json({error:'Host nicht erlaubt.'},403);
   const sentOrigin=request.headers.get('origin');if(sentOrigin&&sentOrigin!==origin.origin)return json({error:'Origin nicht erlaubt.'},403);
@@ -59,6 +64,12 @@ export function createHttpHandler(config:Config,deps:Deps={}){
   if(!config.configured)return json({error:'Backend noch nicht eingerichtet.'},503);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,Allow:'POST, OPTIONS'}});
   if(request.method!=='POST')return json({error:'Nur POST wird unterstützt. Der MCP-Server arbeitet ohne Sessions.'},405,{Allow:'POST, OPTIONS'});
+  const attemptNow=Date.now();
+  if(attemptNow-totalAttempts.since>=60000)totalAttempts={since:attemptNow,count:0};
+  if(++totalAttempts.count>1000)return limited();
+  if(attempts.size>=5000){for(const[k,v]of attempts)if(attemptNow-v.since>=60000)attempts.delete(k);if(attempts.size>=5000)return limited()}
+  let attempt=attempts.get(trustedClientKey);if(!attempt||attemptNow-attempt.since>=60000){attempt={since:attemptNow,count:0};attempts.set(trustedClientKey,attempt)}
+  if(++attempt.count>180)return limited();
   const match=request.headers.get('authorization')?.match(/^Bearer ([A-Za-z0-9._~-]{1,8192})$/i);if(!match)return challenge();
   let principal:Principal;try{principal=await authenticate(match[1])}catch{return challenge()}
   const now=Date.now();if(calls.size>5000){for(const[k,v]of calls)if(now-v.since>=60000)calls.delete(k);if(calls.size>5000)return json({error:'Server ausgelastet.'},503)}

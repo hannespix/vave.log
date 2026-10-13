@@ -15,7 +15,7 @@ app.use(async(req,res,next)=>{
   const headers=new Headers();for(const[k,v]of Object.entries(req.headers)){if(v)headers.set(k,Array.isArray(v)?v.join(', '):v)}
   const init:RequestInit&{duplex?:'half'}={method:req.method,headers};
   if(!['GET','HEAD'].includes(req.method)){init.body=Readable.toWeb(req) as ReadableStream<Uint8Array>;init.duplex='half'}
-  const result=await handle(new Request(config.appUrl+req.originalUrl,init));res.status(result.status);result.headers.forEach((v,k)=>res.setHeader(k,v));res.send(Buffer.from(await result.arrayBuffer()));
+  const result=await handle(new Request(config.appUrl+req.originalUrl,init),req.ip||'shared');res.status(result.status);result.headers.forEach((v,k)=>res.setHeader(k,v));res.send(Buffer.from(await result.arrayBuffer()));
  }catch{res.status(500).json({error:'Anfrage fehlgeschlagen.'})}
 });
 const webDir=fileURLToPath(new URL('../../web/',import.meta.url));

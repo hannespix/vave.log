@@ -1,1 +1,49 @@
-{"name":"vave-log","version":"1.0.0","private":true,"type":"module","engines":{"node":">=22.12"},"scripts":{"dev":"vite --host 0.0.0.0","dev:server":"tsx watch src/server/index.ts","build":"tsc --noEmit && vite build && tsc -p tsconfig.server.json","start":"node --env-file-if-exists=.env dist/server/server/index.js","typecheck":"tsc --noEmit","test":"vitest run","test:e2e":"playwright test","check":"npm run typecheck && npm test && npm run build"},"dependencies":{"@fontsource-variable/readex-pro":"5.3.0","@modelcontextprotocol/sdk":"1.32.1","@supabase/supabase-js":"2.117.3","express":"5.3.0","express-rate-limit":"8.7.1","helmet":"8.3.0","lottie-web":"5.13.0","lucide-react":"1.56.0","react":"19.3.0","react-dom":"19.3.0","zod":"4.6.7"},"devDependencies":{"@electric-sql/pglite":"0.5.9","@playwright/test":"1.64.0","@types/express":"5.0.6","@types/node":"26.6.5","@types/react":"19.3.0","@types/react-dom":"19.3.0","@types/supertest":"7.2.1","@vitejs/plugin-react":"6.1.2","supertest":"7.3.1","tsx":"4.23.15","typescript":"7.0.2","vite":"8.3.4","vitest":"5.0.4"}}
+{
+  "name": "vave-log",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "dev:server": "tsx watch src/server/index.ts",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
+    "start": "node --env-file-if-exists=.env dist/server/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm test && npm run build",
+    "build:worker": "npm run build && node scripts/build-worker.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/readex-pro": "5.3.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@supabase/supabase-js": "2.117.3",
+    "express": "5.3.0",
+    "express-rate-limit": "8.7.1",
+    "helmet": "8.3.0",
+    "lottie-web": "5.13.0",
+    "lucide-react": "1.56.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.9",
+    "@playwright/test": "1.64.0",
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/supertest": "7.2.1",
+    "@vitejs/plugin-react": "6.1.2",
+    "esbuild": "0.28.2",
+    "supertest": "7.3.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

@@ -30,7 +30,7 @@ export function createService(client:SupabaseClient){
   getMemberships:(workspaceId:string)=>rows<Membership>(client.from('memberships').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('user_id').limit(1001)),
   createWorkspace:(input:{name:string;timezone:string;currency:string})=>{const v=parse(workspaceSchema,input);return rpc<Workspace>('create_workspace',{p_name:v.name,p_timezone:v.timezone,p_currency:v.currency})},
   acceptInvitations:()=>rpc<number>('accept_invitations'),
-  inviteMember:async(input:{workspace_id:string;email:string;role:Exclude<Role,'owner'>})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role})},
+  inviteMember:async(input:{workspace_id:string;email:string;role:'manager'|'member'})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role})},
   setMemberRole:async(input:{workspace_id:string;user_id:string;role:Role})=>{const v=parse(roleSchema,input);await rpcVoid('set_member_role',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_role:v.role})},
   listProjects:(workspaceId:string)=>rows<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   saveProject:(input:ProjectInput&{id?:string})=>one<Project>(client.from('projects').upsert(parse(projectSchema,input)).select().single()),

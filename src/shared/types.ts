@@ -1,4 +1,4 @@
-export type Role = 'owner' | 'manager' | 'member';
+export type Role = 'owner' | 'manager' | 'member' | 'disabled';
 export interface Workspace { id: string; name: string; timezone: string; currency: string; created_by: string; created_at: string }
 export interface Membership { workspace_id: string; user_id: string; role: Role; display_name: string; email: string; created_at: string }
 export interface Project { id: string; workspace_id: string; code: string; name: string; client: string; budget_minutes: number; status: 'active'|'paused'|'archived'; color: string; created_at: string }

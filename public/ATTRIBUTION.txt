@@ -1,0 +1,5 @@
+VAVE Logo Animation
+Source: https://www.vave.studio/wp-content/uploads/2024/12/VAVE_Logo_Animation.json
+Retrieved: 2026-10-13, original Lottie data embedded at the request of Hannes Pix for the VAVE application.
+Brand and asset rights remain with VAVE. No independent license or right to redistribute as a general-purpose asset is asserted.
+Font: Readex Pro via @fontsource-variable/readex-pro, SIL Open Font License 1.1 (bundled package license).

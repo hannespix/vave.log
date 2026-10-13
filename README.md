@@ -1,17 +1,32 @@
-# vave.log
+# VAVE.LOG
 
 Projekte, Aufgaben und Arbeitszeiten für VAVE — per Oberfläche oder KI über MCP.
 
-React/TypeScript, Supabase Postgres/Auth mit Row Level Security, gemeinsam genutzte Datenzugriffe und ein authentifizierter MCP-Server. Kein Service-Role-Key im laufenden System. Originales animiertes VAVE-Logo, lokale Readex-Pro-Schrift.
+React/TypeScript, Supabase Postgres/Auth mit Row Level Security, gemeinsam genutzte Datenzugriffe und ein authentifizierter MCP-Server. Keine Service-Role-Schlüssel im laufenden System. Originales animiertes VAVE-Logo und lokale Readex-Pro-Schrift.
 
-## Lokal
+## Funktionen
 
-Node.js >=22.12. `npm ci`, `.env.example` nach `.env` kopieren, Supabase konfigurieren. Dann `npm run build && npm start`. Entwicklung: `npm run dev:server` und `npm run dev` in getrennten Terminals.
+- Getrennte Workspaces mit Owner-, Manager- und Mitgliedsrollen; sichere Deaktivierung ohne Verlust historischer Buchungen.
+- Projekte mit Budget, Aufgaben und Zuständigkeiten, manuelle Zeiterfassung und Timer mit Mitternachtsaufteilung.
+- Zeiten einreichen, freigeben und auswerten; CSV-Export mit Schutz gegen Tabellenformeln.
+- E-Mail-Anmeldung, Passwortreset, OAuth-Zustimmung und Widerruf von KI-Verbindungen.
+- 20 MCP-Werkzeuge über Streamable HTTP; dieselben Berechtigungen und Validierungen wie in der GUI.
+- Deutsche Oberfläche mit mobilen Ansichten, Lade-/Fehlerzuständen und lokaler Markenanimation.
+
+## Betrieb
+
+Node.js >=22.12. `npm ci`, `.env.example` nach `.env` kopieren und die drei öffentlichen Einstellungen setzen. Migration aus `supabase/migrations/` in einem eigenen Supabase-Projekt anwenden. Anschließend `npm run build && npm start`.
+
+Die vollständige Anleitung zu Auth, OAuth, SMTP, Backups, Docker und Freigabetests steht in [docs/operations.md](docs/operations.md). Für Entwicklung `npm run dev:server` und `npm run dev` in getrennten Terminals verwenden.
 
 ## Prüfung
 
-`npm run typecheck`, `npm test`, `npm run build`. PostgreSQL/RLS wird in PGlite tatsächlich ausgeführt; MCP-Tests verwenden den offiziellen Client und das HTTP-Protokoll.
+`npm run check` führt TypeScript, Unit-/Integrationstests und Produktionsbuild aus. PostgreSQL/RLS wird mit PGlite tatsächlich ausgeführt; MCP wird mit dem offiziellen Client über HTTP getestet. `npm run test:e2e` prüft die GUI mit Playwright auf Desktop und Mobilgerät gegen kontrollierte API-Antworten. Diese Tests ersetzen keinen vollständigen Live-Test mit Supabase/OAuth. GitHub Actions führt beide Prüfungen aus.
 
-## Stand
+`npm run build:worker` erzeugt zusätzlich den Worker für die private Sites-Bereitstellung; Node und Worker verwenden denselben MCP-/HTTP-Kern. Die Supabase-Konfiguration wird zur Laufzeit geladen, nicht in den Browser-Build eingebrannt.
 
-Die erste produktive Implementierung wird gerade integriert. Siehe `STATE.md` für überprüfte Nachweise und offene Infrastruktur-Schritte. Ein erfolgreicher Build ist keine Bestätigung eines produktiv eingerichteten Supabase-Projekts.
+## Bereitstellungsstand
+
+Privater Bereitstellungsort: https://vave-log.pixer.chatgpt.site
+
+Der Code ist implementiert. Die Anwendung zeigt ohne eigene Supabase-Konfiguration ausdrücklich den Einrichtungszustand. Ein Livebetrieb wird erst nach Datenbankeinrichtung und echten Auth-/OAuth-Tests bestätigt. Konkrete Nachweise und verbleibende Schritte stehen in [STATE.md](STATE.md).
