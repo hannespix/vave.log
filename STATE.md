@@ -10,11 +10,11 @@
 - Originales VAVE-Lottie-Logo lokal, lokale Schrift; Node/Docker und Sites-Worker, GitHub-CI mit Playwright.
 
 ## Nachweise und Grenzen
-- TypeScript, vollständiger Produktionsbuild, PostgreSQL/RLS-, Service-, HTTP-, MCP- und Frontend-Helfertests lokal geprüft.
+- TypeScript, vollständiger Produktionsbuild und 68 PostgreSQL/RLS-, Service-, HTTP-, MCP- und Frontend-Helfertests lokal erfolgreich.
 - Unabhängige Sicherheitsprüfung durchgeführt. Nachgewiesene Funde zu Datumswerten, Einladungsrollen, Timerwiederholung und Worker-Rate-Limits behoben und mit Regressionstests abgesichert.
 - Aktueller npm-Audit der Laufzeitabhängigkeiten: keine bekannten Sicherheitslücken.
 - PostgreSQL-Tests laufen in einer PGlite-Verbindung; sie beweisen keine konkurrierenden Transaktionen über mehrere echte Verbindungen.
-- Playwright prüft Desktop/Mobilgerät mit kontrollierten API-Antworten in GitHub Actions. Der endgültige CI-Status ist am Commit auf GitHub maßgeblich.
+- GitHub Actions erfolgreich: https://github.com/hannespix/vave.log/actions/runs/38453153277 — 68 Tests sowie 8 Playwright-Tests auf Desktop/Mobilgerät bestanden, Build und Laufzeit-Audit grün. Browsertests verwenden kontrollierte API-Antworten, einschließlich Persistenz nach Reload und abgewiesenem Speichern.
 - Echte Supabase-Auth-/OAuth-, PostgREST- und Browser-End-to-End-Tests gegen die Produktionsdatenbank stehen noch aus.
 - Initiales JavaScript ist größer als Vites Standardwarnschwelle; der Workspace wird separat geladen. Keine nicht gemessene Performance-Zusage.
 
@@ -26,4 +26,6 @@ Die angebotene Supabase-Funktion `get_cost`, Voraussetzung für die Projektanlag
 Nächster notwendiger Schritt: ein eigenes Supabase-Projekt `vave-log` in pix-el / Frankfurt bereitstellen. Danach Migration anwenden, veröffentlichbare Konfiguration setzen, Auth/OAuth/SMTP einrichten, Security Advisors und echte Workflows prüfen. Keine Service-Role- oder Datenbankpasswörter in Repository oder Chat eintragen.
 
 ## Deployment
-Ziel ist die owner-private Site https://vave-log.pixer.chatgpt.site. Ohne Supabase bleibt sie absichtlich im Einrichtungszustand; `/healthz` liefert dann 503. Ein erfolgreicher Quellcode-/Site-Deploy ist noch kein betriebsbereiter Backend-Status.
+Erfolgreich deployt: owner-private Site https://vave-log.pixer.chatgpt.site. Deployment `appgdep_6ace831562d0819180677af57ac3ce8b` wurde mit Status `succeeded` bestätigt. Ohne Supabase bleibt sie absichtlich im Einrichtungszustand; `/healthz` liefert dann 503. Ein erfolgreicher Quellcode-/Site-Deploy ist noch kein betriebsbereiter Backend-Status.
+
+Verifizierter Implementierungsstand auf GitHub main: `bfc6b0f37929fa94d0caf450c2541d05566a5a68`. Sites-Quellcommit: `3915bb58b4fd9050dbfe8c1c00b46bf0d1d4337f`. Beide besitzen denselben Git-Baum `a3b70841e63ec80774f27217218261b13bf23f1f`; spätere Dokumentations-Commits ändern die geprüfte Anwendung nicht.
