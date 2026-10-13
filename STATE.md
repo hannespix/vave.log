@@ -4,13 +4,13 @@
 
 ## Anwendung
 
-GUI in Englisch, Deutsch und vereinfachtem Chinesisch: erste Systemsprache de/zh, sonst Englisch; sichtbarer Sprachumschalter mit gespeicherter Auswahl. Anmeldung/Reset, Workspaces, Projekte, Aufgaben, Zeiterfassung/Timer, Freigaben, Berichte/CSV, Teamrollen und OAuth-Zustimmung/Widerruf. Das originale VAVE-Logo läuft in drei langsamen, variierenden Gesten ohne Wiedergabebutton; reduzierte Bewegung wird berücksichtigt.
+GUI in Englisch, Deutsch und vereinfachtem Chinesisch: erste Systemsprache de/zh, sonst Englisch; sichtbarer Sprachumschalter mit gespeicherter Auswahl. Anmeldung/Reset, Workspaces, Projekte, Aufgaben, Zeiterfassung/Timer, Freigaben, Berichte/CSV, Teamrollen und OAuth-Zustimmung/Widerruf. Das originale VAVE-Logo läuft in drei langsamen, variierenden Gesten ohne Wiedergabebutton; reduzierte Bewegung wird berücksichtigt. Ein einziger farbiger Punkt trennt VAVE und LOG. Der Sprachumschalter zeigt nur Globus und Sprachkürzel.
 
 Manager/Owner erhalten Kunden, Kosten-/Verrechnungssätze, Mitarbeiter-/Freelancerplanung, Stundenbudgets, Ausgaben, Prognosen und Rechnungen. Entwürfe aus freigegebener Zeit oder manuellen Positionen; ausdrückliches Ausstellen mit atomarer Nummer und unveränderlichen Daten; verknüpftes Storno und separater Zahlungsstatus. Druck/PDF über Browser, CSV und Kalender-ICS-Export. Keine automatische Buchhaltungsanbindung, Zahlung oder E-Mail-Versendung.
 
-Erster Start bietet leeren Workspace (voreingestellt) oder recherchierte VAVE-Beispieldaten: acht Studio-, acht Projekt-/Kunden- und sechs öffentliche Führungsreferenzen mit Quellen. Operative Zeiten, Kosten und Budgets sind fiktiv gekennzeichnet. Öffentliche Personen werden nicht als Konten angelegt. Demo-Rechnungen sind auf Datenbankebene nicht ausstellbar. Ersteller/Owner kann ausschließlich seinen markierten Demo-Workspace archivieren.
+Erster Start bietet leeren Workspace (voreingestellt) oder recherchierte VAVE-Beispieldaten: acht öffentliche Studioreferenzen, 49 öffentlich genannte Personen plus acht erfundene Teamprofile, acht öffentliche und fünf erfundene Projekte. Aufgaben, Arbeitszeiten, Kostensätze, Budgets, Ausgaben sowie offene, bezahlte und stornierte Beispielrechnungen füllen die echten Ansichten. Operative Angaben sind fiktiv. Beispielpersonen haben keine Auth-Konten oder Zugangsdaten. Demo-Rechnungen können über die regulären Abläufe ausprobiert werden; Datenbank und Exporte erhalten dauerhaft DEMO-/Nicht-bezahlen-Markierungen. Bestehende Demos bieten „Demo vervollständigen“; Quellen bleiben in der Entwicklungsdokumentation. Ersteller/Owner kann ausschließlich seinen markierten Demo-Workspace archivieren.
 
-43 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
+44 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
 
 ## Supabase
 
@@ -52,3 +52,9 @@ Zwei fehlende Finanz-Fremdschlüsselindizes wurden nach dem Live-Advisor ergänz
 6. Backup/Restore, Mehrverbindungsprüfung, Alarmierung und Betriebsverantwortung abschließen. Details: `docs/operations.md`.
 
 Die implementierten Module sind geprüft und mit dem Backend verbunden. Vollständiger Produktivbetrieb bleibt bis zu diesen echten Betriebsprüfungen unbestätigt. Verbindlichen Merge-/Deploymentstatus zeigen GitHub und die Sites-Version, nicht dieses vor Veröffentlichung erstellte Dokument.
+
+## Vollständige Demo (14.10.2026, Release-Prüfung)
+
+Zusätzliche additive Migration führt nicht anmeldbare Demo-Mitgliedschaften mit bedingtem Auth-Fremdschlüssel ein. Die Sicherheitsprüfung schließt Demo-IDs ausdrücklich aus der Authentifizierung aus; echte Mitgliedschaften benötigen weiter echte Auth-Benutzer. Ein interner, transaktionsgebundener Seed-Kontext erlaubt ausschließlich beim berechtigten Demo-Aufbau das Einfügen der Beispielzeiten. Kein aktiver Timer wird automatisch gestartet.
+
+Neue Demos enthalten 57 Beispielprofile plus Ersteller, 13 Projekte/Kunden/Pläne, 66 Aufgaben, 353 Zeitbuchungen, 58 Kostensätze, 28 Ausgaben und sieben Rechnungen. Bei bestehenden Demos bleiben eigene Ergänzungen erhalten. Stand vor Live-Anwendung: kombinierter lokaler Check mit168 Tests/17Suites und Produktionsbuild erfolgreich; finalen PR-/Deploymentstatus und nachfolgende Migrationseinträge beachten.

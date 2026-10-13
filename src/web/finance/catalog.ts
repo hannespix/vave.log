@@ -236,9 +236,31 @@ const catalog = {
     "这是 PDF 发票，并非结构化电子发票（XRechnung / ZUGFeRD）。客户可能要求结构化电子发票。",
   ],
   demoNote: [
-    "Demonstration workspace: figures are examples. Final invoice issue is disabled.",
-    "Demo-Workspace: Die Zahlen sind Beispiele. Endgültige Rechnungsausstellung ist deaktiviert.",
-    "演示工作区：数字仅为示例。已禁用正式开票。",
+    "Explore sample rates, estimates, expenses and invoices. You can issue and cancel DEMO invoices; all figures and billing details are fictional and no payment is due.",
+    "Erkunde beispielhafte Sätze, Schätzungen, Ausgaben und Rechnungen. Du kannst DEMO-Rechnungen ausstellen und stornieren; alle Zahlen und Rechnungsdaten sind erfunden, es ist keine Zahlung fällig.",
+    "探索示例费率、估算、支出及发票。你可以开具和冲销 DEMO 发票；所有金额和账单资料均为虚构，无需付款。",
+  ],
+  demoMark: ["DEMO — Not for payment", "DEMO — Nicht zur Zahlung", "DEMO — 示例，请勿付款"],
+  demoIssue: ["Issue sample invoice", "Demo-Rechnung ausstellen", "开具示例发票"],
+  demoIssueConfirm: [
+    "Issue this sample invoice with a permanent DEMO number? Its fictional billing details will be frozen. No payment is due.",
+    "Diese Beispielrechnung mit einer dauerhaften DEMO-Nummer ausstellen? Die erfundenen Rechnungsdaten werden unveränderlich gespeichert. Es ist keine Zahlung fällig.",
+    "以永久 DEMO 编号开具此示例发票？虚构的账单资料将被固定，无需付款。",
+  ],
+  demoCancellationConfirm: [
+    "Create a cancellation for this sample invoice? It will remain marked DEMO, with no payment due.",
+    "Eine Stornorechnung für diese Beispielrechnung erstellen? Sie bleibt als DEMO gekennzeichnet; es ist keine Zahlung fällig.",
+    "为此示例发票创建冲销凭证？凭证将继续标记为 DEMO，无需付款。",
+  ],
+  demoPaymentConfirm: [
+    "Update the sample payment status? This only changes the demo record; no money is transferred or due.",
+    "Den beispielhaften Zahlungsstatus ändern? Nur der Demo-Datensatz ändert sich; es wird kein Geld überwiesen und keine Zahlung fällig.",
+    "更新示例付款状态？这仅更改演示记录，不会转账，也无需付款。",
+  ],
+  demoProfileHint: [
+    "These company and payment details are fictional examples for DEMO invoices. No payment is due.",
+    "Diese Unternehmens- und Zahlungsdaten sind erfundene Beispiele für DEMO-Rechnungen. Es ist keine Zahlung fällig.",
+    "这些公司及付款资料均为 DEMO 发票的虚构示例，无需付款。",
   ],
   print: [
     "Print / Save PDF",

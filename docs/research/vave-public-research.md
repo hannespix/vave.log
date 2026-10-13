@@ -248,3 +248,13 @@ All inspected sources are official VAVE pages, accessed 2026-10-13. The content 
 | https://www.vave.studio/fra/tobias-geisler-to-be-jury-chair-of-2026-adc-awards/ | Tobias Geisler's publicly stated Co-Founder & CEO role |
 | https://www.vave.studio/sha/hu-haijie-attend-caas-dalu-forum-make-people-feel/ | Haijie Hu's publicly stated Co-Founder role |
 | https://www.vave.studio/project/reflect-tomorrow/ | Excluded candidate with conflicting year/context |
+
+## Expanded operational demo (14 October 2026)
+
+The complete demonstration uses 49 named public contributors from the imprint and MY MUSEUM, ICOM Dubai, stc LEAP25 and Induction Field project credits, plus eight invented people and five invented projects. The structured source list is [vave-demo-people.json](vave-demo-people.json). These public credits do not establish a current employee roster. Individual assignments, account roles, studio distribution, availability, costs and rates are fictional. Demo profiles have no authentication accounts or credentials. No actual contact addresses are copied.
+
+Additional source: https://www.vave.studio/sha/hu-haijie-charles-lo-deliver-lectures-at-school-of-design-ecnu/ (June 2026, Charles Lo / VAVE DIGITAL).
+
+Name handling: Zi Yi Chua/Ziyi Chua and Abdul Zakaria/Abdul Alrahman Zakaria are kept as one primary display name within the selected credits; uncertain cross-project aliases are not silently merged. External artists, university advisers, photographers and separately credited suppliers are excluded from the chosen 49-person pool. Further historical credits were reviewed but are not presented as a comprehensive current staff directory.
+
+Sources are implementation provenance. The app now presents actual sample team/project/work/finance records and a compact demo disclosure, rather than a source gallery.

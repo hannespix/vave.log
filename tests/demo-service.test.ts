@@ -18,6 +18,13 @@ describe('demo service boundary',()=>{
     expect(await service.create({name:' VAVE demo ',timezone:'Europe/Berlin',locale:'zh',requestId:id})).toEqual(workspace);
     expect(requests[0]?.body).toEqual({p_name:'VAVE demo',p_timezone:'Europe/Berlin',p_locale:'zh',p_request_id:id});
   });
+  it('upgrades only through the authenticated workspace-scoped RPC',async()=>{
+    const {service,requests}=fixture(undefined);
+    await service.upgrade(id);
+    expect(requests).toEqual([{url:'https://example.supabase.co/rest/v1/rpc/demo_upgrade_workspace',body:{p_workspace_id:id}}]);
+    await expect(service.upgrade('invalid')).rejects.toMatchObject({code:'validation'});
+    expect(requests).toHaveLength(1);
+  });
   it('returns null for absent or RLS-hidden metadata',async()=>{
     const {service}=fixture([]); expect(await service.get(id)).toBeNull();
   });

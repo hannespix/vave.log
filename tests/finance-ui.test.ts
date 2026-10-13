@@ -76,6 +76,37 @@ const invoice: Invoice = {
   cancellation_id: null,
 };
 describe("finance documents", () => {
+  it.each([
+    ["en", "DEMO — Not for payment"],
+    ["de", "DEMO — Nicht zur Zahlung"],
+    ["zh", "DEMO — 示例，请勿付款"],
+  ] as const)("marks saved sample documents and exports in %s", (language, notice) => {
+    for (const status of ["draft", "issued", "cancellation"] as const) {
+      const sample = { ...invoice, language, status, is_demo: true };
+      const html = invoiceHtml(sample);
+      expect(html).toContain(`<p class="demo-notice">${notice}</p>`);
+      expect(html).toContain(`class="demo-watermark"`);
+      expect(invoiceCsv(sample)).toContain(notice);
+      expect(invoiceHtml(sample, { isDemo: false })).toContain(notice);
+      expect(invoiceCsv(sample, { isDemo: false })).toContain(notice);
+      expect(html).toContain("119");
+    }
+  });
+  it("marks draft previews from the workspace while issued documents use the durable flag only", () => {
+    const draft = { ...invoice, status: "draft" as const };
+    expect(invoiceHtml(draft, { isDemo: true })).toContain("DEMO — Nicht zur Zahlung");
+    expect(invoiceCsv(draft, { isDemo: true })).toContain("DEMO — Nicht zur Zahlung");
+    expect(invoiceHtml(invoice, { isDemo: true })).toBe(invoiceHtml(invoice));
+    expect(invoiceCsv(invoice, { isDemo: true })).toBe(invoiceCsv(invoice));
+  });
+  it("leaves ordinary and legacy invoices free of sample markings", () => {
+    const real = { ...invoice, is_demo: false };
+    expect(invoiceHtml(real)).toBe(invoiceHtml(invoice));
+    expect(invoiceCsv(real)).toBe(invoiceCsv(invoice));
+    expect(invoiceHtml(real)).not.toContain("DEMO");
+    expect(invoiceCsv(real)).not.toContain("DEMO");
+    expect(invoiceCsv(real).split("\r\n")).toHaveLength(2);
+  });
   it("honors currency precision and decimal rounding in either direction", () => {
     expect(currencyDigits("JPY")).toBe(0);
     expect(currencyDigits("KWD")).toBe(3);

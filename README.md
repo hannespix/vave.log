@@ -10,7 +10,7 @@ React/TypeScript, Supabase Postgres/Auth mit Row Level Security, gemeinsam genut
 - Projekte mit Budget, Aufgaben und Zuständigkeiten, manuelle Zeiterfassung und Timer mit Mitternachtsaufteilung.
 - Zeiten einreichen, freigeben und auswerten; CSV-Export mit Schutz gegen Tabellenformeln.
 - E-Mail-Anmeldung, Passwortreset, OAuth-Zustimmung und Widerruf von KI-Verbindungen.
-- 43 MCP-Werkzeuge über Streamable HTTP; dieselben Berechtigungen und Validierungen wie in der GUI.
+- 44 MCP-Werkzeuge über Streamable HTTP; dieselben Berechtigungen und Validierungen wie in der GUI.
 - English, Deutsch und 简体中文: automatische Erkennung der ersten Systemsprache, Englisch als Fallback und dauerhafter Sprachwechsel. Datums-/Zahlenformate, Exporte und vorbereitete Auth-E-Mails folgen der Sprache.
 - Manager/Owner: Kunden, Kosten- und Verrechnungssätze, Angestellten-/Freelancerplanung, Ausgaben und Projektprognosen; Owner pflegen die rechtliche Rechnungsidentität.
 - Rechnungsentwürfe aus Positionen oder freigegebenen Zeiten, atomare Nummerierung und unveränderliche Snapshots, verknüpfte Stornorechnung, Zahlungsstatus und PDF-/CSV-Ausgabe. Keine automatische Mailzustellung, keine strukturierte E-Rechnung.

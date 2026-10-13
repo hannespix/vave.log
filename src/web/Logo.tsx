@@ -115,6 +115,7 @@ export function Logo({ large = false }: { large?: boolean }) {
       <div ref={container} className={`brand-animation ${loaded ? 'is-loaded' : ''}`} aria-hidden="true" />
       {!loaded && <span className="brand-fallback" aria-hidden="true">VAVE</span>}
     </div>
-    <span className="brand-log">.LOG<span className="brand-dot" /></span>
+    <span className="brand-dot" aria-hidden="true" />
+    <span className="brand-log">LOG</span>
   </div>;
 }

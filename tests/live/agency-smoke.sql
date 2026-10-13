@@ -5,7 +5,7 @@
 begin;
 create temporary table agency_smoke_results (
   role_denials integer, issued_documents integer, cancellation_documents integer,
-  invoice_audit_actions integer, archived_demos integer, retained_demo_entries integer
+  invoice_audit_actions integer, archived_demos integer, retained_demo_entries integer, demo_people integer, demo_documents integer, unchanged_auth_users boolean
 ) on commit drop;
 do $$
 <<smoke>>
@@ -14,7 +14,7 @@ declare
   member_id uuid:=gen_random_uuid(); outsider_id uuid:=gen_random_uuid();
   workspace_id uuid; foreign_workspace_id uuid; project_id uuid; foreign_project_id uuid;
   client_id uuid; invoice_id uuid; cancellation_id uuid; demo_id uuid; demo_retry_id uuid;
-  demo_invoice_id uuid; request_id uuid:=gen_random_uuid();
+  demo_invoice_id uuid; demo_person uuid; request_id uuid:=gen_random_uuid(); before_auth bigint; before_entries bigint;
   draft jsonb; issued jsonb; replay jsonb; cancelled jsonb; paid jsonb; preserved jsonb;
   denied boolean; denial_count integer:=0; n integer; t text;
 begin
@@ -23,6 +23,7 @@ begin
     (manager_id,manager_id::text||'@example.invalid',now(),'{}'),
     (member_id,member_id::text||'@example.invalid',now(),'{}'),
     (outsider_id,outsider_id::text||'@example.invalid',now(),'{}');
+  select count(*) into before_auth from auth.users;
 
   perform set_config('request.jwt.claim.sub',owner_id::text,true);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',owner_id,'role','authenticated')::text,true);
@@ -162,20 +163,44 @@ begin
   select id into demo_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   select id into demo_retry_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   if demo_id is distinct from demo_retry_id then raise exception 'FAIL: demo retry duplicated workspace'; end if;
-  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and jsonb_typeof(d.manifest)='object') then
+  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and d.experience_version=2 and jsonb_typeof(d.manifest)='object') then
     raise exception 'FAIL: owner cannot get demo metadata';
   end if;
   select i.id into demo_invoice_id from public.finance_invoices i where i.workspace_id=smoke.demo_id and i.status='draft' order by i.created_at limit 1;
   if demo_invoice_id is null then raise exception 'FAIL: demo invoice draft missing'; end if;
-  -- Valid configuration ensures the following denial comes from the demo guard.
-  update public.finance_billing_profiles b set legal_name='Synthetic configured demo',billing_address='Test address',tax_id='TEST-ONLY' where b.workspace_id=smoke.demo_id;
-  update public.finance_clients c set billing_address='Synthetic customer address' where c.workspace_id=smoke.demo_id;
+  select count(*) into before_entries from public.time_entries e where e.workspace_id=smoke.demo_id;
+  if before_entries<>353 then raise exception 'FAIL: full demo history missing'; end if;
+  perform public.demo_upgrade_workspace(demo_id);
+  if (select count(*) from public.time_entries e where e.workspace_id=smoke.demo_id)<>before_entries then raise exception 'FAIL: completed upgrade duplicated history'; end if;
+  if (select count(*) from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo)<>57
+    or exists(select 1 from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo and (m.auth_user_id is not null or m.role='owner' or m.email not like '%@example.invalid'))
+    or exists(select 1 from public.running_timers r where r.workspace_id=smoke.demo_id)
+    or exists(select 1 from public.invitations i where i.workspace_id=smoke.demo_id) then raise exception 'FAIL: demo personas are not isolated non-login identities'; end if;
+  if exists(select 1 from public.finance_invoices i where i.workspace_id=smoke.demo_id and (not i.is_demo or (i.number is not null and i.number not like 'DEMO-%'))) then raise exception 'FAIL: unmarked demo document'; end if;
+  update public.finance_billing_profiles b set invoice_prefix='REAL',payment_details='Do not use this account' where b.workspace_id=smoke.demo_id;
+  issued:=public.finance_issue_invoice(demo_id,demo_invoice_id);
+  if issued->>'number' not like 'DEMO-%' or issued->>'is_demo'<>'true'
+    or issued->>'payment_instructions' not like '%DO NOT PAY%'
+    or issued->'issuer_snapshot'->>'payment_details' not like '%DO NOT PAY%'
+    or issued->'customer_snapshot'->>'is_demo'<>'true' then raise exception 'FAIL: demo issuance lost persistent markings'; end if;
+  replay:=public.finance_issue_invoice(demo_id,demo_invoice_id);
+  if replay is distinct from issued then raise exception 'FAIL: demo issue replay changed document'; end if;
+  cancelled:=public.finance_cancel_invoice(demo_id,demo_invoice_id,'Fictional smoke correction');
+  if cancelled->>'is_demo'<>'true' or cancelled->>'number' not like 'DEMO-%'
+    or (cancelled->>'total_minor')::bigint<>-(issued->>'total_minor')::bigint then raise exception 'FAIL: demo cancellation markings or amount'; end if;
+  select m.user_id into demo_person from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo limit 1;
   denied:=false;
-  begin perform public.finance_issue_invoice(demo_id,demo_invoice_id);
-  exception when raise_exception then
-    if sqlerrm like 'FINANCE_CONFLICT:%Demo workspaces%' then denied:=true; else raise; end if;
-  end;
-  if not denied then raise exception 'FAIL: configured demo issued a real document'; end if;
+  begin perform public.set_member_role(demo_id,demo_person,'owner');
+  exception when raise_exception then if sqlerrm like 'DEMO_%' then denied:=true; else raise; end if; end;
+  if not denied then raise exception 'FAIL: demo person promoted to owner'; end if;
+  denial_count:=denial_count+1;
+  reset role;
+  if (select count(*) from auth.users)<>before_auth then raise exception 'FAIL: demo created login users'; end if;
+  if exists(select 1 from private.demo_seed_context) then raise exception 'FAIL: demo seed capability retained'; end if;
+  perform set_config('request.jwt.claim.sub',demo_person::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',demo_person,'role','authenticated')::text,true);
+  set local role authenticated;
+  if private.current_role(demo_id) is not null or exists(select 1 from public.workspaces w where w.id=smoke.demo_id) then raise exception 'FAIL: demo identity can authenticate'; end if;
   denial_count:=denial_count+1;
 
   reset role;
@@ -205,7 +230,7 @@ begin
   reset role;
   if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.archived_at is not null)
     or not exists(select 1 from public.time_entries e where e.workspace_id=smoke.demo_id)
-    or not exists(select 1 from public.finance_invoices i where i.id=smoke.demo_invoice_id and i.status='draft') then
+    or not exists(select 1 from public.finance_invoices i where i.id=smoke.demo_invoice_id and i.status='issued' and i.is_demo) then
     raise exception 'FAIL: archive destroyed retained demo records';
   end if;
   select count(*) into n from public.audit_log a where a.workspace_id=smoke.workspace_id and a.action in ('finance_issue','finance_cancel','finance_paid');
@@ -215,7 +240,10 @@ begin
       (select count(*) from public.finance_invoices i where i.workspace_id=smoke.workspace_id and i.status='issued'),
       (select count(*) from public.finance_invoices i where i.workspace_id=smoke.workspace_id and i.status='cancellation'),n,
       (select count(*) from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.archived_at is not null),
-      (select count(*) from public.time_entries e where e.workspace_id=smoke.demo_id);
+      (select count(*) from public.time_entries e where e.workspace_id=smoke.demo_id),
+      (select count(*) from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo),
+      (select count(*) from public.finance_invoices i where i.workspace_id=smoke.demo_id and i.is_demo),
+      (select count(*) from auth.users)=before_auth;
 end $$;
 -- Non-sensitive counts only; no account IDs, invoice contents or customer data.
 select 'passed; the following ROLLBACK removes all smoke data' as result, * from pg_temp.agency_smoke_results;
