@@ -1,0 +1,17 @@
+import { z } from 'zod';
+export const financeUuid=z.uuid();
+export const financeDate=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(v+'T00:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v&&v>='2000-01-01'&&v<='2100-12-31'},'Invalid date');
+const money=z.number().int().min(0).max(1_000_000_000_000);
+const language=z.enum(['en','de','zh']);
+const kind=z.enum(['employee','freelancer']);
+const text=(max:number)=>z.string().max(max);
+export const financeRangeSchema=z.strictObject({from:financeDate,to:financeDate}).refine(v=>v.to>=v.from,'Invalid date range');
+export const clientSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,name:z.string().trim().min(1).max(160),billing_address:text(2000),contact_email:z.union([z.literal(''),z.email().max(320)]),tax_id:text(120),language});
+export const billingProfileSchema=z.strictObject({workspace_id:financeUuid,legal_name:text(160),billing_address:text(2000),tax_id:text(120),payment_details:text(2000),invoice_prefix:z.string().regex(/^[A-Z0-9][A-Z0-9-]{0,15}$/),footer:text(4000)});
+export const staffRateSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,user_id:financeUuid,kind,effective_from:financeDate,cost_rate_minor:money.nullable(),bill_rate_minor:money.nullable()});
+export const estimateLineSchema=z.strictObject({label:z.string().trim().min(1).max(240),kind,user_id:financeUuid.nullable(),planned_minutes:z.number().int().min(0).max(52560000),cost_rate_minor:money.nullable(),bill_rate_minor:money.nullable()});
+export const projectPlanSchema=z.strictObject({workspace_id:financeUuid,project_id:financeUuid,client_id:financeUuid.nullable(),billing_mode:z.enum(['hourly','fixed','internal']),default_bill_rate_minor:money.nullable(),fixed_fee_minor:money,planned_expenses_minor:money,lines:z.array(estimateLineSchema).max(100)});
+export const expenseSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,project_id:financeUuid,expense_date:financeDate,description:z.string().trim().min(1).max(1000),amount_minor:money,category:z.enum(['external','other']),not_time_costed:z.literal(true)});
+export const invoiceLineSchema=z.strictObject({description:z.string().trim().min(1).max(1000),quantity:z.number().positive().max(1_000_000).refine(v=>Math.abs(v*10000-Math.round(v*10000))<0.00001,'Use at most four decimal places'),unit_price_minor:money,tax_basis_points:z.number().int().min(0).max(10000),zero_tax_reason:text(1000),time_entry_id:financeUuid.nullable()});
+export const invoiceDraftSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,client_id:financeUuid,project_id:financeUuid.nullable(),language,issue_date:financeDate,due_date:financeDate,service_from:financeDate,service_to:financeDate,notes:text(4000),payment_instructions:text(2000),lines:z.array(invoiceLineSchema).max(100)}).refine(v=>v.due_date>=v.issue_date&&v.service_to>=v.service_from,'Invalid date range');
+export const timeInvoiceSchema=z.strictObject({workspace_id:financeUuid,project_id:financeUuid,client_id:financeUuid,from:financeDate,to:financeDate,language,issue_date:financeDate,due_date:financeDate,tax_basis_points:z.number().int().min(0).max(10000),zero_tax_reason:text(1000)}).refine(v=>v.to>=v.from&&v.due_date>=v.issue_date,'Invalid date range');

@@ -1,0 +1,136 @@
+import { useState } from "react";
+import { ArrowDownToLine } from "lucide-react";
+import { Notice } from "../components";
+import { Section, useFinance } from "./context";
+import { downloadText, money, overviewCsv, localeCode } from "./documents";
+import type { FinanceKey } from "./catalog";
+export function Overview() {
+  const { data, locale, workspace, projects, t } = useFinance(),
+    [project, setProject] = useState("");
+  const rows = data.overview.projects.filter(
+      (p) => !project || p.project_id === project,
+    ),
+    m = (value: number | null) => money(value, workspace.currency, locale);
+  const total = (
+    field:
+      | "planned_revenue_minor"
+      | "actual_cost_minor"
+      | "forecast_margin_minor",
+  ) =>
+    rows.some((row) => row[field] === null)
+      ? null
+      : rows.reduce((sum, row) => sum + (row[field] || 0), 0);
+  const hour = (minutes: number) =>
+    new Intl.NumberFormat(localeCode(locale), {
+      maximumFractionDigits: 1,
+    }).format(minutes / 60);
+  return (
+    <>
+      <div className="finance-toolbar">
+        <label className="field">
+          <span>{t("project")}</span>
+          <select value={project} onChange={(e) => setProject(e.target.value)}>
+            <option value="">{t("allProjects")}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="button secondary"
+          onClick={() =>
+            downloadText(
+              `finance-${data.overview.from}-${data.overview.to}.csv`,
+              overviewCsv(
+                { ...data.overview, projects: rows },
+                new Map(projects.map((p) => [p.id, p.name])),
+                locale,
+              ),
+            )
+          }
+        >
+          <ArrowDownToLine size={16} />
+          {t("csv")}
+        </button>
+      </div>
+      <div className="finance-metrics">
+        {(
+          [
+            ["plannedRevenue", total("planned_revenue_minor")],
+            ["actualCost", total("actual_cost_minor")],
+            ["forecastMargin", total("forecast_margin_minor")],
+          ] as [FinanceKey, number | null][]
+        ).map(([label, value]) => (
+          <div key={label} className="finance-metric">
+            <span>{t(label)}</span>
+            <strong>{m(value)}</strong>
+            <small>{workspace.currency}</small>
+          </div>
+        ))}
+      </div>
+      <p className="finance-caption">{t("marginNote")}</p>
+      {rows.length === 0 ? (
+        <div className="panel muted">{t("noProjects")}</div>
+      ) : (
+        <div className="finance-projects">
+          {rows.map((row) => {
+            const info = projects.find((p) => p.id === row.project_id);
+            return (
+              <Section
+                key={row.project_id}
+                title="plan"
+                action={<span className="badge">{t(row.billing_mode)}</span>}
+              >
+                <h3 className="finance-project-name">
+                  {info?.name || row.project_id}
+                </h3>
+                <small className="muted">{info?.code}</small>
+                {(row.missing_cost_entries > 0 ||
+                  row.missing_estimate_costs > 0) && (
+                  <Notice kind="info">
+                    {t("missingRates")} (
+                    {row.missing_cost_entries + row.missing_estimate_costs})
+                  </Notice>
+                )}
+                {row.missing_bill_entries > 0 && (
+                  <Notice kind="info">
+                    {t("missingBills")} ({row.missing_bill_entries})
+                  </Notice>
+                )}
+                <dl className="finance-details">
+                  {(
+                    [
+                      ["plannedRevenue", row.planned_revenue_minor],
+                      ["plannedCost", row.planned_cost_minor],
+                      ["plannedMargin", row.planned_margin_minor],
+                      ["laborCost", row.actual_labor_cost_minor],
+                      ["expenseTotal", row.actual_expenses_minor],
+                      ["billableValue", row.actual_billable_value_minor],
+                      ["forecastCost", row.forecast_cost_minor],
+                      ["forecastMargin", row.forecast_margin_minor],
+                    ] as [FinanceKey, number | null][]
+                  ).map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{t(label)}</dt>
+                      <dd>{m(value)}</dd>
+                    </div>
+                  ))}
+                  <div>
+                    <dt>{t("tracked")}</dt>
+                    <dd>{hour(row.actual_minutes)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("remaining")}</dt>
+                    <dd>{hour(row.remaining_minutes)}</dd>
+                  </div>
+                </dl>
+              </Section>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}

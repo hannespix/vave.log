@@ -1,54 +1,54 @@
 {
   "confirmation": {
     "dashboard": "Confirm sign up",
-    "subject": "VAVE.LOG – Bestätige deine E-Mail-Adresse"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Bestätige deine E-Mail-Adresse{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 确认你的电子邮箱{{ else }}VAVE.LOG – Confirm your email address{{ end }}"
   },
   "invite": {
     "dashboard": "Invite user",
-    "subject": "VAVE.LOG – Deine Einladung"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Deine Einladung{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的邀请{{ else }}VAVE.LOG – Your invitation{{ end }}"
   },
   "magic_link": {
     "dashboard": "Magic link",
-    "subject": "VAVE.LOG – Dein Anmeldelink"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Dein Anmeldelink{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的登录链接{{ else }}VAVE.LOG – Your sign-in link{{ end }}"
   },
   "recovery": {
     "dashboard": "Reset password",
-    "subject": "VAVE.LOG – Passwort zurücksetzen"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Passwort zurücksetzen{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 重置你的密码{{ else }}VAVE.LOG – Reset your password{{ end }}"
   },
   "email_change": {
     "dashboard": "Change email address",
-    "subject": "VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 确认更改你的电子邮箱{{ else }}VAVE.LOG – Confirm your email address change{{ end }}"
   },
   "reauthentication": {
     "dashboard": "Reauthentication",
-    "subject": "VAVE.LOG – Dein Sicherheitscode"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Dein Sicherheitscode{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的安全验证码{{ else }}VAVE.LOG – Your security code{{ end }}"
   },
   "password_changed_notification": {
     "dashboard": "Password changed",
-    "subject": "VAVE.LOG – Dein Passwort wurde geändert"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Dein Passwort wurde geändert{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的密码已更改{{ else }}VAVE.LOG – Your password was changed{{ end }}"
   },
   "email_changed_notification": {
     "dashboard": "Email address changed",
-    "subject": "VAVE.LOG – Deine E-Mail-Adresse wurde geändert"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Deine E-Mail-Adresse wurde geändert{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的电子邮箱已更改{{ else }}VAVE.LOG – Your email address was changed{{ end }}"
   },
   "phone_changed_notification": {
     "dashboard": "Phone number changed",
-    "subject": "VAVE.LOG – Deine Telefonnummer wurde geändert"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Deine Telefonnummer wurde geändert{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 你的电话号码已更改{{ else }}VAVE.LOG – Your phone number was changed{{ end }}"
   },
   "identity_linked_notification": {
     "dashboard": "Sign-in method linked",
-    "subject": "VAVE.LOG – Eine Anmeldemethode wurde verknüpft"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Eine Anmeldemethode wurde verknüpft{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 已关联新的登录方式{{ else }}VAVE.LOG – A sign-in method was linked{{ end }}"
   },
   "identity_unlinked_notification": {
     "dashboard": "Sign-in method removed",
-    "subject": "VAVE.LOG – Eine Anmeldemethode wurde entfernt"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Eine Anmeldemethode wurde entfernt{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 已移除一种登录方式{{ else }}VAVE.LOG – A sign-in method was removed{{ end }}"
   },
   "mfa_factor_enrolled_notification": {
     "dashboard": "Verification method added",
-    "subject": "VAVE.LOG – Eine Sicherheitsmethode wurde hinzugefügt"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Eine Sicherheitsmethode wurde hinzugefügt{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 已添加新的验证方式{{ else }}VAVE.LOG – A verification method was added{{ end }}"
   },
   "mfa_factor_unenrolled_notification": {
     "dashboard": "Verification method removed",
-    "subject": "VAVE.LOG – Eine Sicherheitsmethode wurde entfernt"
+    "subject": "{{ if and .Data (eq (printf \"%s\" .Data.locale) \"de\") }}VAVE.LOG – Eine Sicherheitsmethode wurde entfernt{{ else if and .Data (eq (printf \"%s\" .Data.locale) \"zh\") }}VAVE.LOG – 已移除一种验证方式{{ else }}VAVE.LOG – A verification method was removed{{ end }}"
   }
 }
