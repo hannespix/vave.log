@@ -132,8 +132,8 @@ test('first start defaults to empty and opt-in demo shows sourced fictional data
  await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:seeded?{workspace_id:ws,created_by:user,request_id:input?.p_request_id,locale:'en',manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:workspace.created_at,archived_at:null}:null}));
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
  await page.getByRole('radio',{name:/Explore with VAVE examples/}).check();
- await expect(page.getByLabel('Currency',{exact:true})).toBeDisabled();
- await page.getByLabel('Time zone',{exact:true}).fill('Europe/Berlin');
+ await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
+ await page.getByRole('combobox',{name:/^Time zone /}).fill('Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toBeVisible();
  await page.getByText('Explore the public sources',{exact:true}).click();
