@@ -253,7 +253,7 @@ begin
  perform private.finance_require_manager(w);
  perform private.finance_check_keys(p_input,array['workspace_id','project_id','client_id','from','to','language','issue_date','due_date','tax_basis_points','zero_tax_reason']);
  if date_from is null or date_to is null or date_to<date_from then raise exception 'FINANCE_VALIDATION'; end if;
- select jsonb_agg(jsonb_build_object('description',e.work_date::text||' — '||left(coalesce(nullif(e.note,''),'Approved time'),980),'quantity',1,'unit_price_minor',0,'tax_basis_points',p_input->'tax_basis_points','zero_tax_reason',coalesce(p_input->>'zero_tax_reason',''),'time_entry_id',e.id) order by e.work_date,e.id) into ls
+ select jsonb_agg(jsonb_build_object('description',e.work_date::text||' — '||left(coalesce(nullif(e.note,''),case p_input->>'language' when 'de' then 'Freigegebene Zeit' when 'zh' then '已批准工时' else 'Approved time' end),980),'quantity',1,'unit_price_minor',0,'tax_basis_points',p_input->'tax_basis_points','zero_tax_reason',coalesce(p_input->>'zero_tax_reason',''),'time_entry_id',e.id) order by e.work_date,e.id) into ls
  from public.time_entries e where e.workspace_id=w and e.project_id=(p_input->>'project_id')::uuid and e.work_date between date_from and date_to and e.status='approved' and e.billable and not exists(select 1 from public.finance_time_claims c where c.time_entry_id=e.id);
  if ls is null then raise exception 'FINANCE_NOT_FOUND'; end if;
  return private.finance_save_draft((p_input-'from'-'to'-'tax_basis_points'-'zero_tax_reason')||jsonb_build_object('service_from',date_from,'service_to',date_to,'notes','','payment_instructions','','lines',ls));

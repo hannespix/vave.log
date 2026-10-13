@@ -32,6 +32,21 @@ describe('finance authorization and documents',()=>{
  it('rejects omitted estimate costs instead of silently storing an unknown as zero',async()=>{await expect(attempt("insert into public.finance_project_plans(workspace_id,project_id,lines)values($1,$2,$3)",[w,p,JSON.stringify([{label:'Design',kind:'employee',user_id:null,planned_minutes:60,bill_rate_minor:7500}])])).rejects.toThrow(/FINANCE_VALIDATION/)});
  it('rejects non-string line descriptions from direct JSON RPC callers',async()=>{await expect(attempt('select public.finance_save_draft($1::jsonb)',[JSON.stringify(draft({lines:[{...draft().lines[0],description:42}]}))])).rejects.toThrow(/FINANCE_VALIDATION/)});
  it('rejects approved source time outside the stated service period',async()=>{const e=await approved();await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor)values($1,$2,'2026-01-01',7500)",[w,member]);await expect(attempt('select public.finance_save_draft($1::jsonb)',[JSON.stringify(draft({service_to:'2026-10-12',lines:[{...draft().lines[0],time_entry_id:e}]}))])).rejects.toThrow(/FINANCE_VALIDATION/)});
+ it('localizes blank approved-time descriptions while preserving user notes in every invoice language',async()=>{
+  await login(member);
+  const source=await rows<{id:string;note:string}>("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable)values($1,$2,'2026-10-13',1,'',true),($1,$2,'2026-10-13',1,'User note – 保留',true)returning id,note",[w,p]);
+  await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[w]);
+  await login(manager);
+  for(const entry of source)await db.query('select public.review_entry($1,true)',[entry.id]);
+  await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor)values($1,$2,'2026-01-01',7500)",[w,member]);
+  for(const [language,fallback] of [['en','Approved time'],['de','Freigegebene Zeit'],['zh','已批准工时']]){
+   const input={workspace_id:w,client_id:c,project_id:p,language,from:'2026-10-13',to:'2026-10-13',issue_date:'2026-10-13',due_date:'2026-11-13',tax_basis_points:1900,zero_tax_reason:''};
+   const invoice=(await one<{v:{language:string;lines:{time_entry_id:string;description:string}[]}}>('select public.finance_draft_from_time($1::jsonb)v',[JSON.stringify(input)])).v;
+   expect(invoice.language).toBe(language);
+   expect(invoice.lines).toHaveLength(2);
+   for(const entry of source)expect(invoice.lines.find(line=>line.time_entry_id===entry.id)?.description).toBe(`2026-10-13 — ${entry.note||fallback}`);
+  }
+ });
  it('creates a bounded time draft from approved entries even with long notes',async()=>{await login(member);const e=await one<{id:string}>("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable)values($1,$2,'2026-10-13',1,$3,true)returning id",[w,p,'Work '.repeat(500)]);await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[w]);await login(manager);await db.query('select public.review_entry($1,true)',[e.id]);await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor)values($1,$2,'2026-01-01',99)",[w,member]);const input={workspace_id:w,client_id:c,project_id:p,language:'en',from:'2026-10-01',to:'2026-10-13',issue_date:'2026-10-13',due_date:'2026-11-13',tax_basis_points:1900,zero_tax_reason:''};const d=(await one<{v:any}>('select public.finance_draft_from_time($1::jsonb)v',[JSON.stringify(input)])).v;expect(d.lines).toHaveLength(1);expect(d.lines[0].description.length).toBeLessThanOrEqual(1000);expect((await issue(d.id)).net_minor).toBe(2)});
  it('validates estimate labels without accounts and prevents duplicate freelancer expense costing',async()=>{expect(await rows("insert into public.finance_project_plans(workspace_id,project_id,lines)values($1,$2,$3) returning *",[w,p,JSON.stringify([{label:'External designer',kind:'freelancer',user_id:null,planned_minutes:600,cost_rate_minor:null,bill_rate_minor:7500}])])).toHaveLength(1);await expect(attempt("insert into public.finance_expenses(workspace_id,project_id,expense_date,description,amount_minor,not_time_costed)values($1,$2,'2026-10-13','Freelancer',5000,false)",[w,p])).rejects.toThrow()});
 });
