@@ -8,9 +8,9 @@ const config=readConfig(process.env);const handle=createHttpHandler(config);cons
 app.disable('x-powered-by');
 const proxyHops=Number(process.env.TRUST_PROXY_HOPS||0);if(!Number.isInteger(proxyHops)||proxyHops<0||proxyHops>3)throw Error('Invalid TRUST_PROXY_HOPS');app.set('trust proxy',proxyHops);
 app.use((_req,res,next)=>{for(const[k,v]of Object.entries(securityHeaders(config)))res.setHeader(k,v);next()});
-app.use('/mcp',rateLimit({windowMs:60000,limit:180,standardHeaders:'draft-8',legacyHeaders:false}));
+app.use('/api/mcp',rateLimit({windowMs:60000,limit:180,standardHeaders:'draft-8',legacyHeaders:false}));
 app.use(async(req,res,next)=>{
- if(!['/mcp','/healthz','/api/config'].includes(req.path)&&!req.path.startsWith('/.well-known/'))return next();
+ if(!['/api/mcp','/healthz','/api/config'].includes(req.path)&&!req.path.startsWith('/.well-known/'))return next();
  try{
   const headers=new Headers();for(const[k,v]of Object.entries(req.headers)){if(v)headers.set(k,Array.isArray(v)?v.join(', '):v)}
   const init:RequestInit&{duplex?:'half'}={method:req.method,headers};

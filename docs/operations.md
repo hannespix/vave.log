@@ -17,7 +17,7 @@ Einladungen sind als E-Mail-Zuordnung gespeichert, schicken aber bewusst keine N
 ## MCP / OAuth
 Supabase OAuth 2.1 Server ist laut aktueller Anbieter-Dokumentation **Beta**. In Auth > OAuth Server aktivieren, Authorization Path `/oauth/consent` setzen. Asymmetrischen JWT-Signierschlüssel (ES256/RS256) verwenden. Clients gezielt registrieren oder Dynamic Client Registration aktivieren. Keine Wildcard-Redirects. Nutzer müssen im Consent-Screen den konkreten Client und seine Rechte bestätigen. Standard-OIDC-Scopes beschränken Profilinformationen; Zugriff auf Anwendungsdaten folgt den angezeigten Workspace-Rollen/RLS-Regeln.
 
-MCP-URL: `https://DEINE-DOMAIN/mcp`. Ein kompatibler Streamable-HTTP/OAuth-Client entdeckt die Autorisierung über `/.well-known/oauth-protected-resource/mcp`. KI-Nutzung setzt Unterstützung dieser Standards im jeweiligen Client voraus; nicht jedes Produkt unterstützt benutzerdefinierte MCP-Server.
+Der Pfad `/mcp` ist auf der Sites-Plattform reserviert. Deshalb nutzt die Anwendung plattformübergreifend `/api/mcp`. MCP-URL: `https://DEINE-DOMAIN/api/mcp`. Ein kompatibler Streamable-HTTP/OAuth-Client entdeckt die Autorisierung über `/.well-known/oauth-protected-resource/api/mcp`. KI-Nutzung setzt Unterstützung dieser Standards im jeweiligen Client voraus; nicht jedes Produkt unterstützt benutzerdefinierte MCP-Server.
 
 Verbindungen lassen sich in der GUI widerrufen. Bereits ausgestellte JWTs können bis zum Ablauf gültig bleiben; keine sofortige Zugriffssperre behaupten. Rollenänderungen wirken für Datenbankzugriffe unmittelbar über die Membership-Tabelle. Betrieb erfordert einen vollständigen echten OAuth-Login-Test auf der endgültigen Domain.
 

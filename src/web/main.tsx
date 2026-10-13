@@ -21,10 +21,10 @@ function Connected({ config }: { config: RuntimeConfig }) {
   return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<React.Suspense fallback={<div className="boot"><Spinner label="Dein Workspace wird geladen …"/></div>}><WorkspaceApp key={session.user.id} client={client} session={session} config={config} signOut={signOut}/></React.Suspense></>;
 }
 function Root() {
-  const [config, setConfig] = useState<RuntimeConfig | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [attempt, setAttempt] = useState(0);
-  useEffect(() => { const controller = new AbortController(); setLoading(true); setError(''); fetch('/api/config', { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error('Die Server-Konfiguration konnte nicht geladen werden.'); const value = await res.json() as RuntimeConfig; if (value.configured && (!value.supabaseUrl || !value.supabasePublishableKey)) throw new Error('Die Verbindung ist noch nicht vollständig eingerichtet.'); setConfig(value); }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); }); return () => controller.abort(); }, [attempt]);
+  const [config, setConfig] = useState<RuntimeConfig | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  useEffect(() => { const controller = new AbortController(); setLoading(true); setError(''); fetch('/api/config', { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error('Die Server-Konfiguration konnte nicht geladen werden.'); const value = await res.json() as RuntimeConfig; if (value.configured && (!value.supabaseUrl || !value.supabasePublishableKey)) throw new Error('Die Verbindung ist noch nicht vollständig eingerichtet.'); setConfig(value); }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); }); return () => controller.abort(); }, []);
   if (loading) return <div className="boot"><span className="boot-word">VAVE<span>.LOG</span></span><Spinner label="Ein Moment für deinen Flow …"/></div>;
-  if (error || !config?.configured) return <Setup error={error} onRetry={() => setAttempt(n => n + 1)}/>;
+  if (error || !config?.configured) return <Setup error={error} onRetry={() => window.location.reload()}/>;
   return <Connected config={config}/>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><Root/></React.StrictMode>);

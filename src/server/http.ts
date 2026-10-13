@@ -38,7 +38,7 @@ async function limitedBody(request:Request,max=65536){
 export function createHttpHandler(config:Config,deps:Deps={}){
  const origin=new URL(config.appUrl);const headers=securityHeaders(config);
  const json=(data:unknown,status=200,extra:Record<string,string>={})=>new Response(JSON.stringify(data),{status,headers:{...headers,'content-type':'application/json; charset=utf-8',...extra}});
- const resource=config.appUrl+'/mcp';const metadata=config.appUrl+'/.well-known/oauth-protected-resource/mcp';
+ const resource=config.appUrl+'/api/mcp';const metadata=config.appUrl+'/.well-known/oauth-protected-resource/api/mcp';
  const challenge=()=>json({error:'Bitte anmelden.'},401,{'www-authenticate':`Bearer resource_metadata="${metadata}"`});
  const authenticate=deps.authenticate??(async(token:string)=>{
   const client=createClient(config.supabaseUrl,config.supabasePublishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},global:{headers:{Authorization:`Bearer ${token}`}}});
@@ -59,8 +59,8 @@ export function createHttpHandler(config:Config,deps:Deps={}){
   const sentOrigin=request.headers.get('origin');if(sentOrigin&&sentOrigin!==origin.origin)return json({error:'Origin nicht erlaubt.'},403);
   if(path==='/api/config'&&request.method==='GET')return json(config);
   if(path==='/healthz'&&request.method==='GET')return json({status:config.configured?'configured':'setup_required',version:'1.0.0'},config.configured?200:503);
-  if((path==='/.well-known/oauth-protected-resource/mcp'||path==='/.well-known/oauth-protected-resource')&&request.method==='GET')return config.configured?json({resource,authorization_servers:[config.supabaseUrl+'/auth/v1'],bearer_methods_supported:['header'],resource_name:'VAVE.LOG',resource_documentation:config.appUrl+'/help/mcp'}):json({error:'Backend noch nicht eingerichtet.'},503);
-  if(path!=='/mcp')return json({error:'Nicht gefunden.'},404);
+  if((path==='/.well-known/oauth-protected-resource/api/mcp'||path==='/.well-known/oauth-protected-resource')&&request.method==='GET')return config.configured?json({resource,authorization_servers:[config.supabaseUrl+'/auth/v1'],bearer_methods_supported:['header'],resource_name:'VAVE.LOG',resource_documentation:config.appUrl+'/help/mcp'}):json({error:'Backend noch nicht eingerichtet.'},503);
+  if(path!=='/api/mcp')return json({error:'Nicht gefunden.'},404);
   if(!config.configured)return json({error:'Backend noch nicht eingerichtet.'},503);
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,Allow:'POST, OPTIONS'}});
   if(request.method!=='POST')return json({error:'Nur POST wird unterstützt. Der MCP-Server arbeitet ohne Sessions.'},405,{Allow:'POST, OPTIONS'});

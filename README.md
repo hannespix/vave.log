@@ -29,4 +29,4 @@ Die vollständige Anleitung zu Auth, OAuth, SMTP, Backups, Docker und Freigabete
 
 Privater Bereitstellungsort: https://vave-log.pixer.chatgpt.site
 
-Der Code ist implementiert. Die Anwendung zeigt ohne eigene Supabase-Konfiguration ausdrücklich den Einrichtungszustand. Ein Livebetrieb wird erst nach Datenbankeinrichtung und echten Auth-/OAuth-Tests bestätigt. Konkrete Nachweise und verbleibende Schritte stehen in [STATE.md](STATE.md).
+Das eigene Supabase-Projekt ist eingerichtet und verbunden; Datenbank-Zugriffsregeln und Kernworkflows wurden dort geprüft. Für die Betriebsfreigabe fehlen noch die Auth-Weiterleitungen im Dashboard sowie echte Registrierungs-/OAuth-Tests. Ohne Konfiguration zeigt die Anwendung weiterhin ausdrücklich den Einrichtungszustand. Konkrete Nachweise und verbleibende Schritte stehen in [STATE.md](STATE.md).

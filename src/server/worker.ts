@@ -7,7 +7,7 @@ export default {
   const key=JSON.stringify(config);if(active?.key!==key)active={key,config,handler:createHttpHandler(config)};
   const url=new URL(request.url);
   // Cloudflare replaces CF-Connecting-IP at ingress; do not use X-Forwarded-For.
-  if(['/mcp','/healthz','/api/config'].includes(url.pathname)||url.pathname.startsWith('/.well-known/'))return active!.handler(request,request.headers.get('cf-connecting-ip')||'shared');
+  if(['/api/mcp','/healthz','/api/config'].includes(url.pathname)||url.pathname.startsWith('/.well-known/'))return active!.handler(request,request.headers.get('cf-connecting-ip')||'shared');
   const headers=securityHeaders(config);
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{...headers,Allow:'GET, HEAD'}});
   if((request.headers.get('host')||url.host)!==new URL(config.appUrl).host)return new Response('Host not allowed',{status:403,headers});

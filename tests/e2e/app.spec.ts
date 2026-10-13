@@ -35,3 +35,30 @@ test('authenticated workspace books time and reloads persisted result',async({pa
 test('database refusal never appears as a successful save',async({page})=>{
  await setup(page,true);await page.goto('/');await page.getByRole('button',{name:'Zeit erfassen',exact:true}).first().click();await page.route('https://test.supabase.co/rest/v1/time_entries*',r=>r.request().method()==='POST'?r.fulfill({status:403,json:{code:'42501',message:'denied'}}):r.fallback());const dialog=page.getByRole('dialog');await dialog.getByRole('button',{name:'Speichern',exact:true}).click();await expect(dialog).toBeVisible();await expect(page.getByText(/Berechtigung/).first()).toBeVisible();await expect(page.getByText('Gespeichert.',{exact:true})).toHaveCount(0);
 });
+
+test('setup retry refreshes document CSP before connecting a newly configured backend',async({page})=>{
+ await setup(page);
+ let backendReady=false;let documents=0;let authRequests=0;
+ await page.route('**/api/config',r=>r.fulfill({json:{...config,configured:backendReady}}));
+ await page.route('http://localhost:4173/',async route=>{
+  const response=await route.fetch();documents++;
+  const headers=response.headers();
+  if(documents===1)headers['content-security-policy']=headers['content-security-policy'].replace("connect-src 'self' https://test.supabase.co","connect-src 'self'");
+  await route.fulfill({response,headers});
+ });
+ await page.route('https://test.supabase.co/auth/v1/token?*',r=>{
+  authRequests++;
+  return r.fulfill({status:400,json:{code:'invalid_credentials',msg:'Invalid login credentials'}});
+ });
+ await page.goto('/');
+ await expect(page.getByRole('button',{name:'Verbindung erneut prüfen'})).toBeVisible();
+ backendReady=true;
+ await page.getByRole('button',{name:'Verbindung erneut prüfen'}).click();
+ await expect(page.getByLabel('E-Mail-Adresse',{exact:true})).toBeVisible();
+ expect(documents).toBe(2);
+ await page.getByLabel('E-Mail-Adresse',{exact:true}).fill('owner@example.test');
+ await page.getByLabel('Passwort',{exact:true}).fill('a-test-password');
+ await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+ await expect(page.getByText('E-Mail oder Passwort stimmt nicht.',{exact:true})).toBeVisible();
+ expect(authRequests).toBe(1);
+});

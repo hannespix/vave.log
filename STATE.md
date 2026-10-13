@@ -1,31 +1,38 @@
 # VAVE.LOG — aktueller Arbeitsstand
 
-13.10.2026. Auftrag: eigenständig arbeitsfertig entwickeln, Supabase + GUI + MCP, main sichern und deployen. Zielrepository hannespix/vave.log. Die bisherige Umfrage in vave-discovery bleibt als Referenz erhalten.
+13.10.2026. Repository: hannespix/vave.log. Private Site: https://vave-log.pixer.chatgpt.site.
 
-## Implementiert
-- Vollständige deutsche GUI: Anmeldung/Reset, Workspace-Erstellung, Übersicht, Projekte, Aufgaben, Zeiterfassung/Timer, Freigaben, Berichte/CSV, Team, Einstellungen, OAuth-Zustimmung/Widerruf.
-- Supabase-Migration mit Mandantentrennung/RLS, zusammengesetzten Fremdschlüsseln, geschützten Statusübergängen, Audit und atomarem Timerstopp mit wiederholbarer Rückgabe.
-- Einladungen für bestätigte E-Mail-Konten und sichere Deaktivierung von Mitgliedern; keine Nachrichten werden automatisch versendet.
-- Gemeinsamer validierter Service, 20 MCP-Werkzeuge, offizieller HTTP-Transport, OAuth-Metadaten, JWT-/Host-/Origin-Prüfung.
-- Originales VAVE-Lottie-Logo lokal, lokale Schrift; Node/Docker und Sites-Worker, GitHub-CI mit Playwright.
+## Anwendung
+Deutsche GUI mit Anmeldung/Reset, Workspaces, Projekten, Aufgaben, Zeiterfassung/Timer, Freigaben, Berichten/CSV, Teamrollen, Einstellungen und OAuth-Zustimmung/Widerruf. Gemeinsamer validierter Service und 20 MCP-Werkzeuge; keine privilegierten Supabase-Schlüssel im Runtime-System. Das originale VAVE-Logo läuft in drei langsamen, variierenden Gesten ohne Wiedergabebutton. Reduzierte Bewegung wird berücksichtigt.
 
-## Nachweise und Grenzen
-- TypeScript, vollständiger Produktionsbuild und 68 PostgreSQL/RLS-, Service-, HTTP-, MCP- und Frontend-Helfertests lokal erfolgreich.
-- Unabhängige Sicherheitsprüfung durchgeführt. Nachgewiesene Funde zu Datumswerten, Einladungsrollen, Timerwiederholung und Worker-Rate-Limits behoben und mit Regressionstests abgesichert.
-- Aktueller npm-Audit der Laufzeitabhängigkeiten: keine bekannten Sicherheitslücken.
-- PostgreSQL-Tests laufen in einer PGlite-Verbindung; sie beweisen keine konkurrierenden Transaktionen über mehrere echte Verbindungen.
-- GitHub Actions erfolgreich: https://github.com/hannespix/vave.log/actions/runs/38453153277 — 68 Tests sowie 8 Playwright-Tests auf Desktop/Mobilgerät bestanden, Build und Laufzeit-Audit grün. Browsertests verwenden kontrollierte API-Antworten, einschließlich Persistenz nach Reload und abgewiesenem Speichern.
-- Echte Supabase-Auth-/OAuth-, PostgREST- und Browser-End-to-End-Tests gegen die Produktionsdatenbank stehen noch aus.
-- Initiales JavaScript ist größer als Vites Standardwarnschwelle; der Workspace wird separat geladen. Keine nicht gemessene Performance-Zusage.
+## Supabase ist eingerichtet
+- Projekt `vave-log`, Referenz `ieeujtmpxqxmfyietqgw`, Organisation pix-el, Frankfurt; Status ACTIVE_HEALTHY.
+- Migrationen `20261013202303_vave_log` und `20261013202642_secure_bootstrap_and_indexes` angewendet. Lokale Dateiversionen entsprechen der tatsächlichen Remote-Historie, damit GitHub/CLI sie nicht doppelt ausführen.
+- Alle neun Anwendungstabellen verwenden RLS; anonyme Rollen besitzen keine Tabellenfreigaben. Interne Timerbelege sind auch für angemeldete Nutzer direkt gesperrt.
+- Runtime-Konfiguration auf Sites gesetzt und erfolgreich deployt. `/healthz` liefert 200/configured; `/api/config` verweist auf das richtige Supabase-Projekt.
+- Öffentlicher Auth-Check: E-Mail-Anmeldung aktiv, E-Mail-Bestätigung erforderlich, anonyme Konten deaktiviert.
 
-## Externer Blocker
-Supabase ist verbunden. In der Organisation pix-el bestehen ausschließlich andere Anwendungen; keine davon wurde verändert. Für VAVE.LOG fehlt ein eigenes Projekt.
+## Verifiziert
+- Lokal: TypeScript, Produktionsbuild, 68 Tests. PostgreSQL/RLS wird in PGlite tatsächlich ausgeführt; MCP mit dem offiziellen Client über HTTP geprüft.
+- Bestehende GitHub-Browserprüfung: Desktop/Mobilgerät, Persistenz nach Reload und abgewiesenes Speichern. Neuer Regressionstest deckt den Wechsel vom Einrichtungszustand zur Anmeldung samt Dokument-CSP ab; CI-Status am aktuellen Commit beachten.
+- Echtes Supabase-PostgreSQL: Mandantentrennung, Einladung, Zeitbuchung, Einreichen/Freigeben, Timerstopp/Wiederholung und Deaktivierung erfolgreich geprüft. `tests/live/supabase-smoke.sql` rollt alle synthetischen Konten und Daten zurück; anschließend null Testkonten und null Testworkspaces bestätigt.
+- Anonyme echte PostgREST-Abfrage auf Workspaces liefert 401/permission denied. Keine Datenfreigabe als Fehlerbehebung nötig.
+- Live-HTML liefert eine CSP mit expliziter Supabase-Domain. Beim Wechsel von einer bereits geöffneten unkonfigurierten Seite reicht API-Neuladen nicht: „Verbindung erneut prüfen“ lädt jetzt das gesamte Dokument einschließlich CSP neu.
+- `/mcp` wird von Sites selbst reserviert. Die Anwendung verwendet deshalb `/api/mcp` samt passender OAuth-Ressourcenmetadaten.
 
-Die angebotene Supabase-Funktion `get_cost`, Voraussetzung für die Projektanlage, antwortete mit `MCP tool get_cost was not returned by tools/list` (UNAVAILABLE). Damit kann die erforderliche Projektanlage über die verfügbare Verbindung nicht abgeschlossen werden. Das ist ein technischer Verbindungsblocker, keine ausstehende Produktentscheidung.
+## Advisor-Befunde
+Der vom Supabase-Dashboard erzeugte `rls_auto_enable`-Eventtrigger war für API-Rollen ausführbar. EXECUTE wurde für public/anon/authenticated entzogen; der automatische RLS-Trigger bleibt aktiv. Fehlende Fremdschlüsselindizes sind ergänzt.
 
-Nächster notwendiger Schritt: ein eigenes Supabase-Projekt `vave-log` in pix-el / Frankfurt bereitstellen. Danach Migration anwenden, veröffentlichbare Konfiguration setzen, Auth/OAuth/SMTP einrichten, Security Advisors und echte Workflows prüfen. Keine Service-Role- oder Datenbankpasswörter in Repository oder Chat eintragen.
+Verbleibende, geprüfte Hinweise:
+- [SECURITY DEFINER für angemeldete Nutzer](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable): neun bewusst bereitgestellte RPCs benötigen dies für atomare, geschützte Workflows. Identität, Workspace-Rolle und zulässige Übergänge werden im Funktionskörper geprüft; anonymer Aufruf ist gesperrt. Diese Warnungen werden nicht als „keine Warnungen“ ausgegeben.
+- [RLS ohne Policy](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy): private.timer_receipts verweigert absichtlich jeden direkten Clientzugriff. Zugriff nur durch geprüfte interne RPCs.
+- [Unbenutzte Indizes](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index): bei leerem Projekt erwartbar; keine Indizes allein deshalb entfernen.
 
-## Deployment
-Erfolgreich deployt: owner-private Site https://vave-log.pixer.chatgpt.site. Deployment `appgdep_6ace831562d0819180677af57ac3ce8b` wurde mit Status `succeeded` bestätigt. Ohne Supabase bleibt sie absichtlich im Einrichtungszustand; `/healthz` liefert dann 503. Ein erfolgreicher Quellcode-/Site-Deploy ist noch kein betriebsbereiter Backend-Status.
+## Noch offen bis zur Betriebsfreigabe
+1. Supabase Auth > URL Configuration: Site URL und exakte Redirect URLs auf die veröffentlichte Site einstellen. Die verbundene Supabase-Schnittstelle bietet keine Auth-Konfigurationsänderung an; diesen Dashboard-Schritt muss der Besitzer vornehmen.
+2. Echte Registrierung, Bestätigung, Login und Passwortreset mit dem Besitzer testen. Keine fremden Personen anschreiben oder Konten ohne Auftrag anlegen.
+3. Supabase OAuth-Server/Clientregistrierung konfigurieren und echte MCP-Zustimmung/Widerruf testen. Die Existenz der Discovery-URL beweist keinen abgeschlossenen OAuth-Flow.
+4. Aktuelle Site ist owner-private. Externe MCP-Clients und Teammitglieder benötigen bewusst eingerichteten Hosting-Zugang; keine automatische öffentliche Freigabe.
+5. SMTP für Teamversand, Backup/Restore und Betriebsverantwortung einrichten. Mehrverbindungs-/Konkurrenztests bleiben von den Einverbindungs-SQL-Tests getrennt.
 
-Verifizierter Implementierungsstand auf GitHub main: `bfc6b0f37929fa94d0caf450c2541d05566a5a68`. Sites-Quellcommit: `3915bb58b4fd9050dbfe8c1c00b46bf0d1d4337f`. Beide besitzen denselben Git-Baum `a3b70841e63ec80774f27217218261b13bf23f1f`; spätere Dokumentations-Commits ändern die geprüfte Anwendung nicht.
+Die Anwendung ist mit dem Backend verbunden. Vollständiger Produktivbetrieb bleibt bis zu diesen Liveprüfungen unbestätigt. Details: docs/operations.md.

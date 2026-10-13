@@ -7,7 +7,7 @@ const config={supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_
 const id='11111111-1111-4111-8111-111111111111';
 async function connect(service:Partial<Service>){
  const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service})});
- const transport=new StreamableHTTPClientTransport(new URL(config.appUrl+'/mcp'),{requestInit:{headers:{Authorization:'Bearer test-token'}},fetch:async(input,init)=>handler(new Request(input,init))});
+ const transport=new StreamableHTTPClientTransport(new URL(config.appUrl+'/api/mcp'),{requestInit:{headers:{Authorization:'Bearer test-token'}},fetch:async(input,init)=>handler(new Request(input,init))});
  const client=new Client({name:'test-client',version:'1.0.0'});await client.connect(transport);return client;
 }
 describe('real MCP wire protocol',()=>{
