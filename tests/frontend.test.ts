@@ -1,5 +1,6 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
+import {I18nProvider} from '../src/web/i18n.js';
 import {TaskAssigneeSelect} from '../src/web/components.js';
 import type {Membership} from '../src/shared/types.js';
 import {describe,it,expect} from 'vitest';
@@ -14,12 +15,12 @@ describe('defensive date presentation',()=>{
  it('renders malformed or infinite stored dates without crashing',()=>{
   for (const value of ['infinity','-infinity','','not-a-date','2026-02-30','2026-13-01']) {
    expect(shortDate(value)).toBe('–');
-   expect(longDate(value)).toBe('Ungültiges Datum');
+   expect(longDate(value, 'de')).toBe('Ungültiges Datum');
   }
  });
  it('retains German calendar formatting for valid dates',()=>{
-  expect(shortDate('2026-10-13')).toBe('13.10.');
-  expect(longDate('2026-10-13')).toContain('13. Okt.');
+  expect(shortDate('2026-10-13', 'de')).toBe('13.10.');
+  expect(longDate('2026-10-13', 'de')).toContain('13. Okt.');
  });
 });
 
@@ -30,7 +31,7 @@ describe('historical task assignments',()=>{
   {workspace_id:'workspace',user_id:'other-disabled',role:'disabled',display_name:'Other',email:'other@example.test',created_at:''},
  ];
  it('keeps an existing disabled assignee selected and available for form submission',()=>{
-  const html=renderToStaticMarkup(createElement(TaskAssigneeSelect,{members,currentAssignee:'former'}));
+  const html=renderToStaticMarkup(createElement(I18nProvider,{initialLocale:'de'},createElement(TaskAssigneeSelect,{members,currentAssignee:'former'})));
   expect(html).toContain('value="former" selected=""');
   expect(html).toContain('Former (deaktiviert)');
   expect(html).not.toContain(' disabled=');

@@ -38,7 +38,11 @@ Node hinter einem kontrollierten Reverse Proxy betreiben. Host-Header erhalten. 
 `npm run build:worker` erzeugt `dist/server/index.js` mit lokal eingebetteten Assets. `.openai/hosting.json` bindet diese Installation an die vorhandene private Site. Zur Laufzeit `APP_URL`, `SUPABASE_URL` und `SUPABASE_PUBLISHABLE_KEY` auf der Plattform setzen. Keine privilegierten Schlüssel. Der Standard-Origin dieser Installation ist https://vave-log.pixer.chatgpt.site; für andere Deployments `SITE_ORIGIN` beim Build oder `APP_URL` zur Laufzeit setzen. Die private Sites-Zugriffsschranke kann externe MCP-Clients blockieren: Für allgemeine KI-Clients ist ein bewusst öffentlich erreichbarer HTTPS-Origin mit App-/OAuth-Authentifizierung erforderlich. Die aktuelle private Bereitstellung verändert die Freigabe nicht automatisch.
 
 ## Daten und Grenzen
-Arbeitszeiten sind Minuten und enthalten keine rechtliche Arbeitszeitprüfung. Timer rechnen vergangene Sekunden und teilen am Mitternachtspunkt der Workspace-Zeitzone; unter einer Minute bleibt der Timer zur Korrektur bestehen, über 24 Stunden wird nicht automatisch gebucht. Ein Stopprezept verhindert auch nach späteren Änderungen oder Löschen der Zeitzeile doppelte Buchungen. Tageslimit 1.440 Minuten je Person und Workspace-Datum. Zeiten über mehrere Workspaces werden nicht zu einer gesetzlichen Höchstarbeitszeit verrechnet. Keine Rechnungen, Steuer-/Lohnabrechnung oder verbindlichen Compliance-Aussagen.
+Arbeitszeiten sind Minuten und enthalten keine rechtliche Arbeitszeitprüfung. Timer rechnen vergangene Sekunden und teilen am Mitternachtspunkt der Workspace-Zeitzone; unter einer Minute bleibt der Timer zur Korrektur bestehen, über 24 Stunden wird nicht automatisch gebucht. Ein Stopprezept verhindert auch nach späteren Änderungen oder Löschen der Zeitzeile doppelte Buchungen. Tageslimit 1.440 Minuten je Person und Workspace-Datum. Zeiten über mehrere Workspaces werden nicht zu einer gesetzlichen Höchstarbeitszeit verrechnet.
+
+Manager und Owner können Kunden, Kosten, Stundenbudgets und Rechnungen verwalten. Ausgestellte Rechnungen behalten unveränderliche Aussteller-/Kunden-/Positionsdaten und eine atomar vergebene Nummer; Korrekturen erfolgen als verknüpftes Stornodokument. PDF entsteht über die Druckfunktion des Browsers. Es gibt keinen automatischen Rechnungsversand, Zahlungsabgleich, E-Rechnungs-/Buchhaltungsanschluss oder Steuer-/Lohnabrechnung. Die Anwendung trifft keine verbindlichen Compliance-Aussagen. Steuerbehandlung und Unternehmensangaben müssen vor echten Rechnungen geprüft werden.
+
+Beim Anlegen eines Workspace ist eine leere Datenbasis voreingestellt. Die optionalen VAVE-Beispieldaten verwenden öffentliche Studio-/Projekt-/Führungsreferenzen mit Quellen; operative Zeiten und Finanzwerte sind ausdrücklich fiktiv. Öffentliche Personen werden nicht als Konten angelegt oder eingeladen. Demo-Rechnungen können auch per direktem API-Aufruf nicht ausgestellt werden. Der ursprüngliche Ersteller kann als Owner seinen markierten Demo-Workspace archivieren; echte Workspaces werden dadurch nicht verändert. Details und Quellen: [Demo und Finanzen](demo-and-finance.md), [Recherche](research/vave-public-research.md).
 
 Einzelne Datenlisten sind auf 1.000 Datensätze begrenzt. Überlauf wird ausdrücklich angezeigt, nicht unbemerkt abgeschnitten. Auswertungen nennen ihren Zeitraum; sie sind keine unbegrenzten historischen Projektkosten. Finanzwerte werden nicht über Währungen hinweg summiert.
 
@@ -53,7 +57,8 @@ Vor Echtbetrieb Restore-Test aus einer Sicherung in separatem Supabase-Projekt d
 3. Owner lädt Mitglied ein; Mitglied bucht, reicht ein; Leitung gibt frei; Bearbeitung danach gesperrt.
 4. Timer in zwei Tabs starten/stoppen; nur eine Buchung, Datum/Zeitzone korrekt.
 5. Echte GUI-Anmeldung, Passwortreset, OAuth-Zustimmung/-Ablehnung und Widerruf testen.
-6. Backup wiederherstellen; SMTP, HTTPS, Logs, Alarmierung und Zuständigkeit prüfen.
+6. Finanz-/Demo-Transaktionen mit `tests/live/agency-smoke.sql` prüfen (sämtliche synthetischen Daten werden zurückgerollt); Konkurrenzfälle zusätzlich mit mehreren Verbindungen testen.
+7. Backup wiederherstellen; SMTP, HTTPS, Logs, Alarmierung und Zuständigkeit prüfen.
 
 ## Quellen
 - https://supabase.com/docs/guides/auth/oauth-server/getting-started

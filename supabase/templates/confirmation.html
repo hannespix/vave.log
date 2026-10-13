@@ -1,4 +1,4 @@
-<!doctype html>
+{{ if and .Data (eq (printf "%s" .Data.locale) "de") }}<!doctype html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="x-apple-disable-message-reformatting"><meta name="color-scheme" content="light"><title>VAVE.LOG – Bestätige deine E-Mail-Adresse</title>
 <style>@media only screen and (max-width:480px){.email-pad{padding-left:24px!important;padding-right:24px!important}.email-title{font-size:28px!important;line-height:34px!important;overflow-wrap:anywhere}.email-outer{padding:16px 8px!important}}</style></head>
 <body style="margin:0;padding:0;width:100%;background:#f8f9f6;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
@@ -22,3 +22,52 @@
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr></table></body></html>
+{{ else if and .Data (eq (printf "%s" .Data.locale) "zh") }}<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="x-apple-disable-message-reformatting"><meta name="color-scheme" content="light"><title>VAVE.LOG – 确认你的电子邮箱</title>
+<style>@media only screen and (max-width:480px){.email-pad{padding-left:24px!important;padding-right:24px!important}.email-title{font-size:28px!important;line-height:34px!important;overflow-wrap:anywhere}.email-outer{padding:16px 8px!important}}</style></head>
+<body style="margin:0;padding:0;width:100%;background:#f8f9f6;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
+<div style="display:none;font-size:1px;line-height:1px;color:#f8f9f6;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">确认你用于 VAVE.LOG 的电子邮箱。</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8f9f6"><tr><td align="center" class="email-outer" style="padding:40px 12px;">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">你的账户</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">确认邮箱，<br>即可开始。</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">欢迎使用 VAVE.LOG。点击下方按钮确认你的电子邮箱，即可完成账户注册。</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">请尽量在创建账户时使用的同一浏览器中打开链接。</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">确认电子邮箱</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">此链接仅可使用一次，并在有限时间内有效。如果按钮无法使用，请将以下链接复制到浏览器中：<br><a href="{{ .ConfirmationURL }}" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">{{ .ConfirmationURL }}</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">你没有创建账户？请忽略此邮件。未经你的确认，注册不会完成。</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; 你的账户<br>这是一封有关你 VAVE.LOG 账户的自动通知。</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr></table></body></html>
+{{ else }}<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="x-apple-disable-message-reformatting"><meta name="color-scheme" content="light"><title>VAVE.LOG – Confirm your email address</title>
+<style>@media only screen and (max-width:480px){.email-pad{padding-left:24px!important;padding-right:24px!important}.email-title{font-size:28px!important;line-height:34px!important;overflow-wrap:anywhere}.email-outer{padding:16px 8px!important}}</style></head>
+<body style="margin:0;padding:0;width:100%;background:#f8f9f6;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%;">
+<div style="display:none;font-size:1px;line-height:1px;color:#f8f9f6;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">Confirm your email address for VAVE.LOG.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8f9f6"><tr><td align="center" class="email-outer" style="padding:40px 12px;">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
+<tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
+<div aria-label="VAVE.LOG" style="font-family:Arial,Helvetica,sans-serif;font-size:32px;line-height:38px;letter-spacing:-2px;color:#1b1b1b;"><strong style="font-weight:800;">VAVE</strong><span style="font-weight:400;color:#641dff;">.LOG</span></div>
+</td></tr>
+<tr><td class="email-pad" style="padding:36px;font-family:Arial,Helvetica,sans-serif;">
+<p style="margin:0 0 16px;font-size:11px;font-weight:bold;line-height:18px;letter-spacing:2px;color:#641dff;">YOUR ACCOUNT</p>
+<h1 class="email-title" style="margin:0 0 24px;font-size:32px;font-weight:600;line-height:38px;letter-spacing:-1px;color:#1b1b1b;">One confirmation.<br>Then you’re ready.</h1>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Welcome to VAVE.LOG. Confirm your email address with one click to finish creating your account.</p>
+<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">Open the link in the same browser you used to create your account, if possible.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">Confirm email address</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">This link can only be used once and is valid for a limited time. If the button does not work, copy this link into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">{{ .ConfirmationURL }}</a></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#f8f9f6" style="padding:18px 20px;border-left:3px solid #641dff;background:#f8f9f6;color:#5f655a;font-size:13px;line-height:21px;">Did not create an account? Ignore this message. Your registration will not be completed without your confirmation.</td></tr></table>
+</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;border-top:1px solid #e7e8e3;color:#5f655a;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:20px;">VAVE.LOG &middot; Your account<br>Automated message about your VAVE.LOG account.</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr></table></body></html>
+{{ end }}
