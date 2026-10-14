@@ -9,6 +9,37 @@ export function minutesLabel(minutes: number, locale: Locale = getLocale()) { co
 export function fold(text: string) { return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('ß', 'ss').toLowerCase(); }
 export function dateInZone(timezone: string, date = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
 export function addDays(iso: string, days: number) { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
+/** Werktage Mo–Fr im inklusiven Bereich (Feiertage zählen als Werktag — die pflegt das Team als Abwesenheit der Art „Feiertag"). */
+export function countWorkdays(from: string, to: string) {
+  let count = 0;
+  for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) count++; }
+  return count;
+}
+export interface MemberUtilization { capacityMinutes: number | null; absenceWorkdays: number; expectedMinutes: number | null; actualMinutes: number; billableMinutes: number }
+/** Soll je Person = Kapazität/5 je Werktag im Zeitraum, abzüglich Abwesenheits-Werktagen (tagesgenau dedupliziert — überlappende Einträge zählen einfach). Kapazität null heißt Soll unbekannt, nie 0. */
+export function utilization(members: Membership[], entries: TimeEntry[], absences: { user_id: string; starts_on: string; ends_on: string }[], range: { from: string; to: string }) {
+  const workdays = countWorkdays(range.from, range.to);
+  const result = new Map<string, MemberUtilization>();
+  for (const member of members) {
+    if (member.role === 'disabled') continue;
+    const days = new Set<string>();
+    for (const absence of absences) {
+      if (absence.user_id !== member.user_id) continue;
+      const from = absence.starts_on < range.from ? range.from : absence.starts_on, to = absence.ends_on > range.to ? range.to : absence.ends_on;
+      for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) days.add(day); }
+    }
+    const capacity = member.weekly_capacity_minutes ?? null;
+    const own = entries.filter(entry => entry.user_id === member.user_id);
+    result.set(member.user_id, {
+      capacityMinutes: capacity,
+      absenceWorkdays: days.size,
+      expectedMinutes: capacity == null ? null : Math.round(Math.max(0, workdays - days.size) * capacity / 5),
+      actualMinutes: own.reduce((total, entry) => total + entry.minutes, 0),
+      billableMinutes: own.filter(entry => entry.billable).reduce((total, entry) => total + entry.minutes, 0),
+    });
+  }
+  return result;
+}
 export function weekFor(iso: string) { const day = new Date(`${iso}T12:00:00Z`).getUTCDay(); const from = addDays(iso, -(day === 0 ? 6 : day - 1)); return { from, to: addDays(from, 6) }; }
 export function validRange(from: string, to: string) { const valid = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && s >= '2000-01-01' && s <= '2100-12-31' && Number.isFinite(Date.parse(s)) && new Date(s).toISOString().slice(0, 10) === s; if (!valid(from) || !valid(to)) return false; const a = Date.parse(from), b = Date.parse(to); return b >= a && b - a <= 365 * 86400000; }
 function calendarDate(iso: string): Date | null {
