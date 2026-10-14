@@ -142,7 +142,7 @@ function ClientEditor({
   );
 }
 export function Company() {
-  const { data, workspace, role, t, service, run, busy } = useFinance(),
+  const { data, workspace, role, t, service, run, busy, isDemo } = useFinance(),
     profile = data.profile;
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -163,7 +163,7 @@ export function Company() {
   return (
     <div className="finance-company">
       <Section title="company">
-        <p className="muted">{t("profileHint")}</p>
+        <p className="muted">{t(isDemo ? "demoProfileHint" : "profileHint")}</p>
         {role !== "owner" && <Notice kind="info">{t("ownerOnly")}</Notice>}
         <form className="form-stack" onSubmit={submit}>
           <fieldset

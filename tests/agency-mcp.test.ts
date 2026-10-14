@@ -4,14 +4,24 @@ import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/st
 import {createHttpHandler} from '../src/server/http.js';
 import {AppError,type Service} from '../src/shared/service.js';
 import type {FinanceService} from '../src/shared/finance-service.js';
+import type {DemoService} from '../src/shared/demo-service.js';
 const id='11111111-1111-4111-8111-111111111111';
 const config={supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_publishable_test',appUrl:'https://log.example.com',configured:true};
-async function connect(finance:Partial<FinanceService>,locale='en',service:Partial<Service>={}){
- const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service,finance:finance as FinanceService})});
+async function connect(finance:Partial<FinanceService>,locale='en',service:Partial<Service>={},demo?:Partial<DemoService>){
+ const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service,finance:finance as FinanceService,...(demo?{demo:demo as DemoService}:{})})});
  const transport=new StreamableHTTPClientTransport(new URL(config.appUrl+'/api/mcp'),{requestInit:{headers:{Authorization:'Bearer test-token','Accept-Language':locale}},fetch:async(input,init)=>handler(new Request(input,init))});
  const client=new Client({name:'agency-test',version:'1.0.0'});await client.connect(transport);return client;
 }
 describe('agency MCP wire contract',()=>{
+ it('exposes complete demo enrichment with strict input and the same scoped service',async()=>{
+  const upgrade=vi.fn(async()=>{});const c=await connect({},'en',{}, {upgrade});
+  try{const {tools}=await c.listTools();expect(tools).toHaveLength(44);
+   expect(tools.find(t=>t.name==='demo_upgrade_workspace')?.annotations).toMatchObject({readOnlyHint:false,idempotentHint:true});
+   expect(tools.find(t=>t.name==='demo_create_workspace')?.description).toContain('non-login');
+   const ok=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id}});expect(ok.isError).not.toBe(true);expect(upgrade).toHaveBeenCalledWith(id);
+   const denied=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id,is_demo:false}});expect(denied.isError).toBe(true);expect(upgrade).toHaveBeenCalledTimes(1);
+  }finally{await c.close()}
+ });
  it('offers financial tools with reviewable effect annotations',async()=>{
   const c=await connect({});try{const {tools}=await c.listTools();
    expect(tools.find(t=>t.name==='finance_overview')?.annotations?.readOnlyHint).toBe(true);

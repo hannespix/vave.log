@@ -37,6 +37,11 @@ export function createDemoService(client:SupabaseClient) {
       const {data,error}=await client.from('workspace_demos').select('*').eq('workspace_id',id).maybeSingle();
       fail(error); return data as DemoWorkspace|null;
     },
+    async upgrade(workspaceId:string):Promise<void> {
+      const id=parse(uuid,workspaceId);
+      const {error}=await client.rpc('demo_upgrade_workspace',{p_workspace_id:id});
+      fail(error);
+    },
     async archive(workspaceId:string):Promise<void> {
       const id=parse(uuid,workspaceId);
       const {error}=await client.rpc('demo_archive_workspace',{p_workspace_id:id});

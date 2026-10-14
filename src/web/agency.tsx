@@ -13,17 +13,20 @@ const copy={
  empty:['Start empty','Leer starten','从空白开始'],
  emptyNote:['Your own projects, people and plans.','Eigene Projekte, Menschen und Planungen.','创建自己的项目、团队与计划。'],
  demo:['Explore with VAVE examples','Mit VAVE-Beispielen erkunden','探索 VAVE 示例'],
- demoNote:['8 projects, 8 studios and 6 public profiles. Try fictional hours and budgets in a separate EUR workspace.','8 Projekte, 8 Studios und 6 öffentliche Profile. Erprobe erfundene Stunden und Budgets in einem eigenen EUR-Workspace.','8 个项目、8 间工作室及 6 位公开人物资料。在独立的欧元工作区体验虚构的工时和预算。'],
+ demoNote:['A complete sample agency: people, projects, tasks, time, costs and invoices in a separate EUR workspace.','Eine komplette Beispielagentur: Menschen, Projekte, Aufgaben, Zeiten, Kosten und Rechnungen in einem eigenen EUR-Workspace.','完整的示例工作室：在独立的欧元工作区探索团队、项目、任务、工时、成本及发票。'],
  demoBadge:['DEMO WORKSPACE','DEMO-WORKSPACE','示例工作区'],
- disclosure:['Public VAVE portfolio references. All hours, costs, budgets, dates and invoice drafts here are fictional. Invoice finalization is disabled.','Öffentliche VAVE-Referenzen. Alle Stunden, Kosten, Budgets, Planungstermine und Rechnungsentwürfe hier sind erfunden. Rechnungsfreigabe ist gesperrt.','引用 VAVE 公开作品资料。此处所有工时、成本、预算、计划日期及发票草稿均为虚构，无法正式开具发票。'],
- sources:['Explore the public sources','Öffentliche Quellen erkunden','浏览公开来源'],
- source:['Official source','Offizielle Quelle','官方来源'],
- research:['Research date','Recherchestand','研究日期'],
- studios:['Studios','Studios','工作室'],
- projects:['Portfolio projects & clients','Portfolioprojekte & Kunden','作品项目与客户'],
- people:['Public leadership profiles','Öffentliche Führungsprofile','公开管理团队资料'],
- peopleNote:['These are source references, not workspace members. Public credits do not establish employment type, salary or availability.','Dies sind Quellenprofile, keine Workspace-Mitglieder. Öffentliche Nennungen belegen keine Anstellungsart, Gehälter oder Verfügbarkeit.','这些是公开资料，并非工作区成员。公开署名不能证明雇佣类型、薪资或当前可用时间。'],
- historical:['Years refer to the published portfolio, not this fictional planning period. Client labels are not verified billing entities.','Jahre beziehen sich auf das veröffentlichte Portfolio, nicht auf den erfundenen Planungszeitraum. Kundennamen sind keine geprüften Rechnungsadressen.','年份来自公开作品资料，与虚构计划期间无关。客户名称不代表已核实的开票实体。'],
+ disclosure:['Explore a sample agency with team, projects, time, planning and invoices. Names include public VAVE credits and invented people; all operating and billing data is fictional. Sample people have no login. DEMO invoices are not for payment.','Erkunde eine Beispielagentur mit Team, Projekten, Zeiten, Planung und Rechnungen. Namen stammen aus öffentlichen VAVE-Projektcredits oder sind erfunden; alle Arbeits- und Rechnungsdaten sind fiktiv. Beispielpersonen haben keinen Login. DEMO-Rechnungen sind nicht zur Zahlung bestimmt.','探索包含团队、项目、工时、规划及发票的示例工作室。姓名来自 VAVE 公开项目署名或虚构人物；所有工作及账单数据均为虚构。示例人物无法登录，DEMO 发票无需付款。'],
+ completeDemo:['Complete demo','Demo vervollständigen','补全示例'],
+ completeDemoNote:['Add the full sample team, planning and invoice scenarios. Your existing work is kept.','Ergänze das vollständige Beispielteam, Planung und Rechnungsszenarien. Deine vorhandenen Daten bleiben erhalten.','添加完整的示例团队、规划及发票场景，并保留你已有的工作。'],
+ demoCompleted:['The full demo agency is ready.','Die vollständige Demo-Agentur ist bereit.','完整的示例工作室已准备就绪。'],
+ samplePerson:['DEMO','DEMO','示例'],
+ samplePublic:['Public project credit','Öffentlicher Projektcredit','公开项目署名'],
+ sampleProfile:['Sample profile','Beispielprofil','示例资料'],
+ sampleFictional:['Fictional person','Erfundene Person','虚构人物'],
+ realAccount:['Real account','Konto mit Anmeldung','登录账户'],
+ sampleAccess:['Sample profile · no login','Beispielprofil · kein Login','示例资料 · 无法登录'],
+ teamIdentity:['Profile / email','Profil / E-Mail','资料 / 邮箱'],
+ samplePeopleNote:['DEMO profiles support sample tasks, time and planning. Public credits are historical context, not current employment claims. All rates and availability are fictional.','DEMO-Profile dienen beispielhaften Aufgaben, Zeiten und Planungen. Öffentliche Credits sind historischer Kontext und keine Aussage zur aktuellen Beschäftigung. Alle Sätze und Verfügbarkeiten sind erfunden.','DEMO 资料用于示例任务、工时及规划。公开署名仅提供历史背景，不代表当前雇佣关系。所有费率及可用时间均为虚构。'],
  archive:['Archive demo','Demo archivieren','归档示例'],
  archiveTitle:['Archive this demo workspace?','Diesen Demo-Workspace archivieren?','归档此示例工作区？'],
  archiveText:['This demo will disappear from workspace lists for everyone. Its records are retained; other workspaces are unaffected. Stop or discard any running timer first.','Diese Demo verschwindet für alle aus der Workspace-Auswahl. Ihre Daten bleiben erhalten; andere Workspaces sind nicht betroffen. Laufende Timer bitte zuerst stoppen oder verwerfen.','此示例将从所有人的工作区列表中隐藏，数据仍会保留，其他工作区不受影响。请先停止或放弃正在运行的计时。'],
@@ -45,13 +48,10 @@ export function DemoChoice({value,onChange,disabled=false}:{value:WorkspaceStart
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
  return <fieldset className="demo-choice" disabled={disabled}><legend>{t('start')}</legend>{(['empty','demo'] as const).map(kind=><label key={kind} className={value===kind?'selected':''}><input type="radio" name="workspace-start" value={kind} checked={value===kind} onChange={()=>onChange(kind)}/><span><strong>{t(kind)}</strong><small>{t(kind==='empty'?'emptyNote':'demoNote')}</small></span></label>)}</fieldset>;
 }
-function Source({url,label}:{url:string;label:string}){
- let safe=false;try{const parsed=new URL(url);safe=parsed.protocol==='https:'&&parsed.hostname==='www.vave.studio'&&!parsed.username&&!parsed.password}catch{/* Unknown provenance remains text. */}
- return safe?<a href={url} target="_blank" rel="noopener noreferrer">{label} ↗</a>:<span>{label}</span>;
-}
-export function DemoBanner({demo,canArchive,onArchive,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;busy:boolean}){
- const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);const facts=demo.manifest;
- return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p></div>{canArchive&&<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button>}</div><details className="demo-research"><summary>{t('sources')}</summary><p className="tiny muted">{t('research')}: {facts.researched_at}</p><h3>{t('studios')}</h3><div className="demo-reference-grid">{facts.studios.map(studio=><article key={studio.id}><strong>{studio.name}</strong><p>{studio.city} · {Object.hasOwn(copy,studio.country)?agencyText(locale,studio.country as keyof typeof copy):studio.country}</p><Source url={studio.source_url} label={t('source')}/></article>)}</div><h3>{t('projects')}</h3><p>{t('historical')}</p><div className="demo-reference-grid">{facts.projects.map(project=><article key={project.code}><strong>{project.name}</strong><p>{project.client} · {project.year}</p><small>{project.location}</small><Source url={project.source_url} label={t('source')}/></article>)}</div><h3>{t('people')}</h3><p>{t('peopleNote')}</p><div className="demo-reference-grid">{facts.people.map(person=><article key={person.name}><strong>{person.name}</strong><p>{Object.hasOwn(copy,person.role)?agencyText(locale,person.role as keyof typeof copy):person.role}</p><Source url={person.source_url} label={t('source')}/></article>)}</div></details></aside>;
+export function DemoBanner({demo,canArchive,onArchive,onUpgrade,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onUpgrade:()=>void;busy:boolean}){
+ const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
+ const incomplete=(demo.experience_version??1)<2;
+ return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{incomplete&&canArchive&&<p>{t('completeDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{incomplete&&<button className="button primary small" disabled={busy} onClick={onUpgrade}>{t('completeDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
 }
 export function Connections({tasks,projects,manager}:{tasks:Task[];projects:Project[];manager:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);

@@ -22,12 +22,13 @@ import {
   displayDate,
   downloadText,
   invoiceCsv,
+  isDemoInvoice,
   minorInput,
   money,
   printInvoice,
 } from "./documents";
 export function Invoices() {
-  const { data, t, locale, workspace } = useFinance(),
+  const { data, t, locale, workspace, isDemo } = useFinance(),
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
     [selected, setSelected] = useState("");
   const invoice = data.invoices.find((i) => i.id === selected);
@@ -90,6 +91,7 @@ export function Invoices() {
                       <small className="mono finance-id">
                         {invoice.id.slice(0, 8)}
                       </small>
+                      {isDemoInvoice(invoice, { isDemo }) && <small>{t("demoMark")}</small>}
                     </td>
                     <td>
                       {invoice.customer_snapshot?.name ||
@@ -158,6 +160,7 @@ function InvoiceDetail({
   const { data, locale, workspace, t, run, service, busy, isDemo } =
       useFinance(),
     [confirm, setConfirm] = useState<"issue" | "cancel" | "paid" | null>(null);
+  const demo = isDemoInvoice(invoice, { isDemo });
   const draft = invoice.status === "draft",
     customer = draft
       ? data.clients.find((c) => c.id === invoice.client_id)
@@ -166,7 +169,6 @@ function InvoiceDetail({
   function action(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (confirm === "issue" && isDemo) return;
     void run(
       async () => {
         if (confirm === "issue")
@@ -195,6 +197,7 @@ function InvoiceDetail({
               printInvoice(invoice, {
                 profile: data.profile,
                 customer: data.clients.find((c) => c.id === invoice.client_id),
+                isDemo,
               })
             }
           >
@@ -206,7 +209,7 @@ function InvoiceDetail({
             onClick={() =>
               downloadText(
                 `invoice-${invoice.number || invoice.id}.csv`,
-                invoiceCsv(invoice),
+                invoiceCsv(invoice, { isDemo }),
               )
             }
           >
@@ -216,6 +219,7 @@ function InvoiceDetail({
         </div>
       }
     >
+      {demo && <Notice kind="info">{t("demoMark")}</Notice>}
       {draft && <div className="finance-draft-banner">{t("draftMark")}</div>}
       <div className="finance-invoice-header">
         <div>
@@ -368,11 +372,10 @@ function InvoiceDetail({
             </button>
             <button
               className="button primary"
-              disabled={busy || isDemo}
-              title={isDemo ? t("demoNote") : undefined}
+              disabled={busy}
               onClick={() => setConfirm("issue")}
             >
-              {t("issue")}
+              {t(demo ? "demoIssue" : "issue")}
             </button>
           </>
         ) : invoice.status === "issued" && !invoice.cancellation_id ? (
@@ -398,7 +401,7 @@ function InvoiceDetail({
         <Dialog
           title={t(
             confirm === "issue"
-              ? "issue"
+              ? demo ? "demoIssue" : "issue"
               : confirm === "cancel"
                 ? "cancelInvoice"
                 : invoice.paid
@@ -412,10 +415,10 @@ function InvoiceDetail({
             <p>
               {t(
                 confirm === "issue"
-                  ? "issueConfirm"
+                  ? demo ? "demoIssueConfirm" : "issueConfirm"
                   : confirm === "cancel"
-                    ? "cancellationConfirm"
-                    : "paymentConfirm",
+                    ? demo ? "demoCancellationConfirm" : "cancellationConfirm"
+                    : demo ? "demoPaymentConfirm" : "paymentConfirm",
               )}
             </p>
             <strong>
@@ -435,7 +438,7 @@ function InvoiceDetail({
               </Field>
             )}
             <Actions
-              label={confirm === "issue" ? "issue" : "continue"}
+              label={confirm === "issue" ? demo ? "demoIssue" : "issue" : "continue"}
               onClose={() => setConfirm(null)}
             />
           </form>
@@ -463,7 +466,7 @@ function DraftEditor({
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
-  const { t, data, workspace, locale, range, service, run, busy } =
+  const { t, data, workspace, locale, range, service, run, busy, isDemo } =
       useFinance(),
     id = useRef(invoice?.id || crypto.randomUUID()),
     [clientId, setClientId] = useState(
@@ -550,6 +553,7 @@ function DraftEditor({
   return (
     <Dialog title={t("draft")} onClose={onClose} busy={busy}>
       <form className="form-stack finance-draft-form" onSubmit={submit}>
+        {(invoice ? isDemoInvoice(invoice, { isDemo }) : isDemo) && <Notice kind="info">{t("demoMark")}</Notice>}
         <div className="finance-draft-banner">{t("draftMark")}</div>
         <div className="form-grid">
           <ClientSelect
@@ -732,7 +736,7 @@ function TimeDraft({
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
-  const { t, data, workspace, locale, range, service, run, busy, projects } =
+  const { t, data, workspace, locale, range, service, run, busy, projects, isDemo } =
       useFinance(),
     [tax, setTax] = useState(""),
     [language, setLanguage] = useState<InvoiceLanguage>(
@@ -761,6 +765,7 @@ function TimeDraft({
   return (
     <Dialog title={t("timeInvoice")} onClose={onClose} busy={busy}>
       <form className="form-stack" onSubmit={submit}>
+        {isDemo && <Notice kind="info">{t("demoMark")}</Notice>}
         <Notice kind="info">{t("timeHint")}</Notice>
         <ProjectSelect value={projects[0]?.id} />
         <ClientSelect

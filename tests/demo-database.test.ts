@@ -46,48 +46,38 @@ beforeEach(async()=>{await db.exec('begin');await login(owner)});
 afterEach(async()=>{await db.exec('rollback')});
 
 describe('researched demo workspaces',()=>{
-  it('creates one complete owned EUR workspace with factual provenance and fictional draft activity',async()=>{
+  it('creates a complete owned EUR workspace with exact provenance and fictional operations',async()=>{
     await expect(create()).resolves.toMatchObject({name:'VAVE demo',currency:'EUR',created_by:owner,timezone:'Europe/Berlin'});
     const w=await one<{id:string}>('select id from public.workspaces');
-    expect(await rows('select role,user_id from public.memberships')).toEqual([{role:'owner',user_id:owner}]);
-    expect(await rows('select * from public.projects where workspace_id=$1',[w.id])).toHaveLength(8);
-    expect(await rows('select * from public.tasks where workspace_id=$1',[w.id])).toHaveLength(24);
-    expect(await rows('select * from public.finance_clients where workspace_id=$1',[w.id])).toHaveLength(8);
-    expect(await rows('select * from public.finance_project_plans where workspace_id=$1',[w.id])).toHaveLength(8);
-    expect(await rows('select * from public.finance_expenses where workspace_id=$1',[w.id])).toHaveLength(8);
-    expect(await rows('select * from public.finance_staff_rates')).toEqual([]);
+    expect(await rows('select role,user_id from public.memberships where not is_demo')).toEqual([{role:'owner',user_id:owner}]);
+    for(const [table,count] of [['projects',13],['tasks',66],['finance_clients',13],['finance_project_plans',13],['finance_expenses',28],['finance_staff_rates',58],['time_entries',353],['finance_invoices',7]] as const)
+      expect(await rows(`select * from public.${table} where workspace_id=$1`,[w.id])).toHaveLength(count);
     expect(await rows('select * from public.invitations')).toEqual([]);
-    expect(await rows("select * from public.time_entries where workspace_id=$1 and (user_id<>$2 or status<>'draft' or work_date<date_trunc('week',now() at time zone 'Europe/Berlin')::date or work_date>=date_trunc('week',now() at time zone 'Europe/Berlin')::date+7)",[w.id,owner])).toEqual([]);
-    expect(await rows('select * from public.time_entries where workspace_id=$1',[w.id])).toHaveLength(8);
-    expect(await rows("select l from public.finance_project_plans p,jsonb_array_elements(p.lines) l where l->>'user_id' is not null")).toEqual([]);
-    const d=await one<{manifest:any;manifest_version:string;locale:string;archived_at:null}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
-    expect(d.manifest.version).toBe(d.manifest_version);
-    expect(d.manifest).toEqual(DEMO_MANIFEST);
-    expect(d.manifest.projects).toHaveLength(8); expect(d.manifest.people).toHaveLength(6); expect(d.manifest.studios).toHaveLength(8);
-    expect(d.manifest.disclosure.en).toMatch(/fictional/i);
+    const d=await one<{manifest:any;manifest_version:string;locale:string;archived_at:null;experience_version:number}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
+    expect(d.manifest.version).toBe(d.manifest_version);expect(d.manifest).toEqual(DEMO_MANIFEST);
+    expect(d.manifest.projects).toHaveLength(8);expect(d.manifest.people).toHaveLength(57);expect(d.manifest.studios).toHaveLength(8);
+    expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(2);
     expect(d.manifest.projects.every((p:any)=>p.source_url.startsWith('https://www.vave.studio/project/'))).toBe(true);
-    expect(d.archived_at).toBeNull(); expect(d.locale).toBe('en');
-    const invoice=await one<{status:string;number:null;issuer_snapshot:null;customer_snapshot:null}>('select * from public.finance_invoices where workspace_id=$1',[w.id]);
-    expect(invoice).toMatchObject({status:'draft',number:null,issuer_snapshot:null,customer_snapshot:null});
-    expect(await rows("select * from public.finance_clients where billing_address<>'' or tax_id<>'' or contact_email<>''")).toEqual([]);
-    expect(await rows("select * from public.finance_billing_profiles where legal_name<>'' or billing_address<>'' or tax_id<>'' or payment_details<>''")).toEqual([]);
-    await db.exec('reset role'); expect(await rows('select * from auth.users')).toHaveLength(4);
+    expect(d.archived_at).toBeNull();expect(d.locale).toBe('en');
+    expect(await rows("select * from public.finance_clients where contact_email<>'' and contact_email not like '%@example.invalid'")).toEqual([]);
+    expect((await one('select legal_name from public.finance_billing_profiles')).legal_name).toMatch(/fictional/);
+    await db.exec('reset role');expect(await rows('select * from auth.users')).toHaveLength(4);
   });
 
   it('returns the original workspace on retry without duplicating or overwriting sample records',async()=>{
     const first=await create(),retry=await create('de',requestId,'Changed name','UTC');
     expect(retry).toEqual(first);
     expect(await rows('select * from public.workspaces')).toHaveLength(1);
-    expect(await rows('select * from public.projects')).toHaveLength(8);
-    expect(await rows('select * from public.time_entries')).toHaveLength(8);
-    expect(await rows('select * from public.finance_invoices')).toHaveLength(1);
+    expect(await rows('select * from public.projects')).toHaveLength(13);
+    expect(await rows('select * from public.time_entries')).toHaveLength(353);
+    expect(await rows('select * from public.finance_invoices')).toHaveLength(7);
   });
 
   it.each(['de','zh'])('uses %s labels while preserving original public project names',async(locale)=>{
     const w=await create(locale);
     const metadata=await one<{manifest:any;locale:string}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
     expect(metadata.locale).toBe(locale);
-    expect((await rows<{title:string}>('select distinct title from public.tasks')).map(x=>x.title).sort()).toEqual(metadata.manifest.phases.map((x:any)=>x[locale]).sort());
+    expect((await rows<{title:string}>('select distinct title from public.tasks')).map(x=>x.title).sort()).toEqual(expect.arrayContaining(metadata.manifest.phases.map((x:any)=>x[locale])));
     expect(await rows("select * from public.projects where name='MY MUSEUM'")).toHaveLength(1);
     expect((await one('select language from public.finance_invoices')).language).toBe(locale);
   });
@@ -127,14 +117,12 @@ describe('researched demo workspaces',()=>{
     await login(other); expect(await rows('select * from public.workspace_demos')).toEqual([]);
   });
 
-  it('blocks issuing even after a demo owner completes valid billing configuration',async()=>{
+  it('issues demo documents while ignoring a user-selected real invoice prefix',async()=>{
     const w=await create();
-    const invoice=await one<{id:string}>('select id from public.finance_invoices');
-    await db.query("insert into public.finance_billing_profiles(workspace_id,legal_name,billing_address,tax_id) values($1,'Fictional Issuer','Fictional address','DEMO') on conflict(workspace_id) do update set legal_name=excluded.legal_name,billing_address=excluded.billing_address,tax_id=excluded.tax_id",[w.id]);
-    await db.exec("update public.finance_clients set billing_address='Fictional address'");
-    await expect(attempt('select public.finance_issue_invoice($1,$2)',[w.id,invoice.id])).rejects.toThrow(/FINANCE_CONFLICT/);
-    expect((await one('select status,number from public.finance_invoices')).number).toBeNull();
-    await db.exec('reset role'); expect(await rows('select * from private.finance_number_counters')).toEqual([]);
+    const invoice=await one<{id:string}>("select id from public.finance_invoices where status='draft' limit 1");
+    await db.query("update public.finance_billing_profiles set invoice_prefix='INV' where workspace_id=$1",[w.id]);
+    const issued=(await one<{v:{number:string;is_demo:boolean}}>('select public.finance_issue_invoice($1,$2) v',[w.id,invoice.id])).v;
+    expect(issued.number).toMatch(/^DEMO-/);expect(issued.is_demo).toBe(true);
   });
 
   it('archives only demos created by the current, still active owner and can be retried',async()=>{
@@ -172,9 +160,9 @@ describe('researched demo workspaces',()=>{
     await expect(attempt("insert into public.projects(workspace_id,code,name) values($1,'BAD','Hidden write')",[w.id])).rejects.toThrow();
     await expect(attempt('select public.finance_list_invoices($1)',[w.id])).rejects.toThrow(/FINANCE_FORBIDDEN/);
     await db.exec('reset role');
-    expect(await rows('select * from public.time_entries where workspace_id=$1',[w.id])).toHaveLength(8);
+    expect(await rows('select * from public.time_entries where workspace_id=$1',[w.id])).toHaveLength(353);
     expect(await rows("select * from public.time_entries where id=$1 and status='approved'",[entry.id])).toHaveLength(1);
-    expect(await rows('select * from public.finance_invoices where workspace_id=$1',[w.id])).toHaveLength(1);
+    expect(await rows('select * from public.finance_invoices where workspace_id=$1',[w.id])).toHaveLength(7);
     expect(await rows("select * from public.memberships where workspace_id=$1 and role='owner'",[w.id])).toHaveLength(1);
     expect((await one('select archived_at from public.workspace_demos where workspace_id=$1',[w.id])).archived_at).not.toBeNull();
   });
