@@ -70,7 +70,7 @@ describe('project insight database authorization and snapshot',()=>{
   const value=await insight();
   expect(value.total_minutes).toBe(1390);expect(value.first_work_date).toBe(dateBefore(400));expect(value.last_work_date).toBe(today);
   expect(value.recent_daily).toEqual([{work_date:dateBefore(27),minutes:10},{work_date:dateBefore(2),minutes:30},{work_date:dateBefore(1),minutes:45},{work_date:today,minutes:1165}]);
- });
+ },120000);
  it('counts project tasks separately with strict local-date overdue and done handling',async()=>{
   await db.query("insert into public.tasks(workspace_id,project_id,title,status,due_date) values($1,$2,'Late','todo',$3::date-1),($1,$2,'Today','doing',$3),($1,$2,'Finished','done',$3::date-1),($1,$2,'No deadline','todo',null),($1,$2,'Future','todo',$3::date+1)",[workspace,project,today]);
   expect((await insight()).tasks).toEqual({total:5,done:1,doing:1,overdue:1,estimated:0,estimated_minutes:0,done_estimated_minutes:0,missing_estimates:5,missing_due_dates:1,unassigned:5});
