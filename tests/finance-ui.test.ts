@@ -5,6 +5,8 @@ import { FinanceArea } from "../src/web/finance";
 import { financeError, ft } from "../src/web/finance/catalog";
 import { FinanceContext, type FinanceContextValue } from "../src/web/finance/context";
 import { Overview } from "../src/web/finance/overview";
+import { Planning } from "../src/web/finance/planning";
+import { DraftEditor, Invoices, TimeDraft } from "../src/web/finance/invoices";
 import { summarizeInvoices } from "../src/web/finance/invoice-summary";
 import { describe, expect, it } from "vitest";
 import {
@@ -392,5 +394,114 @@ describe("invoice payment scope labels", () => {
   ] as const)("labels paid and open as status snapshots in %s", (locale, label) => {
     const html = overviewHtml(overviewContext(summaryInvoices, locale));
     expect(html.split(`<small>EUR · ${label}</small>`)).toHaveLength(3);
+  });
+});
+
+describe("connected finance project scope", () => {
+  function context(projectId: string, locale: FinanceContextValue["locale"] = "en") {
+    const value = overviewContext([
+      { ...invoice, id: "invoice-alpha", number: "INV-ALPHA", project_id: "p1", net_minor: 12000 },
+      { ...invoice, id: "invoice-beta", number: "INV-BETA", project_id: "p2", net_minor: 34000 },
+      { ...invoice, id: "invoice-unassigned", number: "INV-UNASSIGNED", project_id: null, net_minor: 56000 },
+    ], locale);
+    value.projects = ["p1", "p2"].map((id, index) => ({
+      id, workspace_id: "w", code: id, name: index ? "Beta" : "Alpha",
+      client: "", budget_minutes: 0, status: "active", color: "", created_at: "",
+    }));
+    value.data.clients = [customer];
+    value.data.overview.projects = value.projects.map((project, index) => ({
+      project_id: project.id, billing_mode: "hourly", planned_minutes: 60,
+      actual_minutes: 30, billable_minutes: 30, remaining_minutes: 30,
+      planned_revenue_minor: index ? 34000 : 12000, planned_labor_cost_minor: 0,
+      planned_cost_minor: 0, planned_margin_minor: 0, actual_labor_cost_minor: 0,
+      actual_expenses_minor: 0, actual_cost_minor: 0, actual_billable_value_minor: 0,
+      forecast_cost_minor: 0, forecast_margin_minor: 0, missing_cost_entries: 0,
+      missing_bill_entries: 0, missing_estimate_costs: 0,
+    }));
+    value.data.plans = value.projects.map((project, index) => ({
+      workspace_id: "w", project_id: project.id, client_id: "c", billing_mode: "hourly",
+      default_bill_rate_minor: null, fixed_fee_minor: index ? 34000 : 12000,
+      planned_expenses_minor: 0, created_at: "", lines: [],
+    }));
+    value.data.expenses = value.projects.map((project, index) => ({
+      id: `expense-${project.id}`, workspace_id: "w", project_id: project.id,
+      expense_date: "2026-10-01", description: index ? "Beta expense" : "Alpha expense",
+      amount_minor: 100, category: "other", not_time_costed: true, created_at: "",
+    }));
+    return { ...value, projectId, setProjectId: () => {}, navigate: () => {} } as FinanceContextValue;
+  }
+  function html(component: typeof Overview | typeof Planning | typeof Invoices, value: FinanceContextValue) {
+    return renderToStaticMarkup(createElement(FinanceContext.Provider, { value }, createElement(component)));
+  }
+  it("applies the same selected project to overview totals, planning and invoice rows", () => {
+    const value = context("p2");
+    const overview = html(Overview, value);
+    expect(overview).toContain("<span>Invoiced net</span><strong>€340.00</strong>");
+    expect(overview).toContain("<span>Project plan volume</span><strong>€340.00</strong>");
+    const planning = html(Planning, value);
+    expect(planning).toContain('name="fixed_fee_minor"');
+    expect(planning).toContain('value="340.00"');
+    expect(planning).toContain("Beta expense");
+    expect(planning).not.toContain("Alpha expense");
+    const invoices = html(Invoices, value);
+    expect(invoices).toContain("INV-BETA");
+    expect(invoices).not.toContain("INV-ALPHA");
+    expect(invoices).not.toContain("INV-UNASSIGNED");
+  });
+  it("keeps all projects explicit, including unassigned invoices, without choosing a planning editor", () => {
+    const value = context("");
+    expect(html(Overview, value)).toContain("<span>Invoiced net</span><strong>€1,020.00</strong>");
+    expect(html(Invoices, value)).toContain("INV-UNASSIGNED");
+    expect(html(Planning, value)).not.toContain('name="fixed_fee_minor"');
+  });
+  it("never broadens an unavailable project into all projects or a first-project plan", () => {
+    const value = context("missing-project");
+    const overview = html(Overview, value);
+    expect(overview).toContain("<span>Invoiced net</span><strong>€0.00</strong>");
+    expect(overview).toContain("Project unavailable");
+    expect(html(Invoices, value)).not.toContain("INV-ALPHA");
+    expect(html(Invoices, value)).not.toContain("INV-BETA");
+    expect(html(Planning, value)).not.toContain('name="fixed_fee_minor"');
+    expect(html(Planning, value)).not.toContain("Alpha expense");
+  });
+  it("rejects a foreign project even when stale data contains its matching ID", () => {
+    const value = context("p2");
+    value.projects[1].workspace_id = "another-workspace";
+    expect(html(Overview, value)).toContain("<span>Invoiced net</span><strong>€0.00</strong>");
+    expect(html(Invoices, value)).not.toContain("INV-BETA");
+    expect(html(Planning, value)).not.toContain('name="fixed_fee_minor"');
+  });
+  function draftProject(value: FinanceContextValue, item?: Invoice, time = false) {
+    const props = { onClose: () => {}, onSaved: () => {} };
+    const output = renderToStaticMarkup(createElement(FinanceContext.Provider, { value },
+      time ? createElement(TimeDraft, props) : createElement(DraftEditor, { ...props, invoice: item })));
+    return output.match(/<select name="project_id"[^>]*>([\s\S]*?)<\/select>/)?.[1];
+  }
+  it.each([false, true])("prefills new drafts with the selected project (from time: %s)", (time) => {
+    const value = context("p2");
+    expect(draftProject(value, undefined, time)).toContain('value="p2" selected=""');
+  });
+  it("retains an existing draft assignment, including deliberately unassigned drafts", () => {
+    const value = context("p2");
+    expect(draftProject(value, { ...invoice, status: "draft", project_id: "p1" })).toContain('value="p1" selected=""');
+    expect(draftProject(value, { ...invoice, status: "draft", project_id: null })).toContain('value="" selected=""');
+  });
+  it("uses unassigned manual drafts and a required first project only in explicit all-project scope", () => {
+    const value = context("");
+    expect(draftProject(value)).toContain('value="" selected=""');
+    expect(draftProject(value, undefined, true)).toContain('value="p1" selected=""');
+  });
+  it.each([
+    ["en", "Project work", "Tasks", "Time", "Planning & costs", "Invoices"],
+    ["de", "Projektarbeit", "Aufgaben", "Zeiten", "Planung & Kosten", "Rechnungen"],
+    ["zh", "项目工作", "任务", "工时", "规划与成本", "发票"],
+  ] as const)("exposes contextual project and finance destinations in %s", (locale, work, tasks, time, planning, invoices) => {
+    const output = html(Overview, context("p2", locale));
+    expect(output).toContain(`<summary>${work}</summary>`);
+    expect(output).toContain(`>${tasks}</button>`);
+    expect(output).toContain(`>${time}</button>`);
+    expect(output).toContain(`>${planning.replaceAll("&", "&amp;")}</button>`);
+    expect(output).toContain(`>${invoices}</button>`);
+    expect(output).toContain('aria-label="Beta"');
   });
 });

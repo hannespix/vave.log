@@ -11,12 +11,14 @@ import { salaryHourlyCost } from "../../shared/finance-math";
 import { Dialog, Field } from "../components";
 import {
   Actions,
+  FinanceProjectFilter,
   MoneyField,
   ProjectSelect,
   Section,
   formMoney,
   formText,
   useFinance,
+  useFinanceProject,
 } from "./context";
 import {
   currencyDigits,
@@ -27,19 +29,19 @@ import {
 } from "./documents";
 export function Planning() {
   const { projects, t } = useFinance(),
-    [project, setProject] = useState(projects[0]?.id || "");
+    { projectId: project, setProjectId: setProject, available } = useFinanceProject();
   return (
     <div className="finance-stack">
       <Section title="plan">
-        <ProjectSelect value={project} onChange={setProject} />
-        {project ? (
+        <FinanceProjectFilter projectId={project} onChange={setProject} />
+        {project && available ? (
           <PlanEditor key={project} projectId={project} />
         ) : (
-          <p className="muted">{t("noProjects")}</p>
+          <p className="muted">{t(!available ? "projectUnavailable" : projects.length ? "chooseProject" : "noProjects")}</p>
         )}
       </Section>
-      <Rates />
-      {project && <Expenses projectId={project} />}
+      {available && <Rates />}
+      {project && available && <Expenses key={project} projectId={project} />}
     </div>
   );
 }

@@ -221,3 +221,90 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await expect(page.getByRole('button',{name:'DEMO-000001',exact:true})).toBeVisible();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
  await page.reload();await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
 });
+
+const secondProject='99999999-9999-4999-8999-999999999999';
+async function connectedSetup(page:Page,role:'owner'|'member'='owner'){
+ await setup(page,true,role);
+ let currentRole=role;const createdTasks:Record<string,unknown>[]=[];const savedProjects:Record<string,unknown>[]=[];
+ const projects=[{id:project,workspace_id:ws,code:'VAV-001',name:'Brand Experience',client:'VAVE',budget_minutes:6000,status:'active',color:'#641dff',created_at:'2026-10-01T10:00:00Z',due_date:'2026-12-01',progress_percent:40,progress_updated_at:'2026-10-13T08:00:00Z'},{id:secondProject,workspace_id:ws,code:'VAV-002',name:'Museum Experience',client:'Museum',budget_minutes:12000,status:'active',color:'#229977',created_at:'2026-10-01T10:00:00Z'}];
+ const tasks=[{id:'10000000-0000-4000-8000-000000000001',workspace_id:ws,project_id:project,title:'Brand sketch',status:'todo',assignee_id:user,due_date:'2026-10-12',created_by:user,created_at:''},{id:'10000000-0000-4000-8000-000000000002',workspace_id:ws,project_id:secondProject,title:'Museum prototype',status:'doing',assignee_id:null,due_date:'2026-10-13',created_by:user,created_at:''}];
+ await page.route('https://test.supabase.co/rest/v1/projects*',r=>{
+  if(r.request().method()==='POST'){const body=r.request().postDataJSON();savedProjects.push(body);Object.assign(projects.find(p=>p.id===body.id)!,body);return r.fulfill({json:{...projects.find(p=>p.id===body.id)}});}
+  return r.fulfill({json:projects,headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}});
+ });
+ await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{
+  if(r.request().method()==='POST'){const body=r.request().postDataJSON();createdTasks.push(body);tasks.push({...body,created_at:'',created_by:user});return r.fulfill({json:body});}
+  return r.fulfill({json:tasks,headers:{'content-range':`0-${tasks.length-1}/${tasks.length}`,'access-control-expose-headers':'content-range'}});
+ });
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:currentRole,display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
+ const insight={project:projects[0],as_of:'2026-10-13',progress_date:'2026-10-13',total_minutes:2400,first_work_date:'2026-09-16',last_work_date:'2026-10-12',recent_daily:[{work_date:'2026-09-16',minutes:800},{work_date:'2026-10-05',minutes:800},{work_date:'2026-10-12',minutes:800}],tasks:{total:4,done:1,overdue:1}};
+ return {projects,createdTasks,savedProjects,insight,setRole:(role:'owner'|'member')=>{currentRole=role;}};
+}
+
+test('project links preserve task filters, editor defaults and browser history',async({page})=>{
+ const state=await connectedSetup(page);await page.goto('/');const nav=page.getByRole('navigation',{name:'Main navigation'});
+ await nav.getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Tasks: Brand Experience',exact:true}).click();
+ await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'New task',exact:true}).click();let dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveValue(project);await dialog.getByLabel('Task',{exact:true}).fill('Linked task');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.createdTasks[0].project_id).toBe(project);
+ await page.getByLabel('Search tasks',{exact:true}).fill('Linked');await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toHaveCount(0);await page.reload();await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('Linked');await expect(page.getByRole('button',{name:'Linked task',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Open project Brand Experience',exact:true}).click();await expect(page.getByRole('heading',{name:'Brand Experience',exact:true})).toBeVisible();await page.goBack();await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('Linked');
+ await page.getByRole('button',{name:'Open project Brand Experience',exact:true}).click();await page.getByRole('button',{name:'Add time',exact:true}).click();dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveValue(project);await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('keyboard skip link preserves the active project and task filters',async({page})=>{
+ await connectedSetup(page);await page.goto(`/#w=${ws}&view=tasks&project=${project}&q=sketch`);
+ await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ const url=page.url();await page.locator('.skip-link').focus();await page.keyboard.press('Enter');
+ await expect(page.locator('#main')).toBeFocused();expect(page.url()).toBe(url);
+ await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+});
+
+test('authorized workspace deep links survive reload and cross-workspace history',async({page})=>{
+ const state=await connectedSetup(page);const other='77777777-7777-4777-8777-777777777777';
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>r.fulfill({json:[{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:''},{id:other,name:'VAVE Shanghai',timezone:'Asia/Shanghai',currency:'EUR',created_by:user,created_at:''}]}));
+ await page.route('https://test.supabase.co/rest/v1/projects*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:state.projects.map(p=>({...p,workspace_id:id})),headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}})});
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:[{workspace_id:id,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}})});
+ await page.goto(`/#w=${other}&view=tasks&project=${project}&q=sketch`);
+ await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ await page.reload();await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);
+ await page.locator('#workspace-select').selectOption(ws);await expect(page.locator('#workspace-select')).toHaveValue(ws);await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Overview',exact:true})).toHaveAttribute('aria-current','page');
+ await page.goBack();await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ await page.goto('/#w=missing&view=tasks');await expect(page.getByRole('heading',{name:'Workspace unavailable',exact:true})).toBeVisible();await expect(page.locator('#workspace-select')).toHaveCount(0);await page.getByRole('button',{name:'Open my workspace',exact:true}).click();await expect(page.locator('#workspace-select')).toHaveValue(ws);
+});
+
+test('task quick and advanced filters explain empty results and reset cleanly',async({page})=>{
+ await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'More filters',exact:true}).click();await page.getByLabel('Assignee',{exact:true}).selectOption('unassigned');await expect(page.getByText('No tasks match these filters.',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Remove filter: Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Museum prototype',exact:true})).toBeVisible();await page.getByRole('button',{name:'Reset filters',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();
+ await page.getByLabel('Language',{exact:true}).selectOption('zh');await expect(page.getByLabel('搜索任务',{exact:true})).toBeVisible();await page.getByLabel('语言',{exact:true}).selectOption('de');await expect(page.getByLabel('Aufgaben durchsuchen',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('project analysis loads all-time facts, retries and opens scoped finance with back navigation',async({page})=>{
+ const state=await connectedSetup(page);let attempts=0;
+ await page.route('https://test.supabase.co/rest/v1/rpc/project_insight',r=>{expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws,p_project_id:project});attempts++;return attempts===1?r.fulfill({status:503,json:{message:'unavailable'}}):r.fulfill({json:state.insight});});
+ await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Project outlook: Brand Experience',exact:true}).click();let dialog=page.getByRole('dialog');await expect(dialog.getByRole('alert')).toBeVisible();await dialog.getByRole('button',{name:'Try again',exact:true}).click();await expect(dialog.getByText('Scenario within deadline',{exact:true})).toBeVisible();await expect(dialog.getByText('40 hr',{exact:true})).toBeVisible();await dialog.getByText('How this is calculated',{exact:true}).click();await expect(dialog.getByText(/Task counts are unweighted/)).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+ await dialog.getByRole('button',{name:'Planning',exact:true}).click();await expect(page.getByRole('tab',{name:'Planning',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.locator('.finance-project-filter select')).toHaveValue(project);
+ await page.getByRole('tab',{name:'Invoices',exact:true}).click();await expect(page.locator('.finance-project-filter select')).toHaveValue(project);await page.goBack();await expect(page.getByRole('tab',{name:'Planning',exact:true})).toHaveAttribute('aria-selected','true');await page.reload();await expect(page.locator('.finance-project-filter select')).toHaveValue(project);
+ await page.getByRole('tab',{name:'Clients',exact:true}).click();await page.reload();await expect(page.getByRole('tab',{name:'Clients',exact:true})).toHaveAttribute('aria-selected','true');
+ expect(attempts).toBe(2);
+});
+
+test('planning fields save explicit progress and deadline without a client timestamp',async({page})=>{
+ const state=await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Edit Brand Experience',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByText('Edit project planning',{exact:true}).click();await dialog.getByLabel('Project deadline',{exact:true}).fill('2026-11-30');await dialog.getByLabel('Reported progress (%)',{exact:true}).fill('55');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.savedProjects[0]).toMatchObject({id:project,due_date:'2026-11-30',progress_percent:55});expect(state.savedProjects[0]).not.toHaveProperty('progress_updated_at');
+});
+
+test('unknown project links stay empty and member views never request project aggregates',async({page})=>{
+ await connectedSetup(page,'member');let insights=0;page.on('request',r=>{if(r.url().includes('project_insight'))insights++;});await page.goto(`/#w=${ws}&view=tasks&project=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`);await expect(page.getByRole('heading',{name:'Project unavailable',exact:true})).toBeVisible();await expect(page.getByText('Brand sketch',{exact:true})).toHaveCount(0);await page.getByRole('button',{name:'Show all projects',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await expect(page.getByRole('button',{name:/Project outlook:/})).toHaveCount(0);expect(insights).toBe(0);
+});
+
+test('role downgrade closes analysis and ignores an in-flight aggregate response',async({page})=>{
+ const state=await connectedSetup(page);let release:(()=>void)|undefined;let started=false;
+ await page.route('https://test.supabase.co/rest/v1/rpc/project_insight',async r=>{started=true;await new Promise<void>(resolve=>{release=resolve});await r.fulfill({json:state.insight});});
+ await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Project outlook: Brand Experience',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await expect.poll(()=>started).toBe(true);state.setRole('member');await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await expect(page.getByRole('dialog')).toHaveCount(0);release?.();await expect(page.getByText('40 hr',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:/Project outlook:/})).toHaveCount(0);
+});

@@ -10,11 +10,14 @@ import { Dialog, Empty, Field, Notice } from "../components";
 import {
   Actions,
   ClientSelect,
+  FinanceProjectFilter,
   LanguageSelect,
+  ProjectLink,
   ProjectSelect,
   Section,
   formText,
   useFinance,
+  useFinanceProject,
 } from "./context";
 import {
   currencyDigits,
@@ -29,9 +32,11 @@ import {
 } from "./documents";
 export function Invoices() {
   const { data, t, locale, workspace, isDemo } = useFinance(),
+    { projectId, setProjectId, available } = useFinanceProject(),
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
     [selected, setSelected] = useState("");
-  const invoice = data.invoices.find((i) => i.id === selected);
+  const invoices = data.invoices.filter((item) => available && (!projectId || item.project_id === projectId));
+  const invoice = invoices.find((i) => i.id === selected);
   return (
     <div className="finance-stack">
       <Section
@@ -40,14 +45,14 @@ export function Invoices() {
           <div className="button-row">
             <button
               className="button secondary small"
-              disabled={!data.clients.length}
+              disabled={!data.clients.length || !available}
               onClick={() => setEditor("time")}
             >
               {t("timeInvoice")}
             </button>
             <button
               className="button primary small"
-              disabled={!data.clients.length}
+              disabled={!data.clients.length || !available}
               onClick={() => setEditor("new")}
             >
               <Plus size={16} />
@@ -56,11 +61,12 @@ export function Invoices() {
           </div>
         }
       >
+        <FinanceProjectFilter projectId={projectId} onChange={setProjectId} />
         {!data.clients.length && (
           <Notice kind="info">{t("clientsHint")}</Notice>
         )}
-        {data.invoices.length === 0 ? (
-          <Empty title={t("noInvoices")} text={t("noSend")} />
+        {invoices.length === 0 ? (
+          <Empty title={t(available ? "noInvoices" : "projectUnavailable")} text={t("noSend")} />
         ) : (
           <div className="table-scroll">
             <table>
@@ -74,7 +80,7 @@ export function Invoices() {
                 </tr>
               </thead>
               <tbody>
-                {data.invoices.map((invoice) => (
+                {invoices.map((invoice) => (
                   <tr
                     key={invoice.id}
                     className={
@@ -97,6 +103,7 @@ export function Invoices() {
                       {invoice.customer_snapshot?.name ||
                         data.clients.find((c) => c.id === invoice.client_id)
                           ?.name}
+                      {invoice.project_id && <small><ProjectLink projectId={invoice.project_id} /></small>}
                     </td>
                     <td>{displayDate(invoice.issue_date, locale)}</td>
                     <td>
@@ -134,7 +141,7 @@ export function Invoices() {
           onSelect={setSelected}
         />
       )}
-      {editor === "time" ? (
+      {available && (editor === "time" ? (
         <TimeDraft onClose={() => setEditor(null)} onSaved={setSelected} />
       ) : (
         editor && (
@@ -144,7 +151,7 @@ export function Invoices() {
             onSaved={setSelected}
           />
         )
-      )}
+      ))}
     </div>
   );
 }
@@ -243,6 +250,10 @@ function InvoiceDetail({
         </div>
       </div>
       <dl className="finance-details">
+        {invoice.project_id && <div>
+          <dt>{t("project")}</dt>
+          <dd><ProjectLink projectId={invoice.project_id} /></dd>
+        </div>}
         <div>
           <dt>{t("issueDate")}</dt>
           <dd>{displayDate(invoice.issue_date, locale)}</dd>
@@ -457,7 +468,7 @@ type LineEdit = {
   timeId: string | null;
   sourceNet?: number;
 };
-function DraftEditor({
+export function DraftEditor({
   invoice,
   onClose,
   onSaved,
@@ -466,7 +477,7 @@ function DraftEditor({
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
-  const { t, data, workspace, locale, range, service, run, busy, isDemo } =
+  const { t, data, workspace, locale, range, service, run, busy, isDemo, projectId } =
       useFinance(),
     id = useRef(invoice?.id || crypto.randomUUID()),
     [clientId, setClientId] = useState(
@@ -565,7 +576,7 @@ function DraftEditor({
               );
             }}
           />
-          <ProjectSelect value={invoice?.project_id} optional />
+          <ProjectSelect value={invoice ? invoice.project_id : projectId} optional />
           <LanguageSelect value={language} onChange={setLanguage} />
           <Field label={t("issueDate")}>
             <input
@@ -729,14 +740,14 @@ function DraftEditor({
     </Dialog>
   );
 }
-function TimeDraft({
+export function TimeDraft({
   onClose,
   onSaved,
 }: {
   onClose: () => void;
   onSaved: (id: string) => void;
 }) {
-  const { t, data, workspace, locale, range, service, run, busy, projects, isDemo } =
+  const { t, data, workspace, locale, range, service, run, busy, projects, isDemo, projectId } =
       useFinance(),
     [tax, setTax] = useState(""),
     [language, setLanguage] = useState<InvoiceLanguage>(
@@ -767,7 +778,7 @@ function TimeDraft({
       <form className="form-stack" onSubmit={submit}>
         {isDemo && <Notice kind="info">{t("demoMark")}</Notice>}
         <Notice kind="info">{t("timeHint")}</Notice>
-        <ProjectSelect value={projects[0]?.id} />
+        <ProjectSelect value={projectId || projects[0]?.id} />
         <ClientSelect
           value={clientId}
           onChange={(value) => {

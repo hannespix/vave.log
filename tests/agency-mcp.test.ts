@@ -15,7 +15,7 @@ async function connect(finance:Partial<FinanceService>,locale='en',service:Parti
 describe('agency MCP wire contract',()=>{
  it('exposes complete demo enrichment with strict input and the same scoped service',async()=>{
   const upgrade=vi.fn(async()=>{});const c=await connect({},'en',{}, {upgrade});
-  try{const {tools}=await c.listTools();expect(tools).toHaveLength(44);
+  try{const {tools}=await c.listTools();expect(tools).toHaveLength(45);
    expect(tools.find(t=>t.name==='demo_upgrade_workspace')?.annotations).toMatchObject({readOnlyHint:false,idempotentHint:true});
    expect(tools.find(t=>t.name==='demo_create_workspace')?.description).toContain('non-login');
    const ok=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id}});expect(ok.isError).not.toBe(true);expect(upgrade).toHaveBeenCalledWith(id);

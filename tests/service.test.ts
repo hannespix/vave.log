@@ -15,3 +15,26 @@ describe('shared service boundary',()=>{
  it('sends explicit date filters and authenticated-only write fields',async()=>{const{service,fetch}=backend([],200,{'content-range':'*/0'});await service.listEntries(id,'2026-10-01','2026-10-13');const url=String(fetch.mock.calls[0]?.[0]);expect(url).toContain('work_date=gte.2026-10-01');expect(url).toContain('work_date=lte.2026-10-13');expect(url).toContain('workspace_id=eq.');});
  it('reports inaccessible deletes as errors rather than success',async()=>{const{service}=backend({code:'PGRST116'},406);await expect(service.deleteEntry(id)).rejects.toThrow('nicht gefunden')});
 });
+
+describe('project insight service boundary',()=>{
+ it('loads one all-history RPC result with exact workspace/project arguments',async()=>{
+  const payload={project:{id},as_of:'2026-10-14',total_minutes:240000,first_work_date:'2024-01-01',last_work_date:'2026-10-14',recent_daily:[],tasks:{total:0,done:0,overdue:0}};
+  const {service,fetch}=backend(payload);expect(await service.getProjectInsight(id,id)).toEqual(payload);
+  expect(String(fetch.mock.calls[0]?.[0])).toContain('/rpc/project_insight');
+  expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({p_workspace_id:id,p_project_id:id});
+ });
+ it('validates both insight IDs before making a request and propagates permission denial',async()=>{
+  const {service,fetch}=backend(null);
+  for(const [w,p] of [[id,'invalid'],['invalid',id]])await expect(async()=>service.getProjectInsight(w,p)).rejects.toThrow('Eingaben');
+  expect(fetch).not.toHaveBeenCalled();
+  await expect(backend({code:'42501',message:'private database detail'},403).service.getProjectInsight(id,id)).rejects.toThrow('Berechtigung');
+ });
+ it('preserves omitted planning payloads and rejects read-only timestamp input',async()=>{
+  const {service,fetch}=backend({id});const input={id,workspace_id:id,code:'P',name:'Project',client:'',budget_minutes:0,status:'active' as const,color:'#641dff'};
+  await service.saveProject(input);expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual(input);
+  await service.saveProject({...input,due_date:null,progress_percent:25});
+  expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body))).toMatchObject({due_date:null,progress_percent:25});
+  await expect(async()=>service.saveProject({...input,progress_updated_at:'2100-01-01'} as never)).rejects.toThrow('Eingaben');
+  expect(fetch).toHaveBeenCalledTimes(2);
+ });
+});

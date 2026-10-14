@@ -1,18 +1,17 @@
-import { useState } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { Notice } from "../components";
-import { Section, useFinance } from "./context";
+import { FinanceProjectFilter, ProjectLink, Section, useFinance, useFinanceProject } from "./context";
 import { downloadText, money, overviewCsv, localeCode } from "./documents";
 import type { FinanceKey } from "./catalog";
 import { summarizeInvoices } from "./invoice-summary";
 export function Overview() {
-  const { data, locale, workspace, projects, range, t } = useFinance(),
-    [project, setProject] = useState("");
+  const { data, locale, workspace, projects, range, t, navigate } = useFinance(),
+    { projectId: project, setProjectId: setProject, available } = useFinanceProject();
   const rows = data.overview.projects.filter(
-      (p) => !project || p.project_id === project,
+      (p) => available && (!project || p.project_id === project),
     ),
     m = (value: number | null) => money(value, workspace.currency, locale);
-  const invoiceTotals = summarizeInvoices(data.invoices, range, project);
+  const invoiceTotals = summarizeInvoices(available ? data.invoices : [], range, project);
   const date = (value: string) =>
     new Intl.DateTimeFormat(localeCode(locale), {
       dateStyle: "medium",
@@ -34,17 +33,7 @@ export function Overview() {
   return (
     <>
       <div className="finance-toolbar">
-        <label className="field">
-          <span>{t("project")}</span>
-          <select value={project} onChange={(e) => setProject(e.target.value)}>
-            <option value="">{t("allProjects")}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FinanceProjectFilter projectId={project} onChange={setProject} />
         <button
           className="button secondary"
           onClick={() =>
@@ -103,7 +92,7 @@ export function Overview() {
         <p className="finance-caption">{t("invoiceSummaryNote")}</p>
       </section>
       {rows.length === 0 ? (
-        <div className="panel muted">{t("noProjects")}</div>
+        <div className="panel muted">{t(available ? "noProjects" : "projectUnavailable")}</div>
       ) : (
         <div className="finance-projects">
           {rows.map((row) => {
@@ -115,7 +104,7 @@ export function Overview() {
                 action={<span className="badge">{t(row.billing_mode)}</span>}
               >
                 <h3 className="finance-project-name">
-                  {info?.name || row.project_id}
+                  <ProjectLink projectId={row.project_id} />
                 </h3>
                 <small className="muted">{info?.code}</small>
                 {(row.missing_cost_entries > 0 ||
@@ -157,6 +146,10 @@ export function Overview() {
                     <dd>{hour(row.remaining_minutes)}</dd>
                   </div>
                 </dl>
+                {info && navigate && <div className="finance-project-actions">
+                  <button type="button" className="text-button" onClick={() => navigate({ view: "finance", projectId: row.project_id, financeTab: "planning" })}>{t("planning")}</button>
+                  <button type="button" className="text-button" onClick={() => navigate({ view: "finance", projectId: row.project_id, financeTab: "invoices" })}>{t("invoices")}</button>
+                </div>}
               </Section>
             );
           })}

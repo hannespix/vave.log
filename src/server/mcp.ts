@@ -1,3 +1,4 @@
+import {forecastProject} from '../shared/project-forecast.js';
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {z} from 'zod';
 import type {Service} from '../shared/service.js';
@@ -26,7 +27,8 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('set_member_role','Owner only: change an existing team role. Confirm exact user and role first.',roleSchema.shape,false,a=>service.setMemberRole(a),true,true);
  tool('accept_invitations','Accept pending invitations for your verified email.',{},false,()=>service.acceptInvitations(),false,true);
  tool('list_projects','List projects in a workspace. Project budget is in minutes.',{workspace_id:uuid},true,a=>service.listProjects(a.workspace_id));
- tool('save_project','Owner/manager: create or update a project. Include the existing id to update; status archived preserves historical times.',projectSchema.shape,false,a=>service.saveProject(a));
+ tool('get_project_insight','Owner/manager only: read all recorded team effort through today in the workspace timezone, recent 28-day totals, project planning and unweighted task counts. Includes the same constant-pace forecast scenario and blockers as the GUI. Excludes future entries and running timers.',{workspace_id:uuid,project_id:uuid},true,async a=>{const insight=await service.getProjectInsight(a.workspace_id,a.project_id);return {...insight,forecast:forecastProject(insight)}});
+ tool('save_project','Owner/manager: create or update a project. Include the existing id to update; status archived preserves historical times. Optional due_date and progress_percent (0–100) may be null; omitted planning fields are preserved. Progress timestamps are server managed.',projectSchema.shape,false,a=>service.saveProject(a));
  tool('list_tasks','List workspace tasks.',{workspace_id:uuid},true,a=>service.listTasks(a.workspace_id));
  tool('save_task','Create or update a task in the workspace. assignee_id and due_date may be null.',taskSchema.shape,false,a=>service.saveTask(a));
  tool('delete_task','Permanently delete one task. Ask for explicit confirmation first.',{id:uuid},false,a=>service.deleteTask(a.id),true);
