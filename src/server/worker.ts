@@ -1,5 +1,6 @@
 import {createHttpHandler,readConfig,securityHeaders,type Config} from './http.js';
 import {assets,siteOrigin} from 'virtual:vave-assets';
+import {staticAssetHeaders} from './static-headers.js';
 let active:{key:string;config:Config;handler:ReturnType<typeof createHttpHandler>}|undefined;
 export default {
  async fetch(request:Request,env:Record<string,string|undefined>){
@@ -15,6 +16,6 @@ export default {
   if(!asset&&!url.pathname.split('/').pop()?.includes('.'))asset=assets['/index.html'];
   if(!asset)return new Response('Not found',{status:404,headers});
   const data=Uint8Array.from(atob(asset.body),c=>c.charCodeAt(0));
-  return new Response(request.method==='HEAD'?null:data,{headers:{...headers,'content-type':asset.type,'cache-control':url.pathname.startsWith('/assets/')?'public, max-age=31536000, immutable':'no-store'}});
+  return new Response(request.method==='HEAD'?null:data,{headers:{...headers,...staticAssetHeaders(url.pathname,asset.type)}});
  }
 };

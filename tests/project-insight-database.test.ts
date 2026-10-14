@@ -73,11 +73,52 @@ describe('project insight database authorization and snapshot',()=>{
  });
  it('counts project tasks separately with strict local-date overdue and done handling',async()=>{
   await db.query("insert into public.tasks(workspace_id,project_id,title,status,due_date) values($1,$2,'Late','todo',$3::date-1),($1,$2,'Today','doing',$3),($1,$2,'Finished','done',$3::date-1),($1,$2,'No deadline','todo',null),($1,$2,'Future','todo',$3::date+1)",[workspace,project,today]);
-  expect((await insight()).tasks).toEqual({total:5,done:1,overdue:1});
+  expect((await insight()).tasks).toEqual({total:5,done:1,doing:1,overdue:1,estimated:0,estimated_minutes:0,done_estimated_minutes:0,missing_estimates:5,missing_due_dates:1,unassigned:5});
  });
  it('keeps the RPC stable, invoker-only, search-path constrained and inaccessible to anon',async()=>{
   await db.exec('reset role');
   expect(await one("select prosecdef,provolatile,proconfig,has_function_privilege('anon',oid,'execute') anon_access,has_function_privilege('authenticated',oid,'execute') user_access from pg_proc where oid='public.project_insight(uuid,uuid)'::regprocedure")).toMatchObject({prosecdef:false,provolatile:'s',proconfig:['search_path=""'],anon_access:false,user_access:true});
+ });
+});
+
+describe('task estimates, milestones and live progress aggregates',()=>{
+ it('reports complete empty KPI and milestone collections',async()=>{
+  const value=await insight();
+  expect(value.tasks).toEqual({total:0,done:0,doing:0,overdue:0,estimated:0,estimated_minutes:0,done_estimated_minutes:0,missing_estimates:0,missing_due_dates:0,unassigned:0});
+  expect((value as any).milestones).toEqual({total:0,done:0,overdue:0,missing_due_dates:0,items:[]});
+ });
+ it('recalculates completed estimated effort immediately when task state changes',async()=>{
+  const t=await one<{id:string}>("insert into public.tasks(workspace_id,project_id,title,status,due_date,estimated_minutes,is_milestone,assignee_id) values($1,$2,'Delivery','todo',$3::date-1,120,true,$4) returning id",[workspace,project,today,member]);
+  await db.query("insert into public.tasks(workspace_id,project_id,title,status,due_date,estimated_minutes) values($1,$2,'Design','doing',$3,180),($1,$2,'Research','done',null,60),($1,$2,'Unknown','todo',null,null)",[workspace,project,today]);
+  expect((await insight()).tasks).toEqual({total:4,done:1,doing:1,overdue:1,estimated:3,estimated_minutes:360,done_estimated_minutes:60,missing_estimates:1,missing_due_dates:2,unassigned:3});
+  expect((await insight() as any).milestones).toMatchObject({total:1,done:0,overdue:1,missing_due_dates:0,items:[{id:t.id,title:'Delivery',status:'todo',due_date:dateBefore(1)}]});
+  await db.query("update public.tasks set status='done' where id=$1",[t.id]);
+  expect((await insight()).tasks).toMatchObject({total:4,done:2,doing:1,overdue:0,estimated:3,estimated_minutes:360,done_estimated_minutes:180});
+  expect((await insight() as any).milestones).toMatchObject({total:1,done:1,overdue:0});
+  await db.query('update public.tasks set estimated_minutes=null where id=$1',[t.id]);
+  expect((await insight()).tasks).toMatchObject({estimated:2,estimated_minutes:240,done_estimated_minutes:60,missing_estimates:2});
+ });
+ it('bounds milestone detail to 12 with deterministic pending-first ordering and full counts',async()=>{
+  await db.query("insert into public.tasks(workspace_id,project_id,title,status,due_date,is_milestone) select $1,$2,'Milestone '||lpad(n::text,2,'0'),case when n<=2 then 'done' else 'todo' end,case when n=15 then null else $3::date+(n-8) end,true from generate_series(1,15)n",[workspace,project,today]);
+  const milestones=(await insight() as any).milestones;
+  expect(milestones).toMatchObject({total:15,done:2,overdue:5,missing_due_dates:1});
+  expect(milestones.items).toHaveLength(12);
+  expect(milestones.items.map((t:any)=>t.title)).toEqual(Array.from({length:12},(_,i)=>`Milestone ${String(i+3).padStart(2,'0')}`));
+  expect(milestones.items.every((t:any)=>Object.keys(t).sort().join(',')==='due_date,id,status,title')).toBe(true);
+ });
+ it('enforces estimate bounds, preserves omitted fields, and retains existing task write roles',async()=>{
+  const t=await one<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Task') returning id",[workspace,project]);
+  expect(await one('select estimated_minutes,is_milestone from public.tasks where id=$1',[t.id])).toEqual({estimated_minutes:null,is_milestone:false});
+  for(const value of [0,-1,6000001,1.5,'NaN']) await expect(attempt('update public.tasks set estimated_minutes=$1 where id=$2',[value,t.id])).rejects.toThrow();
+  for(const value of [1,6000000,null]) expect(await rows('update public.tasks set estimated_minutes=$1 where id=$2 returning id',[value,t.id])).toHaveLength(1);
+  await expect(attempt('update public.tasks set is_milestone=null where id=$1',[t.id])).rejects.toMatchObject({code:'23502'});
+  await login(member);await db.query('update public.tasks set estimated_minutes=180,is_milestone=true where id=$1',[t.id]);
+  await db.query("update public.tasks set title='Legacy edit' where id=$1",[t.id]);
+  expect(await one('select estimated_minutes,is_milestone from public.tasks where id=$1',[t.id])).toEqual({estimated_minutes:180,is_milestone:true});
+  await login(outsider);expect(await rows('update public.tasks set estimated_minutes=1,is_milestone=false where id=$1 returning id',[t.id])).toEqual([]);
+  await login(owner);await db.query("select public.set_member_role($1,$2,'disabled')",[workspace,member]);
+  await login(member);expect(await rows('update public.tasks set estimated_minutes=1 where id=$1 returning id',[t.id])).toEqual([]);
+  await login(manager);expect(await one('select estimated_minutes,is_milestone from public.tasks where id=$1',[t.id])).toEqual({estimated_minutes:180,is_milestone:true});
  });
 });
 

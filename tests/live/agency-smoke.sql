@@ -163,7 +163,7 @@ begin
   select id into demo_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   select id into demo_retry_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   if demo_id is distinct from demo_retry_id then raise exception 'FAIL: demo retry duplicated workspace'; end if;
-  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and d.experience_version=3 and jsonb_typeof(d.manifest)='object') then
+  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and d.experience_version=5 and jsonb_typeof(d.manifest)='object') then
     raise exception 'FAIL: owner cannot get demo metadata';
   end if;
   select i.id into demo_invoice_id from public.finance_invoices i where i.workspace_id=smoke.demo_id and i.status='draft' order by i.created_at limit 1;

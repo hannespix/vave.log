@@ -4,6 +4,7 @@ import {createService,type Service} from '../shared/service.js';
 import {createMcpServer} from './mcp.js';
 import {createFinanceService,type FinanceService} from '../shared/finance-service.js';
 import {createDemoService,type DemoService} from '../shared/demo-service.js';
+import {createWorkspaceAdminService,type WorkspaceAdminService} from '../shared/workspace-admin-service.js';
 import {resolveLocale} from '../shared/i18n.js';
 import {serverMessage} from './messages.js';
 
@@ -25,9 +26,9 @@ export function readConfig(env:Record<string,string|undefined>):Config{
 }
 export function securityHeaders(config:Config):Record<string,string>{
  const connect=config.supabaseUrl?` ${new URL(config.supabaseUrl).origin}`:'';
- return {'x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','cache-control':'no-store','content-security-policy':`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'${connect}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,...(config.appUrl.startsWith('https:')?{'strict-transport-security':'max-age=31536000'}:{})};
+ return {'x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-frame-options':'DENY','permissions-policy':'camera=(), microphone=(), geolocation=()','cache-control':'no-store','content-security-policy':`default-src 'self'; script-src 'self'; worker-src 'self'; manifest-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'${connect}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,...(config.appUrl.startsWith('https:')?{'strict-transport-security':'max-age=31536000'}:{})};
 }
-type Principal={userId:string;service:Service;finance?:FinanceService;demo?:DemoService};
+type Principal={userId:string;service:Service;finance?:FinanceService;demo?:DemoService;workspaceAdmin?:WorkspaceAdminService};
 type Deps={authenticate?:(token:string)=>Promise<Principal>};
 export function validateClaims(claims:Record<string,unknown>,config:Config){
  const aud=claims.aud;const audiences=Array.isArray(aud)?aud:[aud];
@@ -48,7 +49,7 @@ export function createHttpHandler(config:Config,deps:Deps={}){
   const {data,error}=await client.auth.getClaims(token);if(error||!data)throw Error('Invalid token');
   const userId=validateClaims(data.claims,config);
   const user=await client.auth.getUser(token);if(user.error||user.data.user?.id!==userId||!user.data.user.email_confirmed_at)throw Error('User unavailable');
-  return {userId,service:createService(client),finance:createFinanceService(client),demo:createDemoService(client)};
+  return {userId,service:createService(client),finance:createFinanceService(client),demo:createDemoService(client),workspaceAdmin:createWorkspaceAdminService(client)};
  });
  const calls=new Map<string,{since:number;count:number}>();
  const attempts=new Map<string,{since:number;count:number}>();
@@ -83,7 +84,7 @@ export function createHttpHandler(config:Config,deps:Deps={}){
   if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))return json({error:msg('json')},415);
   let body:unknown;try{body=JSON.parse(await limitedBody(request))}catch(error){return json({error:msg('invalid')},error instanceof Error&&error.message==='too_large'?413:400)}
   if(Array.isArray(body))return json({error:msg('batch')},400);
-  const server=createMcpServer(principal.service,{finance:principal.finance,demo:principal.demo,locale});
+  const server=createMcpServer(principal.service,{finance:principal.finance,demo:principal.demo,workspaceAdmin:principal.workspaceAdmin,locale});
   const transport=new WebStandardStreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
   try{await server.connect(transport);const response=await transport.handleRequest(request,{parsedBody:body});for(const[k,v]of Object.entries(headers))response.headers.set(k,v);return response}
   catch{return json({error:msg('failed')},500)}

@@ -6,29 +6,30 @@ const insight = (overrides: Partial<ProjectInsight> = {}, project: Partial<Proje
   project: { id: 'p', workspace_id: 'w', code: 'P', name: 'Project', client: '', color: '#641dff', created_at: '', status: 'active', budget_minutes: 3000, due_date: '2026-11-15', progress_percent: 40, progress_updated_at: '2026-10-12T12:00:00Z', ...project },
   as_of: '2026-10-14', progress_date: '2026-10-12', total_minutes: 1200, first_work_date: '2026-09-01', last_work_date: '2026-10-14',
   recent_daily: [{ work_date: '2026-10-01', minutes: 300 }, { work_date: '2026-10-07', minutes: 300 }, { work_date: '2026-10-14', minutes: 240 }],
-  tasks: { total: 10, done: 9, overdue: 1 }, ...overrides,
+  tasks: { total: 4, done: 1, overdue: 1, doing:1, estimated:4, estimated_minutes:3000, done_estimated_minutes:1200 }, ...overrides,
 });
 
 describe('project effort scenario', () => {
-  it('uses all-time effort and explicit progress, and counts calendar days for recent pace', () => {
+  it('uses all-time effort and automatic weighted progress, and counts calendar days for recent pace', () => {
     expect(forecastProject(insight())).toMatchObject({ usedMinutes: 1200, projectedTotalMinutes: 3000, remainingMinutes: 1800, budgetRemainingMinutes: 1800, observationDays: 28, loggedDays: 3, paceMinutesPerDay: 30, predictedFinishDate: '2026-12-13', deadlineStatus: 'late', budgetStatus: 'within', blockers: [] });
   });
   it('uses inclusive observation days for a younger project and rounds finish days up across months', () => {
     expect(forecastProject(insight({ first_work_date: '2026-10-08', recent_daily: [{work_date:'2026-10-08',minutes:100},{work_date:'2026-10-10',minutes:100},{work_date:'2026-10-14',minutes:100}] }))).toMatchObject({ observationDays: 7, loggedDays: 3, paceMinutesPerDay: 300 / 7, predictedFinishDate: '2026-11-25' });
   });
-  it.each([null, undefined, 0])('does not substitute task completion for missing/zero progress (%s)', progress_percent => {
-    const result = forecastProject(insight({}, { progress_percent }));
-    expect(result.projectedTotalMinutes).toBeNull(); expect(result.predictedFinishDate).toBeNull(); expect(result.deadlineStatus).toBe('unknown'); expect(result.budgetStatus).toBe('unknown');
+  it.each([null, undefined, 0, 100])('ignores legacy manual progress (%s) and uses current task data', progress_percent => {
+    expect(forecastProject(insight({progress_date:null}, {progress_percent}))).toMatchObject({progressPercent:40,predictedFinishDate:'2026-12-13',progress:{method:'estimated-effort'}});
   });
-  it('labels 100% as reported complete without claiming a historical finish date or deadline success', () => {
-    expect(forecastProject(insight({}, { progress_percent: 100 }))).toMatchObject({ progressState: 'complete', projectedTotalMinutes: 1200, remainingMinutes: 0, predictedFinishDate: null, deadlineStatus: 'complete', budgetStatus: 'within' });
+  it('all tracked tasks complete does not invent a historical delivery date or deadline success', () => {
+    expect(forecastProject(insight({tasks:{total:4,done:4,doing:0,overdue:0,estimated:4,estimated_minutes:3000,done_estimated_minutes:3000}}))).toMatchObject({ progressState: 'complete', projectedTotalMinutes: 1200, remainingMinutes: 0, predictedFinishDate: null, deadlineStatus: 'complete', budgetStatus: 'within' });
   });
-  it('retains mathematical effort but suppresses stale forecasts after 14 calendar days', () => {
-    expect(forecastProject(insight({progress_date:'2026-09-30'})).predictedFinishDate).not.toBeNull();
-    expect(forecastProject(insight({progress_date:'2026-09-29'}))).toMatchObject({ progressState:'stale', projectedTotalMinutes:3000, predictedFinishDate:null, deadlineStatus:'unknown', budgetStatus:'unknown', blockers:['stale-progress'] });
+  it('recalculates without a manual report timestamp and exposes unweighted data gaps',()=>{
+    expect(forecastProject(insight({progress_date:'2020-01-01',tasks:{total:10,done:4,overdue:0}}))).toMatchObject({progressPercent:40,progressState:'current',predictedFinishDate:'2026-12-13',progress:{method:'task-count',missingEstimates:10}});
   });
-  it.each([null, 'not-a-date', '2026-02-30', '1900-01-01', '2026-10-16'])('does not trust missing, invalid, ancient or future progress dates (%s)', progress_date => {
-    expect(forecastProject(insight({progress_date})).predictedFinishDate).toBeNull();
+  it('does not infer completion from spent hours or a manual report when there is no task scope',()=>{
+    expect(forecastProject(insight({tasks:{total:0,done:0,overdue:0}}, {progress_percent:75}))).toMatchObject({progressPercent:null,projectedTotalMinutes:null,predictedFinishDate:null,blockers:['missing-progress']});
+  });
+  it('does not assume in-progress tasks are half done',()=>{
+    expect(forecastProject(insight({tasks:{total:4,done:0,doing:4,overdue:0}}))).toMatchObject({progressPercent:0,projectedTotalMinutes:null,predictedFinishDate:null,blockers:['zero-progress']});
   });
   it.each(['paused', 'archived'] as const)('never reassures for a %s project', status => {
     expect(forecastProject(insight({}, {status, due_date:'2027-01-01'}))).toMatchObject({ predictedFinishDate:null, deadlineStatus:'unknown', budgetStatus:'unknown' });
@@ -63,11 +64,11 @@ describe('project effort scenario', () => {
     expect(forecastProject(insight({as_of:date}))).toMatchObject({predictedFinishDate:null,deadlineStatus:'unknown'});
     expect(forecastProject(insight({}, {due_date:date})).deadlineStatus).toBe('unknown');
   });
-  it.each([-1, 101, NaN, Infinity])('rejects out-of-range progress (%s)', progress_percent => {
-    expect(forecastProject(insight({}, {progress_percent}))).toMatchObject({projectedTotalMinutes:null,predictedFinishDate:null,deadlineStatus:'unknown'});
+  it.each([-1, 5, NaN, Infinity])('rejects inconsistent completed task counts (%s)', done => {
+    expect(forecastProject(insight({tasks:{total:4,done,overdue:0}}))).toMatchObject({projectedTotalMinutes:null,predictedFinishDate:null,deadlineStatus:'unknown'});
   });
   it('does not return infinite or out-of-range scenario dates', () => {
-    const result = forecastProject(insight({}, {progress_percent:Number.MIN_VALUE}));
-    expect(result.projectedTotalMinutes).toBeNull(); expect(result.predictedFinishDate).toBeNull();
+    const result = forecastProject(insight({tasks:{total:1000000000,done:1,overdue:0}}));
+    expect(result.predictedFinishDate).toBeNull();expect(result.blockers).toContain('out-of-range');
   });
 });

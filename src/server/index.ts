@@ -4,6 +4,7 @@ import {Readable} from 'node:stream';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {readConfig,createHttpHandler,securityHeaders} from './http.js';
+import {staticAssetHeaders} from './static-headers.js';
 const config=readConfig(process.env);const handle=createHttpHandler(config);const app=express();
 app.disable('x-powered-by');
 const proxyHops=Number(process.env.TRUST_PROXY_HOPS||0);if(!Number.isInteger(proxyHops)||proxyHops<0||proxyHops>3)throw Error('Invalid TRUST_PROXY_HOPS');app.set('trust proxy',proxyHops);
@@ -19,7 +20,7 @@ app.use(async(req,res,next)=>{
  }catch{res.status(500).json({error:'Anfrage fehlgeschlagen.'})}
 });
 const webDir=fileURLToPath(new URL('../../web/',import.meta.url));
-app.use(express.static(webDir,{dotfiles:'deny',index:false,etag:true,maxAge:0,setHeaders(res,file){if(file.includes(path.sep+'assets'+path.sep))res.setHeader('Cache-Control','public, max-age=31536000, immutable')}}));
+app.use(express.static(webDir,{dotfiles:'deny',index:false,etag:true,maxAge:0,setHeaders(res,file){for(const[key,value]of Object.entries(staticAssetHeaders('/'+path.relative(webDir,file).split(path.sep).join('/'))))res.setHeader(key,value)}}));
 app.get('/{*path}',(_req,res)=>res.sendFile(path.join(webDir,'index.html')));
 const port=Number(process.env.PORT||3000);const server=app.listen(port,'0.0.0.0',()=>console.log(`VAVE.LOG listening on port ${port} (${config.configured?'configured':'setup required'})`));
 function shutdown(){server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10000).unref()}

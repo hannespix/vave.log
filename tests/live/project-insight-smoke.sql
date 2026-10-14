@@ -72,7 +72,9 @@ begin
       jsonb_build_object('work_date',today-27,'minutes',10),
       jsonb_build_object('work_date',today-1,'minutes',30),
       jsonb_build_object('work_date',today,'minutes',1005))
-    or value->'tasks'<>jsonb_build_object('total',3,'done',1,'overdue',1) then
+    or not (value->'tasks' @> jsonb_build_object('total',3,'done',1,'overdue',1,'doing',1,'estimated',0,
+      'estimated_minutes',0,'done_estimated_minutes',0,'missing_estimates',3,'missing_due_dates',0,'unassigned',3))
+    or value->'milestones'<>jsonb_build_object('total',0,'done',0,'overdue',0,'missing_due_dates',0,'items','[]'::jsonb) then
     raise exception 'FAIL: team totals, history, future exclusion, task counts or workspace timezone';
   end if;
   before_planning:=value->'project';

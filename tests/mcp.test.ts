@@ -26,12 +26,13 @@ describe('project analysis MCP contract',()=>{
    expect(tools.find(t=>t.name==='get_project_insight')?.annotations?.readOnlyHint).toBe(true);
    const properties=tools.find(t=>t.name==='save_project')?.inputSchema.properties;
    expect(properties).toHaveProperty('due_date');expect(properties).toHaveProperty('progress_percent');expect(properties).not.toHaveProperty('progress_updated_at');
+   const taskProperties=tools.find(t=>t.name==='save_task')?.inputSchema.properties;expect(taskProperties).toHaveProperty('estimated_minutes');expect(taskProperties).toHaveProperty('is_milestone');
   }finally{await c.close()}
  });
  it('routes analysis through the signed-in service and returns denied reads as errors',async()=>{
-  const getProjectInsight=vi.fn(async()=>({project:{id,workspace_id:id,status:'active',budget_minutes:3000,progress_percent:25,due_date:'2026-12-01'},as_of:'2026-10-14',progress_date:'2026-10-14',total_minutes:600,first_work_date:'2026-10-01',last_work_date:'2026-10-13',recent_daily:[{work_date:'2026-10-01',minutes:200},{work_date:'2026-10-08',minutes:200},{work_date:'2026-10-13',minutes:200}],tasks:{total:4,done:1,overdue:0}} as never));
+  const getProjectInsight=vi.fn(async()=>({project:{id,workspace_id:id,status:'active',budget_minutes:3000,progress_percent:99,due_date:'2026-12-01'},as_of:'2026-10-14',progress_date:'2026-10-14',total_minutes:600,first_work_date:'2026-10-01',last_work_date:'2026-10-13',recent_daily:[{work_date:'2026-10-01',minutes:200},{work_date:'2026-10-08',minutes:200},{work_date:'2026-10-13',minutes:200}],tasks:{total:4,done:1,overdue:0}} as never));
   const c=await connect({getProjectInsight});try{
-   const result=await c.callTool({name:'get_project_insight',arguments:{workspace_id:id,project_id:id}});expect(result.isError).not.toBe(true);expect(JSON.stringify(result)).toContain('600');expect(JSON.stringify(result)).toContain('projectedTotalMinutes');expect(JSON.stringify(result)).toContain('2400');expect(getProjectInsight).toHaveBeenCalledWith(id,id);
+   const result=await c.callTool({name:'get_project_insight',arguments:{workspace_id:id,project_id:id}});expect(result.isError).not.toBe(true);expect(JSON.stringify(result)).toContain('600');expect(JSON.stringify(result)).toContain('projectedTotalMinutes');expect(JSON.stringify(result)).toContain('2400');expect(JSON.stringify(result)).toContain('task-count');expect(JSON.stringify(result)).toContain('missingEstimates');expect(getProjectInsight).toHaveBeenCalledWith(id,id);
    const bad=await c.callTool({name:'get_project_insight',arguments:{workspace_id:id,project_id:'fake'}});expect(bad.isError).toBe(true);expect(getProjectInsight).toHaveBeenCalledTimes(1);
   }finally{await c.close()}
   const denied=await connect({getProjectInsight:async()=>{throw new AppError('Dafür fehlt die Berechtigung.','42501')}});

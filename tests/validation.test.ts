@@ -11,6 +11,20 @@ describe('untrusted input validation',()=>{
  it('restricts text, color, timezone and task status',()=>{expect(workspaceSchema.safeParse({name:'VAVE',timezone:'Mars/Olympus',currency:'EUR'}).success).toBe(false);expect(projectSchema.safeParse({workspace_id:id,code:'A',name:'Name',client:'Client',budget_minutes:0,status:'active',color:'url(evil)'}).success).toBe(false);expect(taskSchema.safeParse({workspace_id:id,project_id:id,title:'x',status:'approved',assignee_id:null,due_date:null}).success).toBe(false)});
 });
 
+describe('task planning input',()=>{
+ const task={workspace_id:id,project_id:id,title:'Task',status:'todo',assignee_id:null,due_date:null};
+ it('preserves old payload omission and accepts nullable bounded integer estimates',()=>{
+  expect(taskSchema.parse(task)).not.toHaveProperty('estimated_minutes');
+  expect(taskSchema.parse(task)).not.toHaveProperty('is_milestone');
+  for(const estimated_minutes of [null,1,60,6000000]) expect(taskSchema.safeParse({...task,estimated_minutes,is_milestone:true}).success).toBe(true);
+  expect(taskSchema.safeParse({...task,is_milestone:false}).success).toBe(true);
+ });
+ it('rejects unsupported task estimates and milestone flags',()=>{
+  for(const estimated_minutes of [0,-1,1.5,6000001,NaN,Infinity,'60']) expect(taskSchema.safeParse({...task,estimated_minutes}).success).toBe(false);
+  for(const is_milestone of [null,0,1,'true']) expect(taskSchema.safeParse({...task,is_milestone}).success).toBe(false);
+ });
+});
+
 const project={workspace_id:id,code:'A',name:'Name',client:'',budget_minutes:0,status:'active',color:'#641dff'};
 describe('project planning input',()=>{
  it('allows omitted, nullable and bounded planning values',()=>{

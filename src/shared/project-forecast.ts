@@ -1,4 +1,5 @@
 import type { ProjectInsight } from './project-insight-types.js';
+import {calculateProjectProgress,type AutoProgress} from './project-progress.js';
 
 export type ForecastBlocker = 'invalid-date' | 'invalid-history' | 'inactive' | 'missing-progress' | 'zero-progress' | 'stale-progress' | 'undated-progress' | 'no-effort' | 'insufficient-history' | 'no-pace' | 'out-of-range';
 export interface ProjectForecast {
@@ -7,6 +8,7 @@ export interface ProjectForecast {
   budgetRemainingMinutes: number | null;
   budgetStatus: 'none' | 'unknown' | 'within' | 'over';
   progressPercent: number | null;
+  progress: AutoProgress;
   progressState: 'missing' | 'not-started' | 'current' | 'stale' | 'complete';
   projectedTotalMinutes: number | null;
   remainingMinutes: number | null;
@@ -37,20 +39,15 @@ export function forecastProject(insight: ProjectInsight): ProjectForecast {
   const today = calendarDay(insight.as_of);
   const first = calendarDay(insight.first_work_date);
   const last = calendarDay(insight.last_work_date);
-  const progressDay = calendarDay(insight.progress_date);
   const dueDay = calendarDay(project.due_date);
   const usedMinutes = Number.isFinite(insight.total_minutes) && insight.total_minutes >= 0 ? insight.total_minutes : 0;
   const budgetMinutes = Number.isFinite(project.budget_minutes) && project.budget_minutes > 0 ? project.budget_minutes : null;
-  const progressPercent = typeof project.progress_percent === 'number' && Number.isFinite(project.progress_percent) && project.progress_percent >= 0 && project.progress_percent <= 100 ? project.progress_percent : null;
+  const progress = calculateProjectProgress(insight.tasks);
+  const progressPercent = progress.percent;
   if (today === null) blockers.push('invalid-date');
   if (project.status !== 'active') blockers.push('inactive');
   if (progressPercent === null) blockers.push('missing-progress');
   else if (progressPercent === 0) blockers.push('zero-progress');
-  const stale = today !== null && progressDay !== null && today - progressDay > 14;
-  if (progressPercent !== null && progressPercent > 0) {
-    if (progressDay === null || today === null || progressDay > today) blockers.push('undated-progress');
-    else if (stale) blockers.push('stale-progress');
-  }
   if (usedMinutes === 0) blockers.push('no-effort');
   if (usedMinutes !== insight.total_minutes) blockers.push('out-of-range');
 
@@ -96,7 +93,7 @@ export function forecastProject(insight: ProjectInsight): ProjectForecast {
   else if (projectedTotalMinutes !== null && blockers.length === 0) budgetStatus = 'within';
   return {
     usedMinutes, budgetMinutes, budgetRemainingMinutes: budgetMinutes === null ? null : budgetMinutes - usedMinutes, budgetStatus,
-    progressPercent, progressState: progressPercent === null ? 'missing' : progressPercent === 100 ? 'complete' : progressPercent === 0 ? 'not-started' : stale ? 'stale' : 'current',
+    progress, progressPercent, progressState: progressPercent === null ? 'missing' : progressPercent === 100 ? 'complete' : progressPercent === 0 ? 'not-started' : 'current',
     projectedTotalMinutes, remainingMinutes, observationDays, loggedDays: loggedDates.size, paceMinutesPerDay,
     predictedFinishDate, deadlineDate: dueDay === null ? null : project.due_date!, deadlineStatus, blockers,
   };

@@ -56,7 +56,7 @@ describe('researched demo workspaces',()=>{
     const d=await one<{manifest:any;manifest_version:string;locale:string;archived_at:null;experience_version:number}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
     expect(d.manifest.version).toBe(d.manifest_version);expect(d.manifest).toEqual(DEMO_MANIFEST);
     expect(d.manifest.projects).toHaveLength(8);expect(d.manifest.people).toHaveLength(112);expect(d.manifest.studios).toHaveLength(8);
-    expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(3);
+    expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(5);
     expect(d.manifest.projects.every((p:any)=>p.source_url.startsWith('https://www.vave.studio/project/'))).toBe(true);
     expect(d.archived_at).toBeNull();expect(d.locale).toBe('en');
     expect(await rows("select * from public.finance_clients where contact_email<>'' and contact_email not like '%@example.invalid'")).toEqual([]);

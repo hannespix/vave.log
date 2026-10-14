@@ -43,7 +43,7 @@ test('setup retry refreshes document CSP before connecting a newly configured ba
  await setup(page);
  let backendReady=false;let documents=0;let authRequests=0;
  await page.route('**/api/config',r=>r.fulfill({json:{...config,configured:backendReady}}));
- await page.route('http://localhost:4173/',async route=>{
+ await page.context().route('http://localhost:4173/',async route=>{
   const response=await route.fetch();documents++;
   const headers=response.headers();
   if(documents===1)headers['content-security-policy']=headers['content-security-policy'].replace("connect-src 'self' https://test.supabase.co","connect-src 'self'");
@@ -239,7 +239,7 @@ async function connectedSetup(page:Page,role:'owner'|'member'='owner'){
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:currentRole,display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
- const insight={project:projects[0],as_of:'2026-10-13',progress_date:'2026-10-13',total_minutes:2400,first_work_date:'2026-09-16',last_work_date:'2026-10-12',recent_daily:[{work_date:'2026-09-16',minutes:800},{work_date:'2026-10-05',minutes:800},{work_date:'2026-10-12',minutes:800}],tasks:{total:4,done:1,overdue:1}};
+ const insight={project:projects[0],as_of:'2026-10-13',progress_date:'2026-10-13',total_minutes:2400,first_work_date:'2026-09-16',last_work_date:'2026-10-12',recent_daily:[{work_date:'2026-09-16',minutes:800},{work_date:'2026-10-05',minutes:800},{work_date:'2026-10-12',minutes:800}],tasks:{total:4,done:1,doing:1,overdue:1,estimated:4,estimated_minutes:6000,done_estimated_minutes:2400,missing_estimates:0,missing_due_dates:0,unassigned:0}};
  return {projects,createdTasks,savedProjects,insight,setRole:(role:'owner'|'member')=>{currentRole=role;}};
 }
 
@@ -295,8 +295,8 @@ test('project analysis loads all-time facts, retries and opens scoped finance wi
  expect(attempts).toBe(2);
 });
 
-test('planning fields save explicit progress and deadline without a client timestamp',async({page})=>{
- const state=await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Edit Brand Experience',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByText('Edit project planning',{exact:true}).click();await dialog.getByLabel('Project deadline',{exact:true}).fill('2026-11-30');await dialog.getByLabel('Reported progress (%)',{exact:true}).fill('55');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.savedProjects[0]).toMatchObject({id:project,due_date:'2026-11-30',progress_percent:55});expect(state.savedProjects[0]).not.toHaveProperty('progress_updated_at');
+test('planning saves the deadline and preserves the legacy assessment without asking for manual progress',async({page})=>{
+ const state=await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Edit Brand Experience',exact:true}).click();const dialog=page.getByRole('dialog');await dialog.getByLabel('Project deadline',{exact:true}).fill('2026-11-30');await expect(dialog.getByLabel('Reported progress (%)',{exact:true})).toHaveCount(0);await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.savedProjects[0]).toMatchObject({id:project,due_date:'2026-11-30'});expect(state.savedProjects[0]).not.toHaveProperty('progress_percent');expect(state.savedProjects[0]).not.toHaveProperty('progress_updated_at');
 });
 
 test('unknown project links stay empty and member views never request project aggregates',async({page})=>{
