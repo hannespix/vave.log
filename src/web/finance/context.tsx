@@ -1,3 +1,5 @@
+import { projectOption } from '../select-data';
+import { SmartSelect } from '../smart-select';
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { FinanceService } from "../../shared/finance-service";
 import type {
@@ -95,11 +97,11 @@ export function FinanceProjectFilter({ projectId, onChange }: {
   return (
     <div className="finance-project-filter">
       <Field label={t("project")}>
-        <select value={projectId} onChange={(event) => onChange(event.target.value)}>
+        <SmartSelect value={projectId} onChange={(event) => onChange(event.target.value)}>
           <option value="">{t("allProjects")}</option>
           {!!projectId && !project && <option value={projectId}>{t("projectUnavailable")}</option>}
-          {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
+          {projects.map((item) => <option {...projectOption(item)} key={item.id} value={item.id}>{item.name}</option>)}
+        </SmartSelect>
       </Field>
       {!!projectId && <button type="button" className="text-button" onClick={() => onChange("")}>{t("allProjects")}</button>}
       {project && navigate && <details className="finance-project-work">
@@ -183,7 +185,7 @@ export function ProjectSelect({
   const { t, projects } = useFinance();
   return (
     <Field label={t("project")}>
-      <select
+      <SmartSelect
         name={name}
         defaultValue={onChange ? undefined : value || ""}
         value={onChange ? value || "" : undefined}
@@ -194,11 +196,11 @@ export function ProjectSelect({
           {t(optional ? "none" : "select")}
         </option>
         {projects.map((p) => (
-          <option key={p.id} value={p.id}>
+          <option {...projectOption(p)} key={p.id} value={p.id}>
             {p.code} · {p.name}
           </option>
         ))}
-      </select>
+      </SmartSelect>
     </Field>
   );
 }
@@ -212,7 +214,7 @@ export function ClientSelect({
   const { t, data } = useFinance();
   return (
     <Field label={t("clients")}>
-      <select
+      <SmartSelect
         name="client_id"
         defaultValue={onChange ? undefined : value || ""}
         value={onChange ? value || "" : undefined}
@@ -223,11 +225,11 @@ export function ClientSelect({
           {t("select")}
         </option>
         {data.clients.map((c) => (
-          <option key={c.id} value={c.id}>
+          <option key={c.id} value={c.id} data-detail={c.contact_email} data-keywords={c.billing_address}>
             {c.name}
           </option>
         ))}
-      </select>
+      </SmartSelect>
     </Field>
   );
 }
@@ -241,7 +243,7 @@ export function LanguageSelect({
   const { t } = useFinance();
   return (
     <Field label={t("language")}>
-      <select
+      <SmartSelect
         name="language"
         defaultValue={onChange ? undefined : value}
         value={onChange ? value : undefined}
@@ -254,7 +256,7 @@ export function LanguageSelect({
         <option value="en">English</option>
         <option value="de">Deutsch</option>
         <option value="zh">简体中文</option>
-      </select>
+      </SmartSelect>
     </Field>
   );
 }

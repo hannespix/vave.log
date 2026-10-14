@@ -1,0 +1,23 @@
+.smart-select{position:relative;min-width:0;width:100%;font-size:12px;text-align:left;letter-spacing:normal;font-weight:350}
+.smart-select .smart-select-native{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;min-height:0;padding:0;border:0;inset:0}
+.vave-select__control{background:#fff;border:1px solid #dedfd9;border-radius:8px;min-height:44px;transition:border-color .15s,box-shadow .15s;cursor:pointer!important}
+.vave-select__control:hover{border-color:#b2abae}.vave-select__control--is-focused{border-color:var(--purple,#641dff);box-shadow:0 0 0 3px #641dff12}
+.vave-select__control--is-disabled{opacity:.5;cursor:not-allowed!important}.vave-select__value-container{padding:7px 12px;gap:3px;min-width:0}
+.vave-select__single-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#20221d}.vave-select__placeholder{color:#7d8177}
+.vave-select__input-container{margin:0!important;padding:0!important;color:#20221d}
+.smart-select input{min-height:0!important;padding:0!important;border:0!important;box-shadow:none!important;outline:none!important;font-size:inherit!important;background:transparent!important;border-radius:0!important}
+.select-chevron{margin:0 11px;color:#72766f}.vave-select__menu-portal{font-family:'Readex Pro Variable','Readex Pro',sans-serif;font-size:12px;line-height:1.45;letter-spacing:normal;text-align:left;font-weight:350}
+.vave-select__menu{background:#fff;border:1px solid #dedfd9;border-radius:12px;box-shadow:0 12px 36px #22251c22;overflow:hidden;color:#20221d}
+.vave-select__menu-list{padding:5px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c9c8cd transparent}
+.vave-select__option{border-radius:7px;padding:10px 11px;cursor:pointer!important;overflow-wrap:anywhere;touch-action:manipulation}
+.vave-select__option--is-focused{background:#f3f0fa}.vave-select__option--is-selected{background:#efe8ff;color:#5123a6}.vave-select__option--is-disabled{opacity:.45;cursor:not-allowed!important}
+.select-option-content{display:flex;align-items:center;gap:10px;min-width:0}.select-option-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}.select-option-copy>span{font-weight:450}.select-option-copy small{font-size:10px;color:#70746b;font-weight:350;line-height:1.4}
+.select-check{margin-left:auto;color:var(--purple,#641dff);flex-shrink:0}.select-avatar{width:28px;height:28px;border-radius:50%;background:#eee9fa;color:#62438b;display:grid;place-items:center;flex-shrink:0;font-size:10px}.select-color{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.vave-select__group-heading{padding:12px 11px 6px}.select-group-label{display:flex;align-items:center;justify-content:space-between;color:#707568;font-size:9px;font-weight:500;letter-spacing:.07em;text-transform:uppercase}.select-group-label>span{font-size:9px;border-radius:4px;background:#f3f4ef;padding:1px 5px}
+.vave-select__menu-notice{padding:18px 12px;color:#777c71;line-height:1.6}.smart-select-compact .vave-select__control{min-height:32px;border-color:transparent;background:transparent;box-shadow:none}.smart-select-compact .vave-select__value-container{padding:3px 4px}.smart-select-compact .select-chevron{margin:0 4px}
+.workspace-select-row>.smart-select{flex:1;font-size:11px}.workspace-select-row .vave-select__control{border:0;background:transparent}.workspace-select-row .vave-select__value-container{padding-left:0}
+.filter-group .smart-select{min-width:140px;max-width:280px}.inline-field .smart-select{width:180px}.task-status-field .vave-select__control{min-height:34px}.task-status-field .vave-select__value-container{padding:5px 10px}
+@media(pointer:coarse){.vave-select__option{min-height:44px;display:flex;align-items:center}.vave-select__option>.select-option-content{width:100%}.smart-select input{font-size:16px!important}.smart-select-compact .vave-select__control{min-height:44px}}
+@media(max-width:600px){.filter-group .smart-select{max-width:100%}.inline-field .smart-select{width:100%}.smart-select input{font-size:16px!important}}
+@media(prefers-reduced-motion:reduce){.vave-select__control{transition:none}}
+@media(forced-colors:active){.vave-select__control,.vave-select__menu{border:1px solid ButtonText}.vave-select__option--is-focused{outline:2px solid Highlight}.vave-select__option--is-selected{color:Highlight}.select-check{color:Highlight}}
