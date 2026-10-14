@@ -18,6 +18,7 @@ describe('searchable selects', () => {
  });
  it('retains native form constraints and a disabled empty placeholder', () => {
   const html=renderToStaticMarkup(<SmartSelect name="project" required defaultValue=""><option value="" disabled>Choose project</option><option value="p">Project</option></SmartSelect>);
+  expect(html.match(/<input[^>]*role="combobox"[^>]*>/)?.[0]).toContain('aria-required="true"');
   expect(html).toContain('required=""');expect(html).toContain('aria-hidden="true"');expect(html).toContain('name="project"');
  });
 });

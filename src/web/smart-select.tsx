@@ -67,7 +67,7 @@ export function SmartSelect({children,value,defaultValue,onChange,name,id,requir
    {!options.some(o=>o.value===selected)&&<option value={selected} disabled={!allowCustom}>{allowCustom?selected:words.choose}</option>}
   </select>
   <Control<SelectOption,false,GroupBase<SelectOption>> ref={control} instanceId={inputId} inputId={inputId}
-   aria-label={props['aria-label']} aria-labelledby={labelledBy} aria-describedby={props['aria-describedby']} aria-invalid={invalid||props['aria-invalid']} aria-required={required}
+   aria-label={props['aria-label']} aria-labelledby={labelledBy} aria-describedby={props['aria-describedby']} aria-invalid={invalid||props['aria-invalid']} required={required}
    classNamePrefix="vave-select" unstyled value={selectedOption} options={grouped} isDisabled={disabled} isSearchable={canSearch} isClearable={false}
    inputValue={query} onInputChange={setQuery} menuIsOpen={open} onMenuOpen={()=>setOpen(true)} onMenuClose={()=>{setOpen(false);setQuery('');}}
    onChange={option=>{if(!option)return;setLocal(option.value);setInvalid(false);onChange?.({target:{value:option.value,name:name??''}});}}
