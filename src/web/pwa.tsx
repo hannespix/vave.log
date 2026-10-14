@@ -32,7 +32,7 @@ export function PwaInstallLink(){
  if(state.installed)return null;
  const feedback=state.notice==='dismissed'||state.notice==='installFailed'?copy[state.notice]:'';
  return <><button type="button" className="text-button pwa-install-link" onClick={()=>setOpen(true)}><Download size={14} aria-hidden="true"/>{copy.install}</button>{open&&<Dialog title={copy.dialog} onClose={()=>setOpen(false)} busy={state.installBusy} description={copy.description}>
-  <div className="pwa-install-body"><img src="/icons/icon-192.png" width="64" height="64" alt=""/><p>{state.canPrompt?copy.native:copy[installPlatform()]}</p><p className="muted">{copy.onlineOnly}</p>{feedback&&<p role="status">{feedback}</p>}
+  <div className="pwa-install-body"><img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} width="64" height="64" alt=""/><p>{state.canPrompt?copy.native:copy[installPlatform()]}</p><p className="muted">{copy.onlineOnly}</p>{feedback&&<p role="status">{feedback}</p>}
   {state.canPrompt&&<button type="button" className="button primary" disabled={state.installBusy} onClick={()=>void controller?.install()}><Download size={16} aria-hidden="true"/>{state.installBusy?copy.working:copy.install}</button>}
   </div></Dialog>}</>;
 }
