@@ -23,7 +23,7 @@ export function Logo({ large = false }: { large?: boolean }) {
       renderer: 'svg',
       loop: false,
       autoplay: false,
-      path: '/vave-logo.json',
+      path: `${import.meta.env.BASE_URL}vave-logo.json`,
       rendererSettings: { progressiveLoad: true, preserveAspectRatio: 'xMidYMid meet' },
     });
     let ready = false;
