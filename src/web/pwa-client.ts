@@ -71,6 +71,7 @@ export function createPwaController(env:PwaEnvironment){
    if(!registration?.waiting||state.applying)return;
    set({applying:true,notice:'none'});
    updateTimeout=setTimeout(()=>set({applying:false,notice:'updateFailed'}),15000);
+   // oxlint-disable-next-line unicorn/require-post-message-target-origin -- ServiceWorker.postMessage kennt kein targetOrigin.
    try{registration.waiting.postMessage({type:'VAVE_ACTIVATE_UPDATE'});}
    catch{clearTimeout(updateTimeout);set({applying:false,notice:'updateFailed'});}
   },

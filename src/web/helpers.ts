@@ -34,10 +34,11 @@ export function errorMessage(error: unknown, locale: Locale = getLocale()): stri
   if (!safe && /rate limit|too many requests/i.test(message)) safe = 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.';
   if (!safe && /user already registered|email.*already.*registered/i.test(message)) safe = 'Ein Account mit dieser E-Mail-Adresse existiert bereits.';
   if (!safe && /password.*(least|weak|short|requirement)/i.test(message)) safe = 'Das Passwort erfüllt die Sicherheitsanforderungen nicht.';
-  if (!safe && /^Bitte Eingaben prüfen:/.test(message)) safe = 'Bitte Eingaben prüfen.';
+  if (!safe && message.startsWith('Bitte Eingaben prüfen:')) safe = 'Bitte Eingaben prüfen.';
   if (!safe && hasTranslation(message)) safe = message;
   return translate(safe || 'Das hat nicht geklappt. Bitte erneut versuchen.', locale);
 }
+// oxlint-disable-next-line no-control-regex -- CSV-Injection-Schutz prüft bewusst auf Steuerzeichen.
 export function csvCell(value: unknown) { const original = String(value ?? ''); const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(original) || /^[\t\r\n]/.test(original) ? `'${original}` : original; return `"${safe.replaceAll('"', '""')}"`; }
 export function entriesCsv(entries: TimeEntry[], projects: Project[], members: Membership[], locale: Locale = getLocale()) {
   const rows: unknown[][] = [['Datum', 'Person', 'Projektcode', 'Projekt', 'Kunde', 'Minuten', 'Stunden', 'Beschreibung', 'Abrechenbar', 'Status'].map(label => translate(label, locale))];

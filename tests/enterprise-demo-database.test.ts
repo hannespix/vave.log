@@ -26,10 +26,6 @@ async function attempt(sql:string,args:unknown[]=[]) {
   catch(error) { await db.exec('rollback to savepoint expected_failure'); await db.exec('release savepoint expected_failure'); throw error; }
 }
 const create=(locale='en',request=requestId,name='VAVE demo',timezone='Europe/Berlin') => one<{id:string;name:string;currency:string;created_by:string;timezone:string}>('select * from public.demo_create_workspace($1,$2,$3,$4)',[name,timezone,locale,request]);
-async function addMember(workspace:string,role='member') {
-  await db.query('select public.invite_member($1,$2,$3)',[workspace,'member@example.org',role]);
-  await login(member); await db.exec('select public.accept_invitations()'); await login(owner);
-}
 beforeAll(async()=>{
   db=new PGlite();
   await db.exec(`create role anon nologin; create role authenticated nologin;

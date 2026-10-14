@@ -1,6 +1,7 @@
 import type {Task,Project} from '../shared/types';
 import type {Locale} from '../shared/i18n';
 const labels={en:'Task deadlines',de:'Aufgabenfristen',zh:'任务截止日期'};
+// oxlint-disable-next-line no-control-regex -- ICS-Hygiene: Steuerzeichen werden bewusst entfernt.
 function text(value:string){return value.replaceAll('\\','\\\\').replace(/\r\n|\r|\n/g,'\\n').replaceAll(';','\\;').replaceAll(',','\\,').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'')}
 function fold(value:string){let line='',size=0;const result:string[]=[];for(const char of value){const n=new TextEncoder().encode(char).length;if(size+n>75){result.push(line);line=' ';size=1}line+=char;size+=n}result.push(line);return result.join('\r\n')}
 /** A downloadable RFC 5545 snapshot, with no invitees, email delivery or live sync. */

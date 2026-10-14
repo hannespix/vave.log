@@ -53,6 +53,7 @@ function AuthorizedFinance({
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    // oxlint-disable-next-line react/purity -- "heute" in der Workspace-Zeitzone; bewusst je Render aktuell.
   }).format(new Date());
   const [range, setRange] = useState({
       from: today.slice(0, 7) + "-01",
@@ -101,8 +102,10 @@ function AuthorizedFinance({
   useEffect(() => {
     mounted.current = true;
     return () => {
+      // oxlint-disable react-hooks/exhaustive-deps -- Mounted-/Generationszähler: .current im Cleanup ist der Zweck der Refs.
       mounted.current = false;
       generation.current++;
+      // oxlint-enable react-hooks/exhaustive-deps
     };
   }, []);
   const load = useCallback(async () => {
