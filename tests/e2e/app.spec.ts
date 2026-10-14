@@ -135,7 +135,7 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
  await page.getByRole('radio',{name:/Explore with VAVE examples/}).check();
  await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
- await page.getByRole('combobox',{name:/^Time zone /}).fill('Europe/Berlin');
+ await chooseValue(page,page.getByRole('combobox',{name:'Time zone',exact:true}),'Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
  await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();

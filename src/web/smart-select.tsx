@@ -61,12 +61,15 @@ export function SmartSelect({children,value,defaultValue,onChange,name,id,requir
  },[options]);
  const Control=allowCustom?Creatable:Select;
  const live:AriaLiveMessages<SelectOption,false,GroupBase<SelectOption>>={guidance:()=>words.guide,onFilter:({resultsMessage})=>resultsMessage,onChange:({label})=>label?`${words.chosen}: ${label}`:words.cleared,onFocus:({label})=>label??''};
- return <div ref={root} className={`smart-select ${compact?'smart-select-compact':''} ${className??''}`} data-select-value={selected} data-searchable={canSearch}>
+ return <div ref={root} className={`smart-select ${compact?'smart-select-compact':''} ${className??''}`} data-select-value={selected} data-searchable={canSearch}
+  role={disabled?'combobox':undefined} aria-disabled={disabled||undefined} aria-expanded={disabled?false:undefined} aria-haspopup={disabled?'listbox':undefined}
+  aria-label={disabled?props['aria-label']:undefined} aria-labelledby={disabled?labelledBy:undefined}>
+
   <select name={name} ref={native} className="smart-select-native" tabIndex={-1} aria-hidden="true" value={selected} required={required} disabled={disabled} onChange={()=>{}} onInvalid={event=>{event.preventDefault();setInvalid(true);control.current?.focus();setOpen(true);}}>
    {options.map(o=><option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
    {!options.some(o=>o.value===selected)&&<option value={selected} disabled={!allowCustom}>{allowCustom?selected:words.choose}</option>}
   </select>
-  <Control<SelectOption,false,GroupBase<SelectOption>> ref={control} instanceId={inputId} inputId={inputId}
+  <div aria-hidden={disabled||undefined}><Control<SelectOption,false,GroupBase<SelectOption>> ref={control} instanceId={inputId} inputId={inputId}
    aria-label={props['aria-label']} aria-labelledby={labelledBy} aria-describedby={props['aria-describedby']} aria-invalid={invalid||props['aria-invalid']} required={required}
    classNamePrefix="vave-select" unstyled value={selectedOption} options={grouped} isDisabled={disabled} isSearchable={canSearch} isClearable={false}
    inputValue={query} onInputChange={setQuery} menuIsOpen={open} onMenuOpen={()=>setOpen(true)} onMenuClose={()=>{setOpen(false);setQuery('');}}
@@ -87,6 +90,6 @@ export function SmartSelect({children,value,defaultValue,onChange,name,id,requir
    </span>}
    components={{IndicatorSeparator:null,DropdownIndicator:()=> canSearch?<Search size={14} className="select-chevron" aria-hidden="true"/>:<ChevronDown size={14} className="select-chevron" aria-hidden="true"/>}}
    styles={{menuPortal:base=>{const viewport=typeof window==='undefined'?1024:window.innerWidth;const width=Math.min(Math.max(Number(base.width)||0,240),viewport-16);return {...base,zIndex:1000,width,left:Math.max(8,Math.min(Number(base.left)||0,viewport-width-8))};},menu:base=>({...base,marginTop:6,marginBottom:6})}}
-  />
+  /></div>
  </div>;
 }
