@@ -24,11 +24,12 @@ grün ist** (zusätzlich manuell über *Run workflow*).
    (der Workflow versucht das über `configure-pages` selbst; schlägt das fehl,
    einmal manuell umstellen). Für private Repositories setzt GitHub Pages einen
    bezahlten Plan voraus.
-2. **Repo-Variablen** (Settings → Secrets and variables → Actions → *Variables*,
-   keine Secrets — beide Werte sind öffentliche Client-Konfiguration):
-   - `SUPABASE_URL` – z. B. `https://ieeujtmpxqxmfyietqgw.supabase.co`
-   - `SUPABASE_PUBLISHABLE_KEY` – der `sb_publishable_…`-Schlüssel
-   Ohne diese Variablen deployt die Seite im ehrlichen Einrichtungszustand.
+2. **Konfiguration:** Die öffentliche Client-Konfiguration des Projekts
+   `vave-log` (Supabase-URL und Publishable Key — dieselben Werte, die jeder
+   Browser ohnehin erhält) ist im Workflow hinterlegt; es ist nichts weiter zu
+   tun. Nach einem Schlüsselwechsel oder Projektumzug übersteuern die
+   Repo-Variablen `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`
+   (Settings → Secrets and variables → Actions → *Variables*) die Standardwerte.
 3. **Supabase Auth → URL Configuration:** die Pages-URL
    (`https://<owner>.github.io/<repo>/`) als zusätzliche Redirect-URL eintragen,
    sonst landen Bestätigungs-/Reset-Links nicht in der App
