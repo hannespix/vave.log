@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { ChevronDown, Globe2 } from 'lucide-react';
+import { Globe2 } from 'lucide-react';
+import { SelectMenu } from './select-menu';
 import { localeTag, resolveLocale, translate, type Locale } from '../shared/i18n';
 import './i18n.css';
 export { localeTag, type Locale } from '../shared/i18n';
@@ -48,7 +49,9 @@ export function useI18n() {
 export function LanguageSwitcher() {
   const { locale, t, setLocale } = useI18n();
   const selected = useSyncExternalStore(subscribe, () => preference, () => 'system' as Preference);
-  return <label className="language-switcher" title={t('Sprache')}><span className="language-switcher-display" aria-hidden="true"><Globe2 size={14}/><span>{{en:'EN',de:'DE',zh:'中文'}[locale]}</span><ChevronDown size={11}/></span><select aria-label={t('Sprache')} value={selected} onChange={event => setLocale(event.target.value as Preference)}><option value="system">{t('Systemsprache')}</option><option value="en">English</option><option value="de">Deutsch</option><option value="zh">简体中文</option></select></label>;
+  return <SelectMenu className="language-switcher" label={t('Sprache')} value={selected} onChange={value => setLocale(value as Preference)} align="end" searchable={false}
+    options={[{ value: 'system', label: t('Systemsprache') }, { value: 'en', label: 'English' }, { value: 'de', label: 'Deutsch' }, { value: 'zh', label: '简体中文' }]}
+    renderValue={() => <span className="language-switcher-display" aria-hidden="true"><Globe2 size={14}/><span>{{en:'EN',de:'DE',zh:'中文'}[locale]}</span></span>}/>;
 }
 // Metadata selects future email language only; it must never be used for authorization.
 export function useLocaleMetadata(client: SupabaseClient, user: User | undefined) {

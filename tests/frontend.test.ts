@@ -1,7 +1,7 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {I18nProvider} from '../src/web/i18n.js';
-import {TaskAssigneeSelect} from '../src/web/components.js';
+import {TaskAssigneeSelect,assigneeOptions} from '../src/web/components.js';
 import {DemoBanner} from '../src/web/agency.js';
 import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION, type DemoWorkspace} from '../src/shared/demo-data.js';
 import type {Membership} from '../src/shared/types.js';
@@ -41,15 +41,17 @@ describe('historical task assignments',()=>{
  ];
  it('keeps an existing disabled assignee selected and available for form submission',()=>{
   const html=renderToStaticMarkup(createElement(I18nProvider,{initialLocale:'de'},createElement(TaskAssigneeSelect,{members,currentAssignee:'former'})));
-  expect(html).toContain('value="former" selected=""');
+  expect(html).toContain('<input type="hidden" name="assignee" value="former"');
   expect(html).toContain('Former (deaktiviert)');
   expect(html).not.toContain(' disabled=');
-  expect(html).not.toContain('value="other-disabled"');
+  const values=assigneeOptions(members,'former',(message:string)=>message).map(option=>option.value);
+  expect(values).toContain('former');
+  expect(values).not.toContain('other-disabled');
  });
  it('does not offer disabled members for a new assignment',()=>{
-  const html=renderToStaticMarkup(createElement(TaskAssigneeSelect,{members}));
-  expect(html).toContain('value="active"');
-  expect(html).not.toContain('value="former"');
-  expect(html).not.toContain('value="other-disabled"');
+  const values=assigneeOptions(members,undefined,(message:string)=>message).map(option=>option.value);
+  expect(values).toContain('active');
+  expect(values).not.toContain('former');
+  expect(values).not.toContain('other-disabled');
  });
 });

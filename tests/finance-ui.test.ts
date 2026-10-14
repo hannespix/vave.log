@@ -475,21 +475,21 @@ describe("connected finance project scope", () => {
     const props = { onClose: () => {}, onSaved: () => {} };
     const output = renderToStaticMarkup(createElement(FinanceContext.Provider, { value },
       time ? createElement(TimeDraft, props) : createElement(DraftEditor, { ...props, invoice: item })));
-    return output.match(/<select name="project_id"[^>]*>([\s\S]*?)<\/select>/)?.[1];
+    return output.match(/<input type="hidden" name="project_id" value="([^"]*)"/)?.[1];
   }
   it.each([false, true])("prefills new drafts with the selected project (from time: %s)", (time) => {
     const value = context("p2");
-    expect(draftProject(value, undefined, time)).toContain('value="p2" selected=""');
+    expect(draftProject(value, undefined, time)).toBe("p2");
   });
   it("retains an existing draft assignment, including deliberately unassigned drafts", () => {
     const value = context("p2");
-    expect(draftProject(value, { ...invoice, status: "draft", project_id: "p1" })).toContain('value="p1" selected=""');
-    expect(draftProject(value, { ...invoice, status: "draft", project_id: null })).toContain('value="" selected=""');
+    expect(draftProject(value, { ...invoice, status: "draft", project_id: "p1" })).toBe("p1");
+    expect(draftProject(value, { ...invoice, status: "draft", project_id: null })).toBe("");
   });
   it("uses unassigned manual drafts and a required first project only in explicit all-project scope", () => {
     const value = context("");
-    expect(draftProject(value)).toContain('value="" selected=""');
-    expect(draftProject(value, undefined, true)).toContain('value="p1" selected=""');
+    expect(draftProject(value)).toBe("");
+    expect(draftProject(value, undefined, true)).toBe("p1");
   });
   it.each([
     ["en", "Project work", "Tasks", "Time", "Planning & costs", "Invoices"],

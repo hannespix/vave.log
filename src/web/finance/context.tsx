@@ -12,6 +12,8 @@ import type {
 } from "../../shared/finance-types";
 import type { Membership, Project, Role, Workspace } from "../../shared/types";
 import { Field, Notice } from "../components";
+import { useI18n } from "../i18n";
+import { SelectMenu, projectOption, projectTabs } from "../select-menu";
 import { ft, type FinanceKey } from "./catalog";
 import { currencyDigits, decimalToMinor, minorInput } from "./documents";
 export interface FinanceData {
@@ -90,16 +92,18 @@ export function FinanceProjectFilter({ projectId, onChange }: {
   onChange: (projectId: string) => void;
 }) {
   const { projects: allProjects, workspace, navigate, t } = useFinance();
+  const { t: shared } = useI18n();
   const projects = allProjects.filter((item) => item.workspace_id === workspace.id);
   const project = projects.find((item) => item.id === projectId);
   return (
     <div className="finance-project-filter">
       <Field label={t("project")}>
-        <select value={projectId} onChange={(event) => onChange(event.target.value)}>
-          <option value="">{t("allProjects")}</option>
-          {!!projectId && !project && <option value={projectId}>{t("projectUnavailable")}</option>}
-          {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
+        <SelectMenu label={t("project")} value={projectId} onChange={onChange} tabs={projectTabs(projects, shared)}
+          options={[
+            { value: "", label: t("allProjects") },
+            ...(projectId && !project ? [{ value: projectId, label: t("projectUnavailable") }] : []),
+            ...projects.map((item) => projectOption(item, true)),
+          ]}/>
       </Field>
       {!!projectId && <button type="button" className="text-button" onClick={() => onChange("")}>{t("allProjects")}</button>}
       {project && navigate && <details className="finance-project-work">
@@ -183,22 +187,19 @@ export function ProjectSelect({
   const { t, projects } = useFinance();
   return (
     <Field label={t("project")}>
-      <select
+      <SelectMenu
+        label={t("project")}
         name={name}
         defaultValue={onChange ? undefined : value || ""}
         value={onChange ? value || "" : undefined}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        onChange={onChange}
         required={!optional}
-      >
-        <option value="" disabled={!optional}>
-          {t(optional ? "none" : "select")}
-        </option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.code} · {p.name}
-          </option>
-        ))}
-      </select>
+        placeholder={t("select")}
+        options={[
+          ...(optional ? [{ value: "", label: t("none") }] : []),
+          ...projects.map((p) => projectOption(p)),
+        ]}
+      />
     </Field>
   );
 }
@@ -212,22 +213,16 @@ export function ClientSelect({
   const { t, data } = useFinance();
   return (
     <Field label={t("clients")}>
-      <select
+      <SelectMenu
+        label={t("clients")}
         name="client_id"
         defaultValue={onChange ? undefined : value || ""}
         value={onChange ? value || "" : undefined}
-        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        onChange={onChange}
         required
-      >
-        <option value="" disabled>
-          {t("select")}
-        </option>
-        {data.clients.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+        placeholder={t("select")}
+        options={data.clients.map((c) => ({ value: c.id, label: c.name, sublabel: c.contact_email || undefined, keywords: c.contact_email }))}
+      />
     </Field>
   );
 }
@@ -241,20 +236,19 @@ export function LanguageSelect({
   const { t } = useFinance();
   return (
     <Field label={t("language")}>
-      <select
+      <SelectMenu
+        label={t("language")}
         name="language"
+        searchable={false}
         defaultValue={onChange ? undefined : value}
         value={onChange ? value : undefined}
-        onChange={
-          onChange
-            ? (e) => onChange(e.target.value as InvoiceLanguage)
-            : undefined
-        }
-      >
-        <option value="en">English</option>
-        <option value="de">Deutsch</option>
-        <option value="zh">简体中文</option>
-      </select>
+        onChange={onChange ? (next) => onChange(next as InvoiceLanguage) : undefined}
+        options={[
+          { value: "en", label: "English" },
+          { value: "de", label: "Deutsch" },
+          { value: "zh", label: "简体中文" },
+        ]}
+      />
     </Field>
   );
 }
