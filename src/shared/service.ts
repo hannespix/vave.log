@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { dateRangeSchema,entrySchema,inviteSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role } from './types.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -33,6 +33,8 @@ export function createService(client:SupabaseClient){
   createWorkspace:(input:{name:string;timezone:string;currency:string})=>{const v=parse(workspaceSchema,input);return rpc<Workspace>('create_workspace',{p_name:v.name,p_timezone:v.timezone,p_currency:v.currency})},
   acceptInvitations:()=>rpc<number>('accept_invitations'),
   inviteMember:async(input:{workspace_id:string;email:string;role:'manager'|'member'})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role})},
+  listInvitations:(workspaceId:string)=>rpc<Invitation[]>('list_invitations',{p_workspace_id:parse(uuid,workspaceId)}),
+  revokeInvitation:async(id:string)=>{await rpcVoid('revoke_invitation',{p_id:parse(uuid,id)})},
   setMemberRole:async(input:{workspace_id:string;user_id:string;role:Role})=>{const v=parse(roleSchema,input);await rpcVoid('set_member_role',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_role:v.role})},
   listProjects:(workspaceId:string)=>rows<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   getProjectInsight:(workspaceId:string,projectId:string)=>rpc<ProjectInsight>('project_insight',{p_workspace_id:parse(uuid,workspaceId),p_project_id:parse(uuid,projectId)}),

@@ -117,8 +117,7 @@ describe('database authorization', () => {
     expect((await first('select public.accept_invitations() as n')).n).toBe(1);
     expect((await first('select public.accept_invitations() as n')).n).toBe(0);
     await login(owner);
-    await db.query("select public.invite_member($1,'member@example.org','manager')",[workspace]);
-    await login(member); await db.exec('select public.accept_invitations()');
+    await expect(attempt("select public.invite_member($1,'member@example.org','manager')",[workspace])).rejects.toThrow(/Mitglied/);
     expect((await first('select role from public.memberships where user_id=$1',[member])).role).toBe('member');
   });
   it('rejects owner invitations through the direct RPC', async () => {
@@ -177,10 +176,10 @@ describe('database member offboarding', () => {
     await expect(attempt("select public.set_member_role($1,$2,'disabled')",[workspace,owner])).rejects.toThrow(/Owner/);
     expect((await first('select role from public.memberships where workspace_id=$1 and user_id=$2',[workspace,owner])).role).toBe('owner');
   });
-  it('keeps a disabled membership disabled after reinvitation until the owner explicitly restores it', async () => {
+  it('keeps a disabled membership disabled and blocks reinvitation until the owner explicitly restores it', async () => {
     await login(owner);
     await db.query("select public.set_member_role($1,$2,'disabled')",[workspace,member]);
-    await db.query("select public.invite_member($1,'member@example.org','manager')",[workspace]);
+    await expect(attempt("select public.invite_member($1,'member@example.org','manager')",[workspace])).rejects.toThrow(/Mitglied/);
     await login(member);
     expect((await first('select public.accept_invitations() as n')).n).toBe(0);
     expect(await rows('select * from public.workspaces where id=$1',[workspace])).toHaveLength(0);
@@ -304,6 +303,24 @@ describe('database entries and workflow', () => {
     await login(outsider); await expect(attempt('select * from public.revoke_approval($1)',[e.id])).rejects.toThrow(/Berechtigung/);
     await login(manager); expect((await first('select * from public.revoke_approval($1)',[e.id])).status).toBe('draft');
     await login(member); expect(await rows('update public.time_entries set minutes=95 where id=$1 returning minutes',[e.id])).toEqual([{minutes:95}]);
+  });
+  it('manages invitations: managers list, owners revoke, conflicts and expiry cleanup', async () => {
+    await login(owner); await db.query("select public.invite_member($1,'new@example.org','member')",[workspace]);
+    await login(member); await expect(attempt('select * from public.list_invitations($1)',[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(manager); const inv=(await rows<{id:string;email:string}>('select * from public.list_invitations($1)',[workspace]))[0]!;
+    expect(inv.email).toBe('new@example.org');
+    await expect(attempt('select public.revoke_invitation($1)',[inv.id])).rejects.toThrow(/Berechtigung/);
+    await login(outsider); await expect(attempt('select * from public.list_invitations($1)',[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(owner); await db.query('select public.revoke_invitation($1)',[inv.id]);
+    expect(await rows('select * from public.list_invitations($1)',[workspace])).toEqual([]);
+    await expect(attempt("select public.invite_member($1,'member@example.org','manager')",[workspace])).rejects.toThrow(/Mitglied/);
+    await db.query("select public.invite_member($1,'stale@example.org','member')",[workspace]);
+    await db.exec('reset role');
+    await db.query("update public.invitations set expires_at=now()-interval '1 day' where email='stale@example.org'");
+    await login(owner); await db.query("select public.invite_member($1,'fresh@example.org','member')",[workspace]);
+    await db.exec('reset role');
+    expect(await rows("select email from public.invitations where workspace_id=$1 order by email",[workspace])).toEqual([{email:'fresh@example.org'}]);
+    await login(member);
   });
   it('records meaningful audit events and prevents tampering', async () => {
     const e=await entry(); await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
