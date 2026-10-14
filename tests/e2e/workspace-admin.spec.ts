@@ -3,14 +3,14 @@ import type {WorkspaceAdminSummary} from '../../src/shared/workspace-admin-types
 
 test.use({locale:'en-US'});
 const user='11111111-1111-4111-8111-111111111111',ws='22222222-2222-4222-8222-222222222222',other='44444444-4444-4444-8444-444444444444',archived='55555555-5555-4555-8555-555555555555';
-async function setup(page:Page,{role='owner',archivedOnly=false,running=0,twoActive=false}:{role?:'owner'|'manager'|'member';archivedOnly?:boolean;running?:number;twoActive?:boolean}={}){
+async function setup(page:Page,{role='owner',archivedOnly=false,running=0,twoActive=false,issued=0}:{role?:'owner'|'manager'|'member';archivedOnly?:boolean;running?:number;twoActive?:boolean;issued?:number}={}){
  await page.clock.install({time:new Date('2026-10-14T09:00:00Z')});
  await page.route('**/api/config',r=>r.fulfill({json:{configured:true,appUrl:'http://localhost:4173',supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_publishable_test'}}));
  await page.addInitScript(({user})=>{
   const payload=btoa(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'}));
   localStorage.setItem('sb-test-auth-token',JSON.stringify({access_token:`eyJhbGciOiJIUzI1NiJ9.${payload}.test`,refresh_token:'test-refresh-token',token_type:'bearer',expires_at:2100000000,expires_in:3600,user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}}));
  },{user});
- const summary=(id:string,name:string,is_demo=false,archived_at:string|null=null):WorkspaceAdminSummary=>({id,name,is_demo,archived_at,created_at:'2026-10-01T10:00:00Z',counts:{projects:2,tasks:8,time_entries:12,members:3,invoices:4,expenses:5},running_timers:running});
+ const summary=(id:string,name:string,is_demo=false,archived_at:string|null=null):WorkspaceAdminSummary=>({id,name,is_demo,archived_at,created_at:'2026-10-01T10:00:00Z',counts:{projects:2,tasks:8,time_entries:12,members:3,invoices:4,expenses:5},running_timers:running,issued_invoices:is_demo?0:issued});
  const state={owned:role==='owner'?[...(!archivedOnly?[summary(ws,'North & Süd 工作室')]:[]),...(twoActive?[summary(other,'Second Studio')]:[]),summary(archived,'Archived demo',true,'2026-10-13T12:00:00Z')]:[],deleted:[] as Record<string,unknown>[],fail:false,pending:false,release:undefined as undefined|(()=>void),lists:0};
  const visible=()=>role==='owner'?state.owned.filter(w=>!w.archived_at):[summary(ws,'North & Süd 工作室')];
  await page.route('https://test.supabase.co/**',async route=>{
@@ -48,6 +48,14 @@ test('owners delete archived demos and the last active studio only after explici
  await dialog(page).getByRole('button',{name:'Delete: North & Süd 工作室',exact:true}).click();await expect(dialog(page).getByLabel('Type the exact workspace name')).toHaveValue('');await expect(dialog(page).getByRole('checkbox')).not.toBeChecked();
  await confirm(page,'North & Süd 工作室');await remove(page).click();await expect(dialog(page).getByText('No studios or demos owned by you.',{exact:true})).toBeVisible();
  await dialog(page).getByRole('button',{name:'Close dialog',exact:true}).click();await expect(page.getByRole('button',{name:'Create workspace',exact:true})).toBeVisible();await expect(page).not.toHaveURL(/#w=/);await expect(manager(page)).toBeVisible();expect(state.deleted).toHaveLength(2);
+});
+
+test('issued invoices block deletion with a retention notice',async({page})=>{
+ const state=await setup(page,{issued:3});await page.goto(`/#w=${ws}&view=settings`);await manager(page).click();
+ await dialog(page).getByRole('button',{name:'Delete: North & Süd 工作室',exact:true}).click();
+ await expect(dialog(page).getByText(/legal retention duties/)).toBeVisible();
+ await confirm(page,'North & Süd 工作室');await expect(remove(page)).toBeDisabled();
+ expect(state.deleted).toHaveLength(0);
 });
 
 test('current studio deletion clears its route and moves to the next accessible studio',async({page})=>{

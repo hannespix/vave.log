@@ -4,6 +4,7 @@ import {hasTranslation,translate,type Locale} from '../shared/i18n.js';
 const copy={
  confirmation:['Confirm permanent deletion and enter the exact workspace name.','Bestätige das endgültige Löschen und gib den exakten Workspace-Namen ein.','请确认永久删除并输入完全一致的工作区名称。'],
  running_timers:['Stop or discard all running timers in this workspace before deleting it.','Beende oder verwerfe zuerst alle laufenden Timer in diesem Workspace.','请先停止或放弃此工作区中所有运行中的计时器，再删除工作区。'],
+ gobd_records:['This workspace holds issued invoices or cancellations with legal retention duties (GoBD); it cannot be deleted.','Dieser Workspace enthält ausgestellte Rechnungen oder Stornos mit gesetzlicher Aufbewahrungspflicht (GoBD) und lässt sich nicht löschen.','此工作区包含具有法定保存义务（GoBD）的已开具发票或冲销单，无法删除。'],
  signin:['Please sign in.','Bitte anmelden.','请登录。'],
  limited:['Too many requests. Please wait a moment.','Zu viele Anfragen. Bitte kurz warten.','请求过多，请稍后再试。'],
  host:['Host not allowed.','Host nicht erlaubt.','不允许的主机。'],

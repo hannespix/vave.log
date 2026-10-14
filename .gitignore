@@ -9,3 +9,5 @@ playwright-report/
 .superpowers/
 *.log
 supabase/.temp/
+# Lokale Playwright-Konfiguration (Chromium-Pfad je Maschine) — nie committen
+playwright.local.config.ts

@@ -5,7 +5,7 @@ import { createWorkspaceAdminService } from '../src/shared/workspace-admin-servi
 import { registerWorkspaceAdminTools } from '../src/server/workspace-admin-mcp.js';
 import type { ToolRegistrar } from '../src/server/finance-mcp.js';
 const id='10000000-0000-4000-8000-000000000001';
-const summary={id,name:'Ä Studio 工作室',is_demo:true,archived_at:'2026-10-14T10:00:00Z',created_at:'2026-10-13T12:00:00Z',counts:{projects:17,tasks:102,time_entries:140,members:11,invoices:4,expenses:5},running_timers:0};
+const summary={id,name:'Ä Studio 工作室',is_demo:true,archived_at:'2026-10-14T10:00:00Z',created_at:'2026-10-13T12:00:00Z',counts:{projects:17,tasks:102,time_entries:140,members:11,invoices:4,expenses:5},running_timers:0,issued_invoices:0};
 function fixture(response:unknown,status=200) {
  const requests:{url:string;body:unknown}[]=[];
  const client=createClient('https://example.supabase.co','test-key',{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(input,init)=>{
@@ -29,7 +29,7 @@ describe('workspace admin service and tool boundary',()=>{
    await expect(service.deleteWorkspace(input as never)).rejects.toMatchObject({code:'confirmation'});
   expect(requests).toHaveLength(0);
  });
- it.each([['42501','private secret','forbidden'],['P0001','WORKSPACE_ADMIN_CONFIRMATION','confirmation'],['P0001','WORKSPACE_ADMIN_RUNNING_TIMERS','running_timers'],['P0001','WORKSPACE_ADMIN_NOT_FOUND','not_found'],['XX000','private_secret_table','failed']])('maps %s/%s to controlled %s errors',async(code,message,expected)=>{
+ it.each([['42501','private secret','forbidden'],['P0001','WORKSPACE_ADMIN_CONFIRMATION','confirmation'],['P0001','WORKSPACE_ADMIN_RUNNING_TIMERS','running_timers'],['P0001','WORKSPACE_ADMIN_GOBD_RECORDS','gobd_records'],['P0001','WORKSPACE_ADMIN_NOT_FOUND','not_found'],['XX000','private_secret_table','failed']])('maps %s/%s to controlled %s errors',async(code,message,expected)=>{
   const {service}=fixture({code,message},400);await expect(service.deleteWorkspace({workspaceId:id,confirmationName:'Studio',confirmed:true})).rejects.toMatchObject({code:expected});
   await expect(service.listOwned()).rejects.not.toThrow(/private.secret/);
  });

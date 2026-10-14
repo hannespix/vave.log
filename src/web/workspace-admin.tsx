@@ -18,7 +18,8 @@ export function WorkspaceAdminList({workspaces,currentId,onDelete,busy}:{workspa
 
 export function WorkspaceDeleteConfirmation({workspace,confirmationName,confirmed,busy,online,blocked=false,onNameChange,onConfirmedChange,onBack,onSubmit}:{workspace:WorkspaceAdminSummary;confirmationName:string;confirmed:boolean;busy:boolean;online:boolean;blocked?:boolean;onNameChange:(name:string)=>void;onConfirmedChange:(confirmed:boolean)=>void;onBack:()=>void;onSubmit:()=>void}){
  const {locale}=useI18n();
- const allowed=confirmationName===workspace.name&&confirmed&&online&&!busy&&!blocked&&workspace.running_timers===0;
+ const gobdBlocked=!workspace.is_demo&&workspace.issued_invoices>0;
+ const allowed=confirmationName===workspace.name&&confirmed&&online&&!busy&&!blocked&&workspace.running_timers===0&&!gobdBlocked;
  function submit(event:FormEvent){event.preventDefault();if(allowed)onSubmit();}
  return <form className="form-stack workspace-delete-form" onSubmit={submit}>
   <button className="text-button workspace-admin-back" type="button" onClick={onBack} disabled={busy}><ChevronLeft size={16}/>{text(locale,'back')}</button>
@@ -26,6 +27,7 @@ export function WorkspaceDeleteConfirmation({workspace,confirmationName,confirme
   <div className="workspace-delete-warning"><p><strong>{text(locale,'permanent')}</strong></p><p>{text(locale,'finances')}</p><p>{text(locale,'accounts')}</p></div>
   <section aria-label={text(locale,'counts')}><h4>{text(locale,'counts')}</h4><dl className="workspace-delete-counts">{(['projects','tasks','time_entries','members','invoices','expenses'] as const).map(key=><div key={key}><dt>{text(locale,key)}</dt><dd>{workspace.counts[key]}</dd></div>)}</dl></section>
   {workspace.running_timers>0&&<Notice>{text(locale,'running_timers')}</Notice>}
+  {gobdBlocked&&<Notice>{text(locale,'gobd_records')}</Notice>}
   {!online&&<Notice>{text(locale,'offline')}</Notice>}
   <Field label={text(locale,'nameLabel')} hint={text(locale,'nameHint')}><input name="confirmationName" value={confirmationName} onChange={event=>onNameChange(event.target.value)} disabled={busy} required autoComplete="off" spellCheck={false}/></Field>
   <label className="checkbox-field"><input type="checkbox" checked={confirmed} onChange={event=>onConfirmedChange(event.target.checked)} disabled={busy}/>{text(locale,'acknowledge')}</label>
@@ -44,10 +46,10 @@ export function WorkspaceAdminDialog({service,currentId,onClose,onDeleted}:{serv
  useEffect(()=>{if(!loading)content.current?.focus();},[selected?.id,loading]);
  const back=()=>{setSelected(null);setConfirmationName('');setConfirmed(false);setError('');void load();};
  async function remove(){
-  if(!selected||submitting.current||(error&&error!=='confirmation')||confirmationName!==selected.name||!confirmed||!online||selected.running_timers>0)return;
+  if(!selected||submitting.current||(error&&error!=='confirmation')||confirmationName!==selected.name||!confirmed||!online||selected.running_timers>0||(!selected.is_demo&&selected.issued_invoices>0))return;
   submitting.current=true;setBusy(true);setError('');const id=selected.id;
   try{await service.deleteWorkspace({workspaceId:id,confirmationName,confirmed:true});if(!alive.current)return;setWorkspaces(list=>list.filter(w=>w.id!==id));setSelected(null);setConfirmationName('');setConfirmed(false);setDeleted(true);onDeleted(id);}
-  catch(cause){if(alive.current){const code=(cause as {code?:string})?.code;setError(code&&['forbidden','confirmation','running_timers','not_found'].includes(code)?code:'failed');setConfirmed(false);}}
+  catch(cause){if(alive.current){const code=(cause as {code?:string})?.code;setError(code&&['forbidden','confirmation','running_timers','gobd_records','not_found'].includes(code)?code:'failed');setConfirmed(false);}}
   finally{submitting.current=false;if(alive.current)setBusy(false);}
  }
  return <Dialog title={text(locale,selected?'deleteTitle':'title')} onClose={onClose} busy={busy}>

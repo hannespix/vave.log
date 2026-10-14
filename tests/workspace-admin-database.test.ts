@@ -33,7 +33,8 @@ describe('permanent workspace administration',()=>{
   const result=await list();expect(result).toHaveLength(2);
   expect(result.find(w=>w.id===active.id)).toMatchObject({name:active.name,is_demo:true,archived_at:null,running_timers:0,counts:{projects:25,tasks:102}});
   expect(result.find(w=>w.id===archived.id)?.archived_at).toBeTruthy();
-  expect(Object.keys(result[0]).sort()).toEqual(['archived_at','counts','created_at','id','is_demo','name','running_timers']);
+  expect(Object.keys(result[0]).sort()).toEqual(['archived_at','counts','created_at','id','is_demo','issued_invoices','name','running_timers']);
+  expect(result.find(w=>w.id===active.id)?.issued_invoices).toBe(0);
  });
  it.each([false,true])('removes all business records from a populated demo (archived=%s), retaining accounts and other workspaces',async archived=>{
   const w=await create(),keep=await create('Keep');if(archived)await db.query('select public.demo_archive_workspace($1)',[w.id]);
@@ -85,7 +86,7 @@ describe('permanent workspace administration',()=>{
   await db.exec("create function private.reject_fixture_delete() returns trigger language plpgsql as $$begin raise exception 'injected failure';end$$;create trigger reject_fixture_delete before delete on public.projects for each row execute function private.reject_fixture_delete()");
   await login();await expect(attempt('select public.delete_workspace($1,$2,true)',[w.id,w.name])).rejects.toThrow(/injected failure/);expect(await snapshot(w.id)).toEqual(before);
  });
- it('deletes a real workspace with approved claimed time, immutable invoices/cancellation, timer receipts and pending invitations',async()=>{
+ async function realStudio(){
   const w=await one<{id:string;name:string}>("select * from public.create_workspace('Real studio','UTC','EUR')");
   const p=await one<{id:string}>("insert into public.projects(workspace_id,code,name) values($1,'REAL','Real work')returning id",[w.id]);
   const client=await one<{id:string}>("insert into public.finance_clients(workspace_id,name,billing_address)values($1,'Customer','Customer address')returning id",[w.id]);
@@ -96,10 +97,21 @@ describe('permanent workspace administration',()=>{
   const entry=await one<{id:string;work_date:string}>('select * from public.stop_timer($1)',[timer.id]);
   await db.query('select public.submit_entries($1,$2::date,$2::date)',[w.id,entry.work_date]);await db.query('select public.review_entry($1,true)',[entry.id]);
   const draft=(await one<{v:{id:string}}>('select public.finance_draft_from_time($1::jsonb)v',[JSON.stringify({workspace_id:w.id,client_id:client.id,project_id:p.id,language:'en',from:entry.work_date,to:entry.work_date,issue_date:entry.work_date,due_date:entry.work_date,tax_basis_points:1900,zero_tax_reason:''})])).v;
-  await db.query('select public.finance_issue_invoice($1,$2)',[w.id,draft.id]);await db.query("select public.finance_cancel_invoice($1,$2,'Fixture correction')",[w.id,draft.id]);
   await db.query("select public.invite_member($1,'pending@example.org','member')",[w.id]);
-  expect((await list())[0]).toMatchObject({is_demo:false,counts:{invoices:2,time_entries:1}});await remove(w);
+  return {w,draft};
+ }
+ it('deletes a real workspace with approved time, a draft invoice, timer receipts and pending invitations',async()=>{
+  const {w}=await realStudio();
+  expect((await list())[0]).toMatchObject({is_demo:false,issued_invoices:0,counts:{invoices:1,time_entries:1}});await remove(w);
   expect(Object.values(await snapshot(w.id)).every(v=>v.length===0)).toBe(true);expect(await rows('select id from auth.users')).toHaveLength(2);
+ });
+ it('refuses to delete a real workspace holding issued invoices or cancellations (GoBD retention)',async()=>{
+  const {w,draft}=await realStudio();
+  await db.query('select public.finance_issue_invoice($1,$2)',[w.id,draft.id]);await db.query("select public.finance_cancel_invoice($1,$2,'Fixture correction')",[w.id,draft.id]);
+  expect((await list())[0]).toMatchObject({is_demo:false,issued_invoices:2,counts:{invoices:2}});
+  await expect(attempt('select public.delete_workspace($1,$2,true)',[w.id,w.name])).rejects.toThrow(/WORKSPACE_ADMIN_GOBD_RECORDS/);
+  await login();expect(await rows('select id from public.workspaces where id=$1',[w.id])).toHaveLength(1);
+  expect(await rows('select id from public.finance_invoices where workspace_id=$1',[w.id])).toHaveLength(2);
  });
  it('does not retain a capability after successful deletion that could affect another workspace',async()=>{
   const w=await create(),keep=await create('Retain ordinary protections');await remove(w);await db.exec('reset role');
@@ -121,7 +133,7 @@ describe('permanent workspace administration',()=>{
   await db.exec('rollback');await db.exec('reset role');
   const before=await rows('select id from auth.users order by id');
   const result=await db.exec(readFileSync('tests/live/workspace-admin-smoke.sql','utf8'));
-  expect(result.some(r=>r.rows.some(row=>(row as Record<string,unknown>).deleted_fixture_workspaces===2))).toBe(true);
+  expect(result.some(r=>r.rows.some(row=>(row as Record<string,unknown>).deleted_fixture_workspaces===1))).toBe(true);
   expect(await rows('select id from auth.users order by id')).toEqual(before);
   expect(await rows('select id from public.workspaces')).toEqual([]);
   await db.exec('begin');

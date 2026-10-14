@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { uuid } from './validation.js';
 import type { DeleteWorkspaceInput, WorkspaceAdminSummary } from './workspace-admin-types.js';
 
-export type WorkspaceAdminErrorCode='forbidden'|'confirmation'|'running_timers'|'not_found'|'failed';
+export type WorkspaceAdminErrorCode='forbidden'|'confirmation'|'running_timers'|'gobd_records'|'not_found'|'failed';
 const messages:Record<WorkspaceAdminErrorCode,string>={
   forbidden:'Only a verified workspace owner can manage permanent deletion.',
   confirmation:'Confirm permanent deletion and enter the exact workspace name.',
   running_timers:'Stop or discard all running timers in this workspace before deleting it.',
+  gobd_records:'This workspace holds issued invoices or cancellations, which are subject to legal retention duties. It cannot be deleted.',
   not_found:'This workspace is no longer available.',
   failed:'The workspace administration request could not be completed.'
 };
@@ -19,12 +20,15 @@ export const workspaceConfirmationName=z.string().min(1).max(120);
 const deleteSchema=z.strictObject({workspaceId:uuid,confirmationName:workspaceConfirmationName,confirmed:z.literal(true)});
 const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const summarySchema=z.object({id:uuid,name:workspaceConfirmationName,is_demo:z.boolean(),archived_at:z.string().nullable(),created_at:z.string(),
-  counts:z.object({projects:count,tasks:count,time_entries:count,members:count,invoices:count,expenses:count}),running_timers:count});
+  counts:z.object({projects:count,tasks:count,time_entries:count,members:count,invoices:count,expenses:count}),running_timers:count,
+  // Vor der GoBD-Migration fehlt das Feld in der Datenbank; dann greift wie dort die alte Regel (keine Sperre).
+  issued_invoices:count.default(0)});
 function fail(error:{code?:string;message?:string}|null) {
   if(!error)return;
   if(error.code==='42501'||error.message?.startsWith('WORKSPACE_ADMIN_FORBIDDEN'))throw new WorkspaceAdminError('forbidden');
   if(error.message?.startsWith('WORKSPACE_ADMIN_CONFIRMATION'))throw new WorkspaceAdminError('confirmation');
   if(error.message?.startsWith('WORKSPACE_ADMIN_RUNNING_TIMERS'))throw new WorkspaceAdminError('running_timers');
+  if(error.message?.startsWith('WORKSPACE_ADMIN_GOBD_RECORDS'))throw new WorkspaceAdminError('gobd_records');
   if(error.message?.startsWith('WORKSPACE_ADMIN_NOT_FOUND'))throw new WorkspaceAdminError('not_found');
   throw new WorkspaceAdminError('failed');
 }

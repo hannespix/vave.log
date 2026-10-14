@@ -6,6 +6,8 @@ export interface WorkspaceAdminSummary {
   created_at:string;
   counts:{projects:number;tasks:number;time_entries:number;members:number;invoices:number;expenses:number};
   running_timers:number;
+  /** Ausgestellte Rechnungen + Stornos (GoBD-Aufbewahrung); für Demos immer 0. */
+  issued_invoices:number;
 }
 
 export interface DeleteWorkspaceInput {

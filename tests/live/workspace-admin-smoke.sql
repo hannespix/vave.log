@@ -4,7 +4,7 @@
 begin;
 create temporary table workspace_admin_smoke_results (
  deleted_fixture_workspaces integer, denied_roles integer, archived_transfer_verified boolean,
- real_documents_deleted boolean, running_timer_preserved boolean, other_workspace_unchanged boolean,
+ gobd_retention_enforced boolean, running_timer_preserved boolean, other_workspace_unchanged boolean,
  auth_users_unchanged boolean, private_capability_protected boolean
 ) on commit drop;
 do $$
@@ -108,18 +108,24 @@ begin
  if summary is null or summary->>'archived_at' is null then raise exception 'FAIL: archived owner preview';end if;
  perform public.delete_workspace(demo_id,'Delete Ä 工作室 rollback fixture',true);
  reset role;perform set_config('request.jwt.claim.sub',owner_id::text,true);set local role authenticated;
- perform public.delete_workspace(real_id,'Delete real rollback fixture',true);
+ -- GoBD: a real workspace with issued invoices or cancellations refuses deletion.
+ select value into summary from jsonb_array_elements(public.list_owned_workspaces())where value->>'id'=real_id::text;
+ if (summary->>'issued_invoices')::integer<>2 then raise exception 'FAIL: issued invoice preview';end if;
+ denied:=false;begin perform public.delete_workspace(real_id,'Delete real rollback fixture',true);
+ exception when raise_exception then if sqlerrm='WORKSPACE_ADMIN_GOBD_RECORDS' then denied:=true;else raise;end if;end;
+ if not denied then raise exception 'FAIL: GoBD retention bypass';end if;
  reset role;
- if exists(select 1 from public.workspaces where id in(demo_id,real_id))then raise exception 'FAIL: deleted workspace remains';end if;
+ if exists(select 1 from public.workspaces where id=demo_id)then raise exception 'FAIL: deleted workspace remains';end if;
+ if not exists(select 1 from public.workspaces where id=real_id)then raise exception 'FAIL: retained workspace deleted';end if;
  -- Check every workspace-scoped relation, including private receipts/counters/context.
  for t in select table_schema,table_name from information_schema.columns where column_name='workspace_id'and table_schema in('public','private')loop
-  execute format('select count(*) from %I.%I where workspace_id=any($1)',t.table_schema,t.table_name)into leftover using array[demo_id,real_id];
+  execute format('select count(*) from %I.%I where workspace_id=any($1)',t.table_schema,t.table_name)into leftover using array[demo_id];
   if leftover<>0 then raise exception 'FAIL: leftover rows in %.%',t.table_schema,t.table_name;end if;
  end loop;
  if auth_before<>(select count(*)from auth.users)then raise exception 'FAIL: auth users changed';end if;
- if existing_before+1<>(select count(*)from public.workspaces)then raise exception 'FAIL: unexpected workspace deletion';end if;
+ if existing_before+2<>(select count(*)from public.workspaces)then raise exception 'FAIL: unexpected workspace deletion';end if;
  if before_keep is distinct from(select jsonb_agg(to_jsonb(p) order by p.id)from public.projects p where p.workspace_id=keep_id)then raise exception 'FAIL: other workspace changed';end if;
- insert into workspace_admin_smoke_results values(2,denial_count,true,true,true,true,true,true);
+ insert into workspace_admin_smoke_results values(1,denial_count,true,true,true,true,true,true);
 end $$;
 select * from workspace_admin_smoke_results;
 rollback;
