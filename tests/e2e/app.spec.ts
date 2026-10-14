@@ -276,6 +276,26 @@ test('authorized workspace deep links survive reload and cross-workspace history
  await page.goto('/#w=missing&view=tasks');await expect(page.getByRole('heading',{name:'Workspace unavailable',exact:true})).toBeVisible();await expect(page.locator('#workspace-select')).toHaveCount(0);await page.getByRole('button',{name:'Open my workspace',exact:true}).click();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',ws);
 });
 
+test('inviting a member explains the next steps and can send a styled sign-in link email',async({page})=>{
+ await setup(page,true);
+ let invited:Record<string,unknown>|undefined;let otp:Record<string,unknown>|undefined;
+ await page.route('https://test.supabase.co/rest/v1/rpc/invite_member',r=>{invited=r.request().postDataJSON();return r.fulfill({json:null})});
+ await page.route('https://test.supabase.co/auth/v1/otp*',r=>{otp=r.request().postDataJSON();return r.fulfill({json:{}})});
+ await page.goto('/');
+ await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Team',exact:true}).click();
+ await page.getByRole('button',{name:'Invite person',exact:true}).click();
+ const dialog=page.getByRole('dialog');
+ await expect(dialog.getByText('How the invited person continues:',{exact:true})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Copy invitation text',exact:true})).toBeVisible();
+ await expect(dialog.getByLabel('Send a sign-in link by email right away',{exact:true})).toBeChecked();
+ await dialog.getByLabel('Email address',{exact:true}).fill('neu@example.test');
+ await dialog.getByRole('button',{name:'Save invitation',exact:true}).click();
+ await expect(dialog).not.toBeVisible();
+ await expect(page.getByText('Invitation stored and sign-in link sent by email.',{exact:true})).toBeVisible();
+ expect(invited).toMatchObject({p_workspace_id:ws,p_email:'neu@example.test',p_role:'member'});
+ expect(otp).toMatchObject({email:'neu@example.test',create_user:true});
+});
+
 test('a running timer stays visible everywhere, minimizes and ticks in the tab title',async({page})=>{
  await connectedSetup(page);
  await page.route('https://test.supabase.co/rest/v1/running_timers*',r=>r.fulfill({json:{id:'44444444-4444-4444-8444-444444444444',workspace_id:ws,project_id:project,user_id:user,started_at:'2026-10-13T08:30:00Z',note:'Focus block',billable:true}}));
