@@ -78,3 +78,5 @@ body.timer-floating.timer-open .app-shell{padding-bottom:calc(var(--mobile-nav-h
 .invite-row:first-child{border-top:0}
 .invite-row strong{font-size:12px;overflow-wrap:anywhere}
 .invite-row small{display:block;margin-top:4px;font-size:9px;color:#99a28c}
+
+.capacity-cell{display:inline-flex;align-items:center;gap:7px}.capacity-cell input{width:72px;padding:6px 8px}.absence-form{margin-bottom:18px}
