@@ -30,6 +30,9 @@ writeFileSync(join(out, 'manifest.webmanifest'), JSON.stringify(manifest, null, 
 const sw = readFileSync(join(out, 'sw.js'), 'utf8').replaceAll("'/offline.", `'${base}offline.`);
 if (base !== '/' && !sw.includes(`'${base}offline.html'`)) throw Error('Service worker rewrite failed; check public/sw.js offline asset paths.');
 writeFileSync(join(out, 'sw.js'), sw);
+const offline = readFileSync(join(out, 'offline.html'), 'utf8').replaceAll('"/offline.', `"${base}offline.`);
+if (base !== '/' && !offline.includes(`"${base}offline.css"`)) throw Error('Offline page rewrite failed; check public/offline.html asset paths.');
+writeFileSync(join(out, 'offline.html'), offline);
 
 // GitHub Pages cannot send response headers. The document carries the same
 // policy as the server (headers helmet cannot express in <meta> are omitted).

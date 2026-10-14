@@ -39,7 +39,7 @@ export function PwaInstallLink(){
 export function PwaSettings(){
  const{state,controller}=useContext(Context),{locale}=useI18n(),copy=pwaCopy(locale);
  const notice=state.notice==='upToDate'||state.notice==='checkFailed'||state.notice==='updateFailed'?copy[state.notice]:'';
- return <section className="panel pwa-settings"><div className="panel-heading"><div><p className="eyebrow">VAVE.LOG</p><h2>{copy.title}</h2></div><img src="/icons/icon-192.png" width="40" height="40" alt=""/></div><p className="muted">{copy.description}</p>
+ return <section className="panel pwa-settings"><div className="panel-heading"><div><p className="eyebrow">VAVE.LOG</p><h2>{copy.title}</h2></div><img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} width="40" height="40" alt=""/></div><p className="muted">{copy.description}</p>
   <div className="button-row">{state.installed?<span className="pwa-installed"><Check size={15} aria-hidden="true"/>{copy.installed}</span>:<PwaInstallLink/>}
   {state.workerStatus==='ready'&&<button type="button" className="text-button" disabled={state.checking||state.offline||state.applying} onClick={()=>void controller?.checkForUpdate()}>{state.checking?copy.working:copy.check}</button>}</div>
   <p className="tiny muted">{copy.onlineOnly}</p>
