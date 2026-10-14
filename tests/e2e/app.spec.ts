@@ -139,7 +139,7 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toBeVisible();
  await expect(page.getByText('Explore the public sources',{exact:true})).toHaveCount(0);
  await page.getByRole('navigation').getByRole('button',{name:'Team',exact:true}).click();
- await expect(page.getByText('Tobias Geisler',{exact:true})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  expect(input).toMatchObject({p_name:'VAVE · Demo',p_timezone:'Europe/Berlin',p_locale:'en'});expect(input?.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -184,7 +184,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await page.goto('/');await page.getByRole('button',{name:'Complete demo',exact:true}).click();
  await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
  const nav=page.getByRole('navigation');await nav.getByRole('button',{name:'Team',exact:true}).click();
- await expect(page.getByText('Elena Weber',{exact:true})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
+ await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  await nav.getByRole('button',{name:/^Time/}).click();await page.getByRole('button',{name:'Team time',exact:true}).click();
  await page.getByRole('button',{name:/Approve.*Elena Weber/}).click();await expect(page.getByRole('row').filter({hasText:'Sample concept workshop'}).getByText('Approved',{exact:true})).toBeVisible();
  await nav.getByRole('button',{name:'Finance',exact:true}).click();await page.getByRole('tab',{name:'Invoices',exact:true}).click();
