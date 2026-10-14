@@ -28,6 +28,8 @@ import {
   minorInput,
   money,
   printInvoice,
+  taxBreakdown,
+  taxRateLabel,
 } from "./documents";
 import { dateInZone, downloadText } from "../helpers";
 import { isOverdue } from "./invoice-summary";
@@ -377,10 +379,12 @@ function InvoiceDetail({
           <dt>{t("net")}</dt>
           <dd>{money(invoice.net_minor, invoice.currency, locale)}</dd>
         </div>
-        <div>
-          <dt>{t("tax")}</dt>
-          <dd>{money(invoice.tax_minor, invoice.currency, locale)}</dd>
-        </div>
+        {taxBreakdown(invoice.lines).map((rate) => (
+          <div key={rate.basisPoints}>
+            <dt>{t("tax")} {taxRateLabel(rate.basisPoints, locale)} %</dt>
+            <dd>{money(rate.tax_minor, invoice.currency, locale)}</dd>
+          </div>
+        ))}
         <div>
           <dt>{t("total")}</dt>
           <dd>{money(invoice.total_minor, invoice.currency, locale)}</dd>
