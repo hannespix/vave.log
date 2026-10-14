@@ -1,5 +1,6 @@
 import {test,expect,type Page} from '@playwright/test';
 import {pickOption} from './select';
+import {goArea} from './nav';
 import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION} from '../../src/shared/demo-data';
 test.use({locale:'en-US'});
 const user='11111111-1111-4111-8111-111111111111';
@@ -138,10 +139,10 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await pickOption(page.getByRole('combobox',{name:'Time zone',exact:true}),'Europe/Berlin','Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
- await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();
+ await goArea(page,'Settings');
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toBeVisible();
  await expect(page.getByText('Explore the public sources',{exact:true})).toHaveCount(0);
- await page.getByRole('navigation').getByRole('button',{name:'Team',exact:true}).click();
+ await goArea(page,'Team');
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
@@ -162,7 +163,7 @@ test('finance loads more than a thousand time entries and keeps million-euro met
  await page.route('https://test.supabase.co/rest/v1/finance_staff_rates*',r=>r.fulfill({json:people.map((person,i)=>({id:String(i),workspace_id:ws,user_id:person,kind:'employee',effective_from:'2026-01-01',cost_rate_minor:8000,bill_rate_minor:18500})),headers:{'access-control-expose-headers':'content-range','content-range':'0-110/111'}}));
  await page.route('https://test.supabase.co/rest/v1/finance_project_plans*',r=>r.fulfill({json:[{workspace_id:ws,project_id:project,client_id:null,billing_mode:'fixed',default_bill_rate_minor:18500,fixed_fee_minor:2255000000,planned_expenses_minor:563750000,lines:[{label:'Fictional annual production programme',kind:'employee',user_id:null,planned_minutes:7800000,cost_rate_minor:8000,bill_rate_minor:18500}],created_at:''}],headers:{'access-control-expose-headers':'content-range','content-range':'0-0/1'}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
- await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'Finance',exact:true}).click();
+ await page.goto('/');await goArea(page,'Finance');
  await expect(page.locator('.finance-metric').filter({hasText:'22,550,000.00'})).toBeVisible();
  await expect(page.locator('.finance-metric').filter({hasText:'7,370.35'})).toBeVisible();
  expect(offsets.filter(x=>x===1000).length).toBeGreaterThanOrEqual(2);
@@ -177,7 +178,7 @@ test('manager saves a real draft shape and must review before issuing',async({pa
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:invoices}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_save_draft',r=>{saved=r.request().postDataJSON().p_input;const invoice={...saved,created_at:'2026-10-13T09:00:00Z',status:'draft',number:null,currency:'EUR',lines:[{...(saved!.lines as Record<string,unknown>[])[0],net_minor:25000,tax_minor:4750,total_minor:29750}],net_minor:25000,tax_minor:4750,total_minor:29750,issuer_snapshot:null,customer_snapshot:null,issued_at:null,cancellation_of:null,cancellation_id:null,cancellation_reason:'',paid:false};invoices.push(invoice);return r.fulfill({json:invoice})});
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_issue_invoice',r=>{issued++;return r.fulfill({status:400,json:{code:'P0001',message:'FINANCE_CONFIGURATION'}})});
- await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'Finance',exact:true}).click();
+ await page.goto('/');await goArea(page,'Finance');
  await page.getByRole('tab',{name:'Invoices',exact:true}).click();await page.getByRole('button',{name:'Manual draft',exact:true}).click();
  let dialog=page.getByRole('dialog');await dialog.getByLabel('Description',{exact:true}).fill('Design workshop');await dialog.getByLabel('Quantity',{exact:true}).fill('2');await dialog.getByLabel('Unit price (EUR)',{exact:true}).fill('125');await dialog.getByLabel('Tax %',{exact:true}).fill('19');
  await dialog.getByRole('button',{name:'Save changes',exact:true}).click();await expect(dialog).not.toBeVisible();
@@ -206,21 +207,21 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:upgraded?[invoice]:[]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_issue_invoice',r=>{issued++;expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws,p_id:draftId});Object.assign(invoice,{status:'issued',number:'DEMO-000001',issued_at:'2026-10-13T09:00:00Z',issuer_snapshot:profile,customer_snapshot:client});return r.fulfill({json:invoice})});
  await page.goto('/');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);
- await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();
+ await goArea(page,'Settings');
  await page.getByRole('button',{name:'Complete demo',exact:true}).click();
  await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
- const nav=page.getByRole('navigation');await nav.getByRole('button',{name:'Team',exact:true}).click();
+ const nav=page.getByRole('navigation');await goArea(page,'Team');
  await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
  await nav.getByRole('button',{name:/^Time/}).click();await page.getByRole('button',{name:'Team time',exact:true}).click();
  await page.getByRole('button',{name:/Approve.*Elena Weber/}).click();await expect(page.getByRole('row').filter({hasText:'Sample concept workshop'}).getByText('Approved',{exact:true})).toBeVisible();
- await nav.getByRole('button',{name:'Finance',exact:true}).click();await page.getByRole('tab',{name:'Invoices',exact:true}).click();
+ await goArea(page,'Finance');await page.getByRole('tab',{name:'Invoices',exact:true}).click();
  await page.getByRole('button',{name:'Draft',exact:true}).click();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
  await expect(page.getByRole('button',{name:'Issue sample invoice',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Issue sample invoice',exact:true}).click();
  const dialog=page.getByRole('dialog');await expect(dialog).toContainText('No payment is due.');expect(issued).toBe(0);
  await dialog.getByRole('button',{name:'Issue sample invoice',exact:true}).click();await expect(dialog).not.toBeVisible();expect(issued).toBe(1);
  await expect(page.getByRole('button',{name:'DEMO-000001',exact:true})).toBeVisible();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
- await page.reload();await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await page.reload();await goArea(page,'Settings');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
 });
 
 const secondProject='99999999-9999-4999-8999-999999999999';
@@ -282,7 +283,7 @@ test('inviting a member explains the next steps and can send a styled sign-in li
  await page.route('https://test.supabase.co/rest/v1/rpc/invite_member',r=>{invited=r.request().postDataJSON();return r.fulfill({json:null})});
  await page.route('https://test.supabase.co/auth/v1/otp*',r=>{otp=r.request().postDataJSON();return r.fulfill({json:{}})});
  await page.goto('/');
- await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Team',exact:true}).click();
+ await goArea(page,'Team');
  await page.getByRole('button',{name:'Invite person',exact:true}).click();
  const dialog=page.getByRole('dialog');
  await expect(dialog.getByText('How the invited person continues:',{exact:true})).toBeVisible();
@@ -296,7 +297,7 @@ test('inviting a member explains the next steps and can send a styled sign-in li
  expect(otp).toMatchObject({email:'neu@example.test',create_user:true});
 });
 
-test('a running timer stays visible everywhere, minimizes and ticks in the tab title',async({page})=>{
+test('a running timer stays visible everywhere, minimizes and ticks in the tab title',async({page,isMobile})=>{
  await connectedSetup(page);
  await page.route('https://test.supabase.co/rest/v1/running_timers*',r=>r.fulfill({json:{id:'44444444-4444-4444-8444-444444444444',workspace_id:ws,project_id:project,user_id:user,started_at:'2026-10-13T08:30:00Z',note:'Focus block',billable:true}}));
  await page.goto('/');
@@ -307,12 +308,15 @@ test('a running timer stays visible everywhere, minimizes and ticks in the tab t
  await nav.getByRole('button',{name:'Tasks',exact:true}).click();
  const widget=page.locator('.floating-timer');
  await expect(widget).toBeVisible();
+ const aboveBar=async(locator:ReturnType<Page['locator']>)=>{if(!isMobile)return;const bar=await page.locator('.sidebar nav').boundingBox();const box=await locator.boundingBox();expect(box!.y+box!.height).toBeLessThanOrEqual(bar!.y+1);};
+ await aboveBar(widget);
  await expect(widget.locator('.floating-clock')).toHaveText(/^00:30:\d\d$/);
  await expect(widget.getByRole('button',{name:'Brand Experience'})).toBeVisible();
  await widget.getByRole('button',{name:'Minimize timer',exact:true}).click();
  await expect(page.locator('.floating-timer')).toHaveCount(0);
  const mini=page.locator('.floating-timer-mini');
  await expect(mini).toBeVisible();
+ await aboveBar(mini);
  await nav.getByRole('button',{name:'Projects',exact:true}).click();
  await expect(page.locator('.floating-timer-mini')).toBeVisible();
  await mini.click();
@@ -320,6 +324,29 @@ test('a running timer stays visible everywhere, minimizes and ticks in the tab t
  await page.locator('.floating-timer').getByRole('button',{name:'Brand Experience'}).click();
  await expect(page.getByText('Your timer is running.',{exact:true})).toBeVisible();
  await expect(page.locator('.floating-timer')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('the phone bottom bar keeps four areas tappable and groups the rest behind More',async({page,isMobile})=>{
+ await connectedSetup(page);await page.goto('/');
+ const nav=page.getByRole('navigation',{name:'Main navigation'});
+ if(!isMobile){
+  await expect(nav.getByRole('button',{name:'Settings',exact:true})).toBeVisible();
+  await expect(page.locator('.nav-more')).toBeHidden();
+  return;
+ }
+ for(const name of ['Overview','Projects','Tasks','Time','More'])await expect(nav.getByRole('button',{name,exact:true})).toBeVisible();
+ for(const name of ['Reports','Team','Finance','Settings'])await expect(nav.getByRole('button',{name,exact:true})).toHaveCount(0);
+ await nav.getByRole('button',{name:'More',exact:true}).click();
+ const sheet=page.locator('.nav-more-sheet');
+ for(const name of ['Reports','Team','Finance','Settings'])await expect(sheet.getByRole('button',{name,exact:true})).toBeVisible();
+ await sheet.getByRole('button',{name:'Settings',exact:true}).click();
+ await expect(sheet).toHaveCount(0);
+ await expect(page.getByText('VAVE.LOG / SETTINGS',{exact:true})).toBeVisible();
+ await expect(nav.getByRole('button',{name:'More',exact:true})).toHaveClass(/active/);
+ await nav.getByRole('button',{name:'More',exact:true}).click();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('.nav-more-sheet')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 

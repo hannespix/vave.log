@@ -129,6 +129,8 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Dein Account, dein Workspace und deine Verbindungen.": {"en": "Your account, workspace, and connections.", "de": "Dein Account, dein Workspace und deine Verbindungen.", "zh": "你的账户、工作区与连接。"},
   "Workspace wechseln": {"en": "Switch workspace", "de": "Workspace wechseln", "zh": "切换工作区"},
   "Hauptnavigation": {"en": "Main navigation", "de": "Hauptnavigation", "zh": "主导航"},
+  "Mehr": {"en": "More", "de": "Mehr", "zh": "更多"},
+  "Weitere Bereiche": {"en": "More areas", "de": "Weitere Bereiche", "zh": "更多区域"},
   "Abmelden": {"en": "Sign out", "de": "Abmelden", "zh": "退出登录"},
   "Daten aktualisieren": {"en": "Refresh data", "de": "Daten aktualisieren", "zh": "刷新数据"},
   "LET’S MAKE IT COUNT": {"en": "LET’S MAKE IT COUNT", "de": "LET’S MAKE IT COUNT", "zh": "让每一刻都有价值"},
