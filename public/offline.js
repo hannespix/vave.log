@@ -10,6 +10,6 @@
   const select=document.getElementById('language');
   function render(){const c=copy[language];document.documentElement.lang=language;for(const id of ['eyebrow','title','description','retry'])document.getElementById(id).textContent=c[id];document.getElementById('language-label').textContent=c.language;select.value=language;document.getElementById('connection').textContent=navigator.onLine?c.connected:c.offline;}
   select.addEventListener('change',()=>{language=select.value;try{localStorage.setItem('vave-log.locale',language);}catch{}render();});
-  document.getElementById('retry').addEventListener('click',()=>{if(location.pathname==='/offline.html')location.assign('/');else location.reload();});
+  document.getElementById('retry').addEventListener('click',()=>{if(location.pathname.endsWith('/offline.html'))location.assign('./');else location.reload();});
   window.addEventListener('online',render);window.addEventListener('offline',render);render();
 })();

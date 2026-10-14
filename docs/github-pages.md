@@ -17,6 +17,12 @@ grün ist** (zusätzlich manuell über *Run workflow*).
   die Content-Security-Policy steckt stattdessen als `<meta>`-Tag im Dokument.
 - Service Worker, Manifest und Offline-Seite werden auf den Pages-Basispfad
   (`/vave.log/`) umgeschrieben; die PWA bleibt installierbar.
+- App-interne Links (Passwort-Reset-Redirect `?reset=1`, `/oauth/consent`,
+  MCP-Adresse) laufen über den `appHref`/`appPath`-Helfer in
+  `src/web/helpers.ts` und respektieren den Basispfad. Wichtig: Die Pages-URL
+  samt `/?reset=1` muss in Supabase unter Auth → URL Configuration als
+  Redirect-URL eingetragen sein, sonst fällt der Reset-Link auf die Site-URL
+  zurück.
 
 ## Einmalige Einrichtung
 

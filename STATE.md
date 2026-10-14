@@ -131,3 +131,7 @@ Der Besitzer meldete am Handy zwei Blocker: Der schwebende Timer (Karte und Pill
 ## Timer auch unter „Zeiten“ (14.10.2026)
 
 Auf Wunsch des Besitzers steht das Timer-Panel (starten, laufende Zeit, stoppen/verwerfen) jetzt zusätzlich oben auf der Zeiten-Seite — dieselbe Komponente wie in der Übersicht, auf breiten Bildschirmen auf 460 px begrenzt, am Handy volle Breite. Auf dieser Seite blendet sich der schwebende Timer aus (das Panel zeigt den laufenden Timer bereits); überall sonst erscheint er weiterhin. Der Timer-Browsertest prüft das: Auf „Zeiten“ ist das Panel sichtbar und weder Karte noch Pille vorhanden.
+
+## M1-A: Basispfad-feste App-Links (14.10.2026)
+
+Der Hoch-Befund aus dem Audit ist behoben: `appHref(relative, appUrl)` und `appPath(relative)` in `src/web/helpers.ts` sind die einzige Quelle für app-relative URLs. Umgestellt: Passwort-Reset-Redirect (`?reset=1`) in Anmeldung und Einstellungen, der `/oauth/consent`-Pfadcheck (Anmeldehinweis und Routing), `history.replaceState` nach dem Reset, die angezeigte und kopierte MCP-Adresse sowie der Retry-Knopf der Offline-Seite (`endsWith('/offline.html')` + relatives Sprungziel). Auf einem GitHub-Pages-Projektpfad (`/vave.log/`) landen Reset-Links damit wieder in der App; Voraussetzung bleibt der Eintrag der Pages-URL in Supabase unter Auth → URL Configuration (dokumentiert in `docs/github-pages.md`). Unit-Tests in `tests/app-href.test.ts`.
