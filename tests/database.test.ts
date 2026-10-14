@@ -352,6 +352,28 @@ describe('database entries and workflow', () => {
     await login(member); await expect(attempt('select public.review_entries($1,$2,false)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
     await login(outsider); await expect(attempt('select public.review_entries($1,$2,true)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
   });
+  it('notifies entry owners about review decisions, merges unread counts, and keeps notifications private', async () => {
+    const a=await entry(60); const b=await entry(30); const c=await entry(45);
+    await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await login(manager);
+    await db.query('select public.review_entry($1,true)',[a.id]);
+    expect((await first('select public.review_entries($1,$2,false) as n',[workspace,[b.id,c.id]])).n).toBe(2);
+    expect(await rows('select * from public.notifications')).toHaveLength(0); // RLS: nur eigene Zeilen
+    await login(member);
+    expect(await rows<{kind:string;entry_count:number}>('select kind,entry_count from public.notifications where read_at is null order by kind')).toEqual([{kind:'entries_approved',entry_count:1},{kind:'entries_returned',entry_count:2}]);
+    await expect(attempt("insert into public.notifications(workspace_id,user_id,kind) values($1,$2,'entries_approved')",[workspace,member])).rejects.toThrow();
+    await expect(attempt('update public.notifications set read_at=now()')).rejects.toThrow();
+    expect((await first('select public.mark_notifications_read($1) as n',[workspace])).n).toBe(2);
+    expect(await rows('select * from public.notifications where read_at is null')).toHaveLength(0);
+    await login(manager);
+    await db.query('select public.revoke_approval($1)',[a.id]);
+    const own=await entry(15);
+    await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await db.query('select public.review_entry($1,true)',[own.id]);
+    expect(await rows('select * from public.notifications')).toHaveLength(0); // Selbst-Review meldet nichts
+    await login(member);
+    expect(await rows('select kind,entry_count from public.notifications where read_at is null')).toEqual([{kind:'entries_returned',entry_count:1}]);
+  });
   it('manages invitations: managers list, owners revoke, conflicts and expiry cleanup', async () => {
     await login(owner); await db.query("select public.invite_member($1,'new@example.org','member')",[workspace]);
     await login(member); await expect(attempt('select * from public.list_invitations($1)',[workspace])).rejects.toThrow(/Berechtigung/);

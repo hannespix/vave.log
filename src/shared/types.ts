@@ -11,4 +11,5 @@ export type TaskInput = Omit<Task,'id'|'created_at'|'created_by'>;
 export interface TimeEntry { id:string; workspace_id:string; project_id:string; user_id:string; work_date:string; minutes:number; note:string; billable:boolean; status:'draft'|'submitted'|'approved'; timer_id:string|null; task_id?:string|null; created_at:string }
 export type EntryInput = Omit<TimeEntry,'id'|'created_at'|'user_id'|'status'|'timer_id'>;
 export interface RunningTimer { id:string; workspace_id:string; project_id:string; user_id:string; started_at:string; note:string; billable:boolean; task_id?:string|null }
+export interface AppNotification { id:string; workspace_id:string; user_id:string; kind:'entries_approved'|'entries_returned'; entry_count:number; created_at:string; read_at:string|null }
 export interface TimerInput { workspace_id:string; project_id:string; note:string; billable:boolean; task_id?:string|null }
