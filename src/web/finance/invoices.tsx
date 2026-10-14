@@ -23,13 +23,13 @@ import {
   currencyDigits,
   decimalToMinor,
   displayDate,
-  downloadText,
   invoiceCsv,
   isDemoInvoice,
   minorInput,
   money,
   printInvoice,
 } from "./documents";
+import { downloadText } from "../helpers";
 export function Invoices() {
   const { data, t, locale, workspace, isDemo } = useFinance(),
     { projectId, setProjectId, available } = useFinanceProject(),
