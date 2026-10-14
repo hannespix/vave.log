@@ -7,7 +7,7 @@ import './styles.css';
 import { AuthForm, ConfirmEmail, OAuthConsent, PasswordReset, Setup, type RuntimeConfig } from './auth';
 import { Spinner, Notice } from './components';
 const WorkspaceApp = React.lazy(() => import('./workspace').then(module => ({ default: module.WorkspaceApp })));
-import { errorMessage } from './helpers';
+import { appPath, errorMessage } from './helpers';
 import { PwaProvider } from './pwa';
 
 function Connected({ config }: { config: RuntimeConfig }) {
@@ -19,9 +19,9 @@ function Connected({ config }: { config: RuntimeConfig }) {
   useLocaleMetadata(client, session?.user);
   if (!ready) return <div className="boot"><Spinner label={t('Dein Workspace wird vorbereitet …')}/></div>;
   if (!session) return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<AuthForm client={client} config={config}/></>;
-  if (recovery) return <PasswordReset client={client} done={() => { setRecovery(false); window.history.replaceState({}, '', '/'); }}/>;
+  if (recovery) return <PasswordReset client={client} done={() => { setRecovery(false); window.history.replaceState({}, '', appPath()); }}/>;
   if (!session.user.email_confirmed_at) return <ConfirmEmail session={session} signOut={() => void signOut()}/>;
-  if (window.location.pathname === '/oauth/consent') return <OAuthConsent key={session.user.id} client={client} session={session}/>;
+  if (window.location.pathname === appPath('oauth/consent')) return <OAuthConsent key={session.user.id} client={client} session={session}/>;
   return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<React.Suspense fallback={<div className="boot"><Spinner label={t('Dein Workspace wird geladen …')}/></div>}><WorkspaceApp key={session.user.id} client={client} session={session} config={config} signOut={signOut}/></React.Suspense></>;
 }
 function Root() {
