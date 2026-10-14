@@ -71,3 +71,10 @@ body.timer-floating.timer-open .app-shell{padding-bottom:calc(var(--mobile-nav-h
 /* Review queue: submitted entries outside the visible range. */
 .queue-notice{margin:0 0 18px}
 .queue-notice .text-button{font-size:inherit}
+
+/* Open invitations on the team view. */
+.invite-list{display:flex;flex-direction:column}
+.invite-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid #eff2e7}
+.invite-row:first-child{border-top:0}
+.invite-row strong{font-size:12px;overflow-wrap:anywhere}
+.invite-row small{display:block;margin-top:4px;font-size:9px;color:#99a28c}

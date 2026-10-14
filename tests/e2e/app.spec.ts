@@ -280,7 +280,10 @@ test('authorized workspace deep links survive reload and cross-workspace history
 test('inviting a member explains the next steps and can send a styled sign-in link email',async({page})=>{
  await setup(page,true);
  let invited:Record<string,unknown>|undefined;let otp:Record<string,unknown>|undefined;
+ let invites=[{id:'55555555-5555-4555-8555-555555555555',workspace_id:ws,email:'offen@example.test',role:'manager',invited_by:user,created_at:'2026-10-01T10:00:00Z',expires_at:'2026-10-20T10:00:00Z'}];
  await page.route('https://test.supabase.co/rest/v1/rpc/invite_member',r=>{invited=r.request().postDataJSON();return r.fulfill({json:null})});
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_invitations',r=>r.fulfill({json:invites}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/revoke_invitation',r=>{invites=[];return r.fulfill({json:null})});
  await page.route('https://test.supabase.co/auth/v1/otp*',r=>{otp=r.request().postDataJSON();return r.fulfill({json:{}})});
  await page.goto('/');
  await goArea(page,'Team');
@@ -288,13 +291,21 @@ test('inviting a member explains the next steps and can send a styled sign-in li
  const dialog=page.getByRole('dialog');
  await expect(dialog.getByText('How the invited person continues:',{exact:true})).toBeVisible();
  await expect(dialog.getByRole('button',{name:'Copy invitation text',exact:true})).toBeVisible();
- await expect(dialog.getByLabel('Send a sign-in link by email right away',{exact:true})).toBeChecked();
+ const otpToggle=dialog.getByLabel('Send a sign-in link by email right away',{exact:true});
+ await expect(otpToggle).not.toBeChecked();
+ await otpToggle.check();
  await dialog.getByLabel('Email address',{exact:true}).fill('neu@example.test');
  await dialog.getByRole('button',{name:'Save invitation',exact:true}).click();
  await expect(dialog).not.toBeVisible();
  await expect(page.getByText('Invitation stored and sign-in link sent by email.',{exact:true})).toBeVisible();
  expect(invited).toMatchObject({p_workspace_id:ws,p_email:'neu@example.test',p_role:'member'});
  expect(otp).toMatchObject({email:'neu@example.test',create_user:true});
+ await expect(page.getByText('OPEN INVITATIONS',{exact:true})).toBeVisible();
+ const row=page.locator('.invite-row').filter({hasText:'offen@example.test'});
+ await expect(row.getByText(/valid until/)).toBeVisible();
+ await row.getByRole('button',{name:'Revoke the invitation for offen@example.test',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Revoke invitation',exact:true}).click();
+ await expect(page.getByText('OPEN INVITATIONS',{exact:true})).toHaveCount(0);
 });
 
 test('a running timer stays visible everywhere, minimizes and ticks in the tab title',async({page,isMobile})=>{
