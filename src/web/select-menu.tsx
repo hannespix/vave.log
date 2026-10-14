@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { useI18n } from './i18n';
-import { initials } from './helpers';
+import { fold, initials } from './helpers';
 import type { Membership, Project } from '../shared/types';
 import './select-menu.css';
 
@@ -55,7 +55,6 @@ interface Props {
 }
 
 /** Search normalization: case-, diacritic- and ß-insensitive multi-token match. */
-function fold(text: string) { return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('ß', 'ss').toLowerCase(); }
 export function optionMatches(option: SelectOption, query: string) {
   const haystack = fold([option.label, option.sublabel, option.hint, option.group, option.keywords].filter(Boolean).join(' '));
   return fold(query).split(/\s+/).filter(Boolean).every(token => haystack.includes(token));

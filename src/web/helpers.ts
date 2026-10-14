@@ -5,6 +5,8 @@ import type { Membership, Project, TimeEntry } from '../shared/types';
 export const roleNames = { owner: 'Inhaber:in', manager: 'Leitung', member: 'Mitglied', disabled: 'Deaktiviert' };
 export const statusNames = { draft: 'Entwurf', submitted: 'Eingereicht', approved: 'Freigegeben', active: 'Aktiv', paused: 'Pausiert', archived: 'Archiviert', todo: 'Offen', doing: 'In Arbeit', done: 'Erledigt' };
 export function minutesLabel(minutes: number, locale: Locale = getLocale()) { const n = Math.max(0, Math.round(minutes)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} ${locale === 'zh' ? '小时' : 'h'}`; }
+/** Diakritika-tolerante Suchnormalisierung (ä→a, ß→ss), geteilt von SelectMenu und Listen-Suchen. */
+export function fold(text: string) { return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('ß', 'ss').toLowerCase(); }
 export function dateInZone(timezone: string, date = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
 export function addDays(iso: string, days: number) { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
 export function weekFor(iso: string) { const day = new Date(`${iso}T12:00:00Z`).getUTCDay(); const from = addDays(iso, -(day === 0 ? 6 : day - 1)); return { from, to: addDays(from, 6) }; }
