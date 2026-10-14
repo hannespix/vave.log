@@ -1,7 +1,7 @@
 import { Children, Fragment, isValidElement, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type SelectHTMLAttributes } from 'react';
 import Creatable from 'react-select/creatable';
 import Select, { type AriaLiveMessages, type GroupBase, type SelectInstance } from 'react-select';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
 import { useI18n } from './i18n';
 import './smart-select.css';
 
@@ -61,7 +61,7 @@ export function SmartSelect({children,value,defaultValue,onChange,name,id,requir
  },[options]);
  const Control=allowCustom?Creatable:Select;
  const live:AriaLiveMessages<SelectOption,false,GroupBase<SelectOption>>={guidance:()=>words.guide,onFilter:({resultsMessage})=>resultsMessage,onChange:({label})=>label?`${words.chosen}: ${label}`:words.cleared,onFocus:({label})=>label??''};
- return <div ref={root} className={`smart-select ${compact?'smart-select-compact':''} ${className??''}`} data-select-value={selected}>
+ return <div ref={root} className={`smart-select ${compact?'smart-select-compact':''} ${className??''}`} data-select-value={selected} data-searchable={canSearch}>
   <select name={name} ref={native} className="smart-select-native" tabIndex={-1} aria-hidden="true" value={selected} required={required} disabled={disabled} onChange={()=>{}} onInvalid={event=>{event.preventDefault();setInvalid(true);control.current?.focus();setOpen(true);}}>
    {options.map(o=><option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
    {!options.some(o=>o.value===selected)&&<option value={selected} disabled={!allowCustom}>{allowCustom?selected:words.choose}</option>}
@@ -85,7 +85,7 @@ export function SmartSelect({children,value,defaultValue,onChange,name,id,requir
     <span className="select-option-copy"><span>{option.label}</span>{option.detail&&<small>{option.detail}</small>}</span>
     {option.value===selected&&<Check size={15} className="select-check" aria-hidden="true"/>}
    </span>}
-   components={{IndicatorSeparator:null,DropdownIndicator:()=> <ChevronDown size={14} className="select-chevron" aria-hidden="true"/>}}
+   components={{IndicatorSeparator:null,DropdownIndicator:()=> canSearch?<Search size={14} className="select-chevron" aria-hidden="true"/>:<ChevronDown size={14} className="select-chevron" aria-hidden="true"/>}}
    styles={{menuPortal:base=>{const viewport=typeof window==='undefined'?1024:window.innerWidth;const width=Math.min(Math.max(Number(base.width)||0,240),viewport-16);return {...base,zIndex:1000,width,left:Math.max(8,Math.min(Number(base.left)||0,viewport-width-8))};},menu:base=>({...base,marginTop:6,marginBottom:6})}}
   />
  </div>;

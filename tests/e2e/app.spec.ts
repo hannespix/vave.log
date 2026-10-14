@@ -1,4 +1,4 @@
-import { chooseValue, expectChoiceValue } from './select-helpers';
+import { chooseValue, expectChoiceValue, openChoice } from './select-helpers';
 import {test,expect,type Page} from '@playwright/test';
 import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION} from '../../src/shared/demo-data';
 test.use({locale:'en-US'});
@@ -330,6 +330,6 @@ test('searchable project and people menus work in dialogs, including keyboard, e
 });
 
 test('small custom menus stay compact and close on outside click without changing selection',async({page})=>{
- await setup(page,true);await page.goto('/');const language=page.getByRole('combobox',{name:'Language',exact:true});await language.click();await expect(page.getByRole('option')).toHaveCount(4);await expect(language).toHaveAttribute('readonly','');
+ await setup(page,true);await page.goto('/');const language=page.getByRole('combobox',{name:'Language',exact:true});await openChoice(language);await expect(page.getByRole('option')).toHaveCount(4);await expect(language).toHaveAttribute('inputmode','none');
  await page.getByRole('heading',{level:1}).click();await expect(page.getByRole('listbox')).toHaveCount(0);await expectChoiceValue(language,'system');
 });
