@@ -340,6 +340,25 @@ describe('database entries and workflow', () => {
     await login(member);
     await expect(attempt('select * from public.start_timer($1,$2,$3,$4,$5)',[workspace,otherProject,'Falsch',true,(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Neu') returning id",[workspace,project])).id])).rejects.toThrow(/gehört nicht/);
   });
+  it('rolls repeating tasks forward on completion without duplicating on status toggles', async () => {
+    await login(manager);
+    const id=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,due_date,repeat,assignee_id,estimated_minutes) values($1,$2,'Wochenreport','2026-10-16','weekly',$3,120) returning id",[workspace,project,member])).id;
+    await db.query("update public.tasks set status='done' where id=$1",[id]);
+    expect((await first<{repeat:string}>('select repeat from public.tasks where id=$1',[id])).repeat).toBe('');
+    const next=await first<{due:string|null;status:string;repeat:string;assignee_id:string;estimated_minutes:number;created_by:string}>("select due_date::text as due,status,repeat,assignee_id,estimated_minutes,created_by from public.tasks where workspace_id=$1 and title='Wochenreport' and id<>$2",[workspace,id]);
+    expect(next).toMatchObject({due:'2026-10-23',status:'todo',repeat:'weekly',assignee_id:member,estimated_minutes:120,created_by:manager});
+    await db.query("update public.tasks set status='todo' where id=$1",[id]);
+    await db.query("update public.tasks set status='done' where id=$1",[id]);
+    expect(await rows("select id from public.tasks where workspace_id=$1 and title='Wochenreport'",[workspace])).toHaveLength(2);
+    const monthly=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,repeat) values($1,$2,'Monatsabschluss','monthly') returning id",[workspace,project])).id;
+    await db.query("update public.tasks set status='done' where id=$1",[monthly]);
+    expect((await first<{due:string|null}>("select due_date::text as due from public.tasks where title='Monatsabschluss' and id<>$1",[monthly])).due).toBeNull();
+    const capped=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,due_date,repeat) values($1,$2,'Jahrhundertwende','2100-12-20','monthly') returning id",[workspace,project])).id;
+    await db.query("update public.tasks set status='done' where id=$1",[capped]);
+    expect((await first<{due:string}>("select due_date::text as due from public.tasks where title='Jahrhundertwende' and id<>$1",[capped])).due).toBe('2100-12-31');
+    await expect(attempt("insert into public.tasks(workspace_id,project_id,title,repeat) values($1,$2,'Kaputt','daily')",[workspace,project])).rejects.toThrow();
+    await login(member);
+  });
   it('approves a submitted batch in one call, skipping entries decided in the meantime', async () => {
     const a=await entry(60); const b=await entry(30); const c=await entry(45);
     await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
