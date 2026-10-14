@@ -6,9 +6,10 @@ name: Deploy to GitHub Pages
 #
 # Setup (once):
 #   1. Settings → Pages → Source: "GitHub Actions" (or let configure-pages enable it).
-#   2. Repo variables (Settings → Secrets and variables → Actions → Variables):
-#      SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (public client configuration).
-#      Without them the site deploys in the honest "setup" state.
+#   2. The vave-log public client configuration (Supabase URL + publishable
+#      key — the same values every browser receives) is baked in below;
+#      repo variables SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY override it,
+#      e.g. after rotating the key or switching projects.
 #   3. Supabase Auth → URL Configuration: add the Pages URL as redirect URL.
 # Note: a Pages site is publicly reachable. Keep this disabled if the
 # deployment must stay owner-private.
@@ -51,8 +52,8 @@ jobs:
         env:
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
           APP_URL: ${{ steps.pages.outputs.base_url }}/
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://ieeujtmpxqxmfyietqgw.supabase.co' }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ayphPnwU01vo-dvSbEsuFg_48cjmqnk' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/pages
