@@ -7,7 +7,7 @@ import {workspaceAdminCopy,workspaceAdminText} from '../src/web/workspace-admin-
 import type {WorkspaceAdminSummary} from '../src/shared/workspace-admin-types';
 import type {Locale} from '../src/shared/i18n';
 
-const studio:WorkspaceAdminSummary={id:'w',name:'Studio <North> & South',is_demo:false,archived_at:null,created_at:'2026-10-01',counts:{projects:2,tasks:7,time_entries:13,members:3,invoices:4,expenses:5},running_timers:0};
+const studio:WorkspaceAdminSummary={id:'w',name:'Studio <North> & South',is_demo:false,archived_at:null,created_at:'2026-10-01',counts:{projects:2,tasks:7,time_entries:13,members:3,invoices:4,expenses:5},running_timers:0,issued_invoices:0};
 const props={workspace:studio,confirmationName:studio.name,confirmed:true,busy:false,online:true,blocked:false,onNameChange:()=>{},onConfirmedChange:()=>{},onBack:()=>{},onSubmit:()=>{}};
 const render=(overrides:Partial<typeof props>={},locale:Locale='en')=>renderToStaticMarkup(createElement(I18nProvider,{initialLocale:locale},createElement(WorkspaceDeleteConfirmation,{...props,...overrides})));
 describe('owner workspace management',()=>{
