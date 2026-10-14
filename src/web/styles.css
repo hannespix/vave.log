@@ -37,3 +37,9 @@
 @keyframes floating-timer-pulse{0%,100%{box-shadow:0 0 0 4px #ffffff18}50%{box-shadow:0 0 0 7px #ffffff2e}}
 @media (max-width:600px){.floating-timer{right:12px;bottom:12px;width:calc(100vw - 24px);max-width:300px}.floating-timer-mini{right:12px;bottom:12px}}
 @media (prefers-reduced-motion:reduce){.floating-timer,.floating-timer-mini{animation:none}.floating-timer-mini .live-dot{animation:none}}
+
+/* Invite dialog: what the invited person does next, plus a copy-ready message. */
+.invite-steps{display:flex;flex-direction:column;gap:9px;font-size:12px}
+.invite-steps ol{margin:0;padding-left:19px;display:flex;flex-direction:column;gap:5px;line-height:1.55}
+.invite-steps .invite-copy{align-self:flex-start}
+.invite-steps textarea{font-size:11px;line-height:1.5}
