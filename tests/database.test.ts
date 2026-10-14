@@ -304,6 +304,25 @@ describe('database entries and workflow', () => {
     await login(manager); expect((await first('select * from public.revoke_approval($1)',[e.id])).status).toBe('draft');
     await login(member); expect(await rows('update public.time_entries set minutes=95 where id=$1 returning minutes',[e.id])).toEqual([{minutes:95}]);
   });
+  it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
+    await login(manager);
+    const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;
+    const otherProject=(await first<{id:string}>("insert into public.projects(workspace_id,code,name) values($1,'B','B') returning id",[workspace])).id;
+    await login(member);
+    const e=await first<{id:string}>("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable,task_id) values($1,$2,'2026-10-13',60,'Arbeit',true,$3) returning id",[workspace,project,task]);
+    await expect(attempt("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable,task_id) values($1,$2,'2026-10-13',30,'Falsch',true,$3)",[workspace,otherProject,task])).rejects.toThrow(/gehört nicht/);
+    await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await login(manager); await db.query('select public.review_entry($1,true)',[e.id]);
+    const tt=await first<{id:string}>('select * from public.start_timer($1,$2,$3,$4,$5)',[workspace,project,'Mit Aufgabe',true,task]);
+    await ageTimer(tt.id,'125 seconds'); await login(manager);
+    const stopped=await rows<{task_id:string|null}>('select * from public.stop_timer($1)',[tt.id]);
+    expect(stopped[0]!.task_id).toBe(task);
+    expect(await rows('delete from public.tasks where id=$1 returning id',[task])).toHaveLength(1);
+    const after=await first<{task_id:string|null;status:string}>('select task_id,status from public.time_entries where id=$1',[e.id]);
+    expect(after.task_id).toBeNull(); expect(after.status).toBe('approved');
+    await login(member);
+    await expect(attempt('select * from public.start_timer($1,$2,$3,$4,$5)',[workspace,otherProject,'Falsch',true,(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Neu') returning id",[workspace,project])).id])).rejects.toThrow(/gehört nicht/);
+  });
   it('approves a submitted batch in one call, skipping entries decided in the meantime', async () => {
     const a=await entry(60); const b=await entry(30); const c=await entry(45);
     await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
