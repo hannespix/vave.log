@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import lottie from 'lottie-web/build/player/lottie_light';
 
 type Gesture = readonly (readonly [position: number, durationMs: number])[];
 // Scrub the original shape morphs in both directions. Every gesture starts and
@@ -16,10 +15,21 @@ export function Logo({ large = false }: { large?: boolean }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!container.current) return;
+    const node = container.current;
+    if (!node) return;
+    // lottie_light (~70 kB gzip) lädt als eigener Chunk erst, wenn das Logo
+    // wirklich gerendert wird; bis dahin (und bei Ladefehlern) steht die
+    // Wortmarke als Fallback.
+    let cancelled = false;
+    let teardown: (() => void) | undefined;
+    void import('lottie-web/build/player/lottie_light').then(({ default: lottie }) => {
+      if (cancelled || !node.isConnected) return;
+      teardown = setup(lottie);
+    }).catch(() => { /* Fallback-Wortmarke bleibt sichtbar. */ });
+    const setup = (lottie: typeof import('lottie-web/build/player/lottie_light')['default']) => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const item = lottie.loadAnimation({
-      container: container.current,
+      container: node,
       renderer: 'svg',
       loop: false,
       autoplay: false,
@@ -95,7 +105,7 @@ export function Logo({ large = false }: { large?: boolean }) {
       inView = entry.isIntersecting;
       syncMotion();
     }) : undefined;
-    observer?.observe(container.current);
+    observer?.observe(node);
     item.addEventListener('DOMLoaded', onReady);
     reduced.addEventListener('change', syncMotion);
     document.addEventListener('visibilitychange', syncMotion);
@@ -108,6 +118,8 @@ export function Logo({ large = false }: { large?: boolean }) {
       item.removeEventListener('DOMLoaded', onReady);
       item.destroy();
     };
+    };
+    return () => { cancelled = true; teardown?.(); };
   }, []);
 
   return <div className={`brand ${large ? 'brand-large' : ''}`}>
