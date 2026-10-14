@@ -304,6 +304,23 @@ describe('database entries and workflow', () => {
     await login(manager); expect((await first('select * from public.revoke_approval($1)',[e.id])).status).toBe('draft');
     await login(member); expect(await rows('update public.time_entries set minutes=95 where id=$1 returning minutes',[e.id])).toEqual([{minutes:95}]);
   });
+  it('manages weekly capacity via the definer function and absences under RLS', async () => {
+    await expect(attempt('select * from public.set_member_capacity($1,$2,2400)',[workspace,member])).rejects.toThrow(/Berechtigung/);
+    await login(manager);
+    expect((await first<{weekly_capacity_minutes:number}>('select * from public.set_member_capacity($1,$2,2400)',[workspace,member])).weekly_capacity_minutes).toBe(2400);
+    await expect(attempt('select * from public.set_member_capacity($1,$2,6060)',[workspace,member])).rejects.toThrow(/100 Stunden/);
+    expect((await first<{weekly_capacity_minutes:number|null}>('select * from public.set_member_capacity($1,$2,null)',[workspace,member])).weekly_capacity_minutes).toBeNull();
+    await login(member);
+    const own=await first<{id:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,note) values($1,'2026-12-21','2026-12-31','vacation','Skiurlaub') returning id",[workspace]);
+    await expect(attempt("insert into public.absences(workspace_id,user_id,starts_on,ends_on) values($1,$2,'2026-12-21','2026-12-22')",[workspace,manager])).rejects.toThrow();
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on) values($1,'2026-12-22','2026-12-21')",[workspace])).rejects.toThrow();
+    await login(manager);
+    await db.query("insert into public.absences(workspace_id,user_id,starts_on,ends_on,kind) values($1,$2,'2026-11-02','2026-11-02','sick')",[workspace,member]);
+    expect(await rows('select * from public.absences where workspace_id=$1 order by starts_on',[workspace])).toHaveLength(2);
+    expect(await rows('delete from public.absences where id=$1 returning id',[own.id])).toHaveLength(1);
+    await login(outsider);
+    expect(await rows('select * from public.absences where workspace_id=$1',[workspace])).toHaveLength(0);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

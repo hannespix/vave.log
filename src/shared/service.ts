@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { dateRangeSchema,entrySchema,inviteSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role } from './types.js';
+import { absenceSchema,dateRangeSchema,entrySchema,inviteSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -36,6 +36,10 @@ export function createService(client:SupabaseClient){
   listInvitations:(workspaceId:string)=>rpc<Invitation[]>('list_invitations',{p_workspace_id:parse(uuid,workspaceId)}),
   revokeInvitation:async(id:string)=>{await rpcVoid('revoke_invitation',{p_id:parse(uuid,id)})},
   setMemberRole:async(input:{workspace_id:string;user_id:string;role:Role})=>{const v=parse(roleSchema,input);await rpcVoid('set_member_role',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_role:v.role})},
+  setMemberCapacity:(input:{workspace_id:string;user_id:string;minutes:number|null})=>{const v=parse(z.strictObject({workspace_id:uuid,user_id:uuid,minutes:z.number().int().min(0).max(6000).nullable()}),input);return rpc<Membership>('set_member_capacity',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_minutes:v.minutes})},
+  listAbsences:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to});return rows<Absence>(client.from('absences').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).lte('starts_on',v.to).gte('ends_on',v.from).order('starts_on').order('id').limit(1001))},
+  saveAbsence:(input:AbsenceInput&{id?:string})=>one<Absence>(client.from('absences').upsert(parse(absenceSchema,input)).select().single()),
+  deleteAbsence:async(id:string)=>{await one(client.from('absences').delete().eq('id',parse(uuid,id)).select('id').single())},
   listProjects:(workspaceId:string)=>rows<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   getProjectInsight:(workspaceId:string,projectId:string)=>rpc<ProjectInsight>('project_insight',{p_workspace_id:parse(uuid,workspaceId),p_project_id:parse(uuid,projectId)}),
   saveProject:(input:ProjectInput&{id?:string})=>one<Project>(client.from('projects').upsert(parse(projectSchema,input)).select().single()),
