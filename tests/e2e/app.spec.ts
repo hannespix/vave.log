@@ -216,7 +216,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await nav.getByRole('button',{name:/^Time/}).click();await page.getByRole('button',{name:'Team time',exact:true}).click();
  await page.getByRole('button',{name:/Approve.*Elena Weber/}).click();await expect(page.getByRole('row').filter({hasText:'Sample concept workshop'}).getByText('Approved',{exact:true})).toBeVisible();
  await goArea(page,'Finance');await page.getByRole('tab',{name:'Invoices',exact:true}).click();
- await page.getByRole('button',{name:'Draft',exact:true}).click();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
+ await page.getByRole('table').getByRole('button',{name:'Draft',exact:true}).click();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
  await expect(page.getByRole('button',{name:'Issue sample invoice',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Issue sample invoice',exact:true}).click();
  const dialog=page.getByRole('dialog');await expect(dialog).toContainText('No payment is due.');expect(issued).toBe(0);
  await dialog.getByRole('button',{name:'Issue sample invoice',exact:true}).click();await expect(dialog).not.toBeVisible();expect(issued).toBe(1);

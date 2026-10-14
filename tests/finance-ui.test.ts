@@ -7,7 +7,7 @@ import { FinanceContext, type FinanceContextValue } from "../src/web/finance/con
 import { Overview } from "../src/web/finance/overview";
 import { Planning } from "../src/web/finance/planning";
 import { DraftEditor, Invoices, TimeDraft } from "../src/web/finance/invoices";
-import { summarizeInvoices } from "../src/web/finance/invoice-summary";
+import { isOverdue, summarizeInvoices } from "../src/web/finance/invoice-summary";
 import { describe, expect, it } from "vitest";
 import {
   currencyDigits,
@@ -338,13 +338,13 @@ describe("invoice summary project filters", () => {
   const range = { from: "2026-10-01", to: "2026-10-31" };
   it("uses the selected project for invoiced, paid and open totals", () => {
     expect(summarizeInvoices(summaryInvoices, range, "p1")).toEqual({
-      invoicedNet: 150000000, paidNet: 150000000, openNet: 0,
+      invoicedNet: 150000000, paidNet: 150000000, openNet: 0, overdueNet: 0, overdueCount: 0,
     });
     expect(summarizeInvoices(summaryInvoices, range, "p2")).toEqual({
-      invoicedNet: 75000000, paidNet: 0, openNet: 75000000,
+      invoicedNet: 75000000, paidNet: 0, openNet: 75000000, overdueNet: 0, overdueCount: 0,
     });
     expect(summarizeInvoices(summaryInvoices, range, "missing")).toEqual({
-      invoicedNet: 0, paidNet: 0, openNet: 0,
+      invoicedNet: 0, paidNet: 0, openNet: 0, overdueNet: 0, overdueCount: 0,
     });
   });
   it("keeps unassigned invoices only in the all-project view and combines date filtering", () => {
@@ -354,11 +354,26 @@ describe("invoice summary project filters", () => {
       { ...invoice, id: "previous", project_id: "p2", issue_date: "2026-09-30", net_minor: 9999999, paid: true },
     ];
     expect(summarizeInvoices(invoices, range, "")).toEqual({
-      invoicedNet: 225012000, paidNet: 150000000, openNet: 75012000,
+      invoicedNet: 225012000, paidNet: 150000000, openNet: 75012000, overdueNet: 0, overdueCount: 0,
     });
     expect(summarizeInvoices(invoices, range, "p2")).toEqual({
-      invoicedNet: 75000000, paidNet: 0, openNet: 75000000,
+      invoicedNet: 75000000, paidNet: 0, openNet: 75000000, overdueNet: 0, overdueCount: 0,
     });
+  });
+  it("counts overdue only for issued, unpaid, past-due invoices without a cancellation", () => {
+    const base = { ...invoice, project_id: "p1", issue_date: "2026-10-05", due_date: "2026-10-10", paid: false, cancellation_id: null };
+    const invoices = [
+      { ...base, id: "late", net_minor: 1000 },
+      { ...base, id: "paid-late", net_minor: 2000, paid: true },
+      { ...base, id: "cancelled-late", net_minor: 4000, cancellation_id: "c1" },
+      { ...base, id: "due-today", net_minor: 8000, due_date: "2026-10-20" },
+      { ...base, id: "future", net_minor: 16000, due_date: "2026-11-30" },
+    ] as Invoice[];
+    expect(isOverdue(invoices[0]!, "2026-10-20")).toBe(true);
+    expect(isOverdue(invoices[3]!, "2026-10-20")).toBe(false);
+    expect(summarizeInvoices(invoices, range, "p1", "2026-10-20")).toMatchObject({ overdueNet: 1000, overdueCount: 1 });
+    // Ohne Stichtag (ältere Aufrufer) wird nichts als überfällig gezählt.
+    expect(summarizeInvoices(invoices, range, "p1")).toMatchObject({ overdueNet: 0, overdueCount: 0 });
   });
   it.each([true, false])("excludes a currently cancelled original from paid/open even if its credit is later (paid=%s)", (paid) => {
     const invoices: Invoice[] = [
@@ -366,10 +381,10 @@ describe("invoice summary project filters", () => {
       { ...invoice, id: "credit", project_id: "p1", issue_date: "2026-11-01", net_minor: -10000, status: "cancellation", cancellation_of: "original" },
     ];
     expect(summarizeInvoices(invoices, range, "p1")).toEqual({
-      invoicedNet: 10000, paidNet: 0, openNet: 0,
+      invoicedNet: 10000, paidNet: 0, openNet: 0, overdueNet: 0, overdueCount: 0,
     });
     expect(summarizeInvoices(invoices, { from: "2026-10-01", to: "2026-11-01" }, "p1")).toEqual({
-      invoicedNet: 0, paidNet: 0, openNet: 0,
+      invoicedNet: 0, paidNet: 0, openNet: 0, overdueNet: 0, overdueCount: 0,
     });
   });
 });

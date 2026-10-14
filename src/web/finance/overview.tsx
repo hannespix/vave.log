@@ -2,7 +2,7 @@ import { ArrowDownToLine } from "lucide-react";
 import { Notice } from "../components";
 import { FinanceProjectFilter, ProjectLink, Section, useFinance, useFinanceProject } from "./context";
 import { money, overviewCsv, localeCode } from "./documents";
-import { downloadText } from "../helpers";
+import { dateInZone, downloadText } from "../helpers";
 import type { FinanceKey } from "./catalog";
 import { summarizeInvoices } from "./invoice-summary";
 export function Overview() {
@@ -12,7 +12,7 @@ export function Overview() {
       (p) => available && (!project || p.project_id === project),
     ),
     m = (value: number | null) => money(value, workspace.currency, locale);
-  const invoiceTotals = summarizeInvoices(available ? data.invoices : [], range, project);
+  const invoiceTotals = summarizeInvoices(available ? data.invoices : [], range, project, dateInZone(workspace.timezone));
   const date = (value: string) =>
     new Intl.DateTimeFormat(localeCode(locale), {
       dateStyle: "medium",
@@ -89,6 +89,15 @@ export function Overview() {
               </small>
             </div>
           ))}
+          {invoiceTotals.overdueCount > 0 && (
+            <div className="finance-metric finance-metric-overdue">
+              <span>{t("overdueNet")}</span>
+              <strong>{m(invoiceTotals.overdueNet)}</strong>
+              <small>
+                {invoiceTotals.overdueCount} {t("overdueCountNote")}
+              </small>
+            </div>
+          )}
         </div>
         <p className="finance-caption">{t("invoiceSummaryNote")}</p>
       </section>
