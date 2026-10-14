@@ -9,6 +9,8 @@ import type {
 } from "../../shared/finance-types";
 import { salaryHourlyCost } from "../../shared/finance-math";
 import { Dialog, Field } from "../components";
+import { useI18n } from "../i18n";
+import { SelectMenu, memberOption, memberTabs } from "../select-menu";
 import {
   Actions,
   FinanceProjectFilter,
@@ -57,6 +59,7 @@ type EstimateEdit = {
 function PlanEditor({ projectId }: { projectId: string }) {
   const { data, workspace, members, t, service, run, busy } = useFinance(),
     plan = data.plans.find((p) => p.project_id === projectId);
+  const { t: shared } = useI18n();
   const [billing, setBilling] = useState<BillingMode>(
       plan?.billing_mode || "hourly",
     ),
@@ -118,26 +121,13 @@ function PlanEditor({ projectId }: { projectId: string }) {
     <form className="form-stack finance-plan-form" onSubmit={submit}>
       <div className="form-grid">
         <Field label={t("clients")}>
-          <select name="client_id" defaultValue={plan?.client_id || ""}>
-            <option value="">{t("none")}</option>
-            {data.clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <SelectMenu label={t("clients")} name="client_id" defaultValue={plan?.client_id || ""}
+            options={[{ value: "", label: t("none") }, ...data.clients.map((c) => ({ value: c.id, label: c.name, sublabel: c.contact_email || undefined, keywords: c.contact_email }))]}/>
         </Field>
         <Field label={t("billingMode")}>
-          <select
-            value={billing}
-            onChange={(e) => setBilling(e.target.value as BillingMode)}
-          >
-            {(["hourly", "fixed", "internal"] as const).map((mode) => (
-              <option key={mode} value={mode}>
-                {t(mode)}
-              </option>
-            ))}
-          </select>
+          <SelectMenu label={t("billingMode")} searchable={false} value={billing}
+            onChange={(mode) => setBilling(mode as BillingMode)}
+            options={(["hourly", "fixed", "internal"] as const).map((mode) => ({ value: mode, label: t(mode) }))}/>
         </Field>
         <MoneyField
           name="default_bill_rate_minor"
@@ -207,28 +197,15 @@ function PlanEditor({ projectId }: { projectId: string }) {
           </div>
           <div className="finance-line-grid">
             <Field label={t("kind")}>
-              <select
-                value={line.kind}
-                onChange={(e) =>
-                  update(line.key, { kind: e.target.value as WorkerKind })
-                }
-              >
-                <option value="employee">{t("employee")}</option>
-                <option value="freelancer">{t("freelancer")}</option>
-              </select>
+              <SelectMenu label={t("kind")} searchable={false} value={line.kind}
+                onChange={(kind) => update(line.key, { kind: kind as WorkerKind })}
+                options={[{ value: "employee", label: t("employee") }, { value: "freelancer", label: t("freelancer") }]}/>
             </Field>
             <Field label={t("person")}>
-              <select
-                value={line.user_id}
-                onChange={(e) => update(line.key, { user_id: e.target.value })}
-              >
-                <option value="">{t("noAccount")}</option>
-                {members.map((m) => (
-                  <option value={m.user_id} key={m.user_id}>
-                    {m.display_name || m.email}
-                  </option>
-                ))}
-              </select>
+              <SelectMenu label={t("person")} value={line.user_id}
+                onChange={(user_id) => update(line.key, { user_id })}
+                tabs={memberTabs(members, shared)}
+                options={[{ value: "", label: t("noAccount") }, ...members.map((m) => memberOption(m))]}/>
             </Field>
             <Field label={t("hours")}>
               <input
@@ -350,6 +327,7 @@ function RateEditor({
   const { t, workspace, members, range, service, run, busy, locale } =
       useFinance(),
     id = useRef(item?.id || crypto.randomUUID());
+  const { t: shared } = useI18n();
   const [cost, setCost] = useState(
       minorInput(item?.cost_rate_minor, workspace.currency),
     ),
@@ -396,23 +374,14 @@ function RateEditor({
     <Dialog title={t("rates")} onClose={onClose} busy={busy}>
       <form className="form-stack" onSubmit={submit}>
         <Field label={t("person")}>
-          <select name="user_id" required defaultValue={item?.user_id || ""}>
-            <option value="" disabled>
-              {t("select")}
-            </option>
-            {members.map((m) => (
-              <option value={m.user_id} key={m.user_id}>
-                {m.display_name || m.email}
-              </option>
-            ))}
-          </select>
+          <SelectMenu label={t("person")} name="user_id" required placeholder={t("select")} defaultValue={item?.user_id || ""}
+            tabs={memberTabs(members, shared)}
+            options={members.map((m) => memberOption(m))}/>
         </Field>
         <div className="form-grid">
           <Field label={t("kind")}>
-            <select name="kind" defaultValue={item?.kind || "employee"}>
-              <option value="employee">{t("employee")}</option>
-              <option value="freelancer">{t("freelancer")}</option>
-            </select>
+            <SelectMenu label={t("kind")} searchable={false} name="kind" defaultValue={item?.kind || "employee"}
+              options={[{ value: "employee", label: t("employee") }, { value: "freelancer", label: t("freelancer") }]}/>
           </Field>
           <Field label={t("effective")}>
             <input
@@ -621,10 +590,8 @@ function ExpenseEditor({
             />
           </Field>
           <Field label={t("category")}>
-            <select name="category" defaultValue={item?.category || "external"}>
-              <option value="external">{t("external")}</option>
-              <option value="other">{t("other")}</option>
-            </select>
+            <SelectMenu label={t("category")} searchable={false} name="category" defaultValue={item?.category || "external"}
+              options={[{ value: "external", label: t("external") }, { value: "other", label: t("other") }]}/>
           </Field>
         </div>
         <Field label={t("description")}>

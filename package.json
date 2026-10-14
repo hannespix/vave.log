@@ -16,6 +16,7 @@
     "test:e2e": "playwright test",
     "check": "npm run emails:check && npm run typecheck && npm test && npm run build",
     "build:worker": "npm run build && node scripts/build-worker.mjs",
+    "build:pages": "vite build --outDir dist/pages && node scripts/build-pwa.mjs dist/pages && node scripts/build-pages.mjs dist/pages",
     "emails:build": "node scripts/build-auth-emails.mjs",
     "emails:check": "node scripts/build-auth-emails.mjs --check"
   },

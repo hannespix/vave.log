@@ -1,15 +1,10 @@
 .language-switcher {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex: 0 0 auto;
   min-width: 68px;
+}
+.language-switcher .sm-trigger {
+  justify-content: center;
   height: 32px;
-  padding: 0 6px;
-  border-radius: 6px;
-  color: #686d65;
-  font-size: 11px;
   font-weight: 400;
   line-height: 1;
 }
@@ -19,25 +14,6 @@
   gap: 5px;
   pointer-events: none;
 }
-.language-switcher select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.language-switcher:hover {
-  color: #30352d;
-  background: #72766f0a;
-}
-.language-switcher:focus-within {
-  outline: 2px solid var(--purple, #641dff);
-  outline-offset: 2px;
-}
 .welcome-content { position: relative; }
 .welcome-content > .language-switcher {
   position: absolute;
@@ -45,13 +21,12 @@
   top: 1rem;
 }
 @media (pointer: coarse) {
-  .language-switcher { height: 44px; }
+  .language-switcher .sm-trigger { height: 44px; }
 }
 @media (max-width: 600px) {
   .welcome-content > .language-switcher { right: .75rem; top: .5rem; }
   .topbar-right { gap: .45rem; }
 }
 @media (forced-colors: active) {
-  .language-switcher { color: CanvasText; }
-  .language-switcher:focus-within { outline-color: Highlight; }
+  .language-switcher .sm-trigger { color: CanvasText; }
 }

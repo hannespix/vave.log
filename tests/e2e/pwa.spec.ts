@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {pickOption} from './select';
 
 test.use({locale:'en-US'});
 
@@ -152,7 +153,7 @@ test('manual installation stays opt-in and localized with accessible offline sta
   {locale:'zh',install:'安装应用',dialog:'在你的设备上使用 VAVE.LOG',offline:'当前离线。请联网后保存修改。修改不会自动同步。'},
  ];
  for(const copy of locales){
-  await page.getByRole('combobox',{name:/^(Language|Sprache|语言)$/}).selectOption(copy.locale);
+  await pickOption(page.getByRole('combobox',{name:/^(Language|Sprache|语言)$/}),({en:'English',de:'Deutsch',zh:'简体中文'} as Record<string,string>)[copy.locale]);
   const install=page.getByRole('button',{name:copy.install,exact:true});
   await install.click();const dialog=page.getByRole('dialog',{name:copy.dialog,exact:true});await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button',{name:copy.install,exact:true})).toHaveCount(0);
@@ -181,7 +182,7 @@ test('Settings checks the real worker for updates without reloading and fits all
   {locale:'zh',heading:'VAVE.LOG 应用',install:'安装应用',dialog:'在你的设备上使用 VAVE.LOG'},
  ];
  for(const copy of locales){
-  await page.getByRole('combobox',{name:/^(Language|Sprache|语言)$/}).selectOption(copy.locale);
+  await pickOption(page.getByRole('combobox',{name:/^(Language|Sprache|语言)$/}),({en:'English',de:'Deutsch',zh:'简体中文'} as Record<string,string>)[copy.locale]);
   await expect(panel.getByRole('heading',{name:copy.heading,exact:true})).toBeVisible();await noHorizontalOverflow(page);
   await panel.getByRole('button',{name:copy.install,exact:true}).click();
   await expect(page.getByRole('dialog',{name:copy.dialog,exact:true})).toBeVisible();await noHorizontalOverflow(page);

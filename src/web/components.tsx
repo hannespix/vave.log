@@ -2,6 +2,7 @@ import { useI18n } from './i18n';
 import type { Membership } from '../shared/types';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { ArrowRight, Check, LoaderCircle, X } from 'lucide-react';
+import { SelectMenu, memberOption, memberTabs } from './select-menu';
 
 export function Spinner({ label = 'Wird geladen …' }: { label?: string }) {
   const { t } = useI18n(); return <div className="loading-state" role="status"><LoaderCircle className="spin" size={24}/><span>{t(label)}</span></div>; }
@@ -20,15 +21,17 @@ export function Dialog({ title, children, onClose, busy = false, description }: 
 export function FormActions({ busy, onClose, label = 'Speichern' }: { busy: boolean; onClose: () => void; label?: string }) {
   const { t } = useI18n(); return <div className="form-actions"><button className="button secondary" type="button" onClick={onClose} disabled={busy}>{t('Abbrechen')}</button><button className="button primary" type="submit" disabled={busy}>{busy ? <LoaderCircle size={17} className="spin"/> : <ArrowRight size={17}/>} {busy ? t('Wird gespeichert …') : t(label)}</button></div>; }
 
+// Keep the current historical assignment in the options. Dropping it would
+// omit it from submission even while it remains selected.
+export function assigneeOptions(members: Membership[], currentAssignee: string | null | undefined, t: (message: string) => string) {
+  const available = members.filter(member => member.role !== 'disabled' || member.user_id === currentAssignee);
+  return [{ value: '', label: t('Noch nicht zugewiesen') }, ...available.map(member => {
+    const option = memberOption(member);
+    return member.role === 'disabled' ? { ...option, label: option.label + t(' (deaktiviert)'), tab: undefined } : option;
+  })];
+}
 export function TaskAssigneeSelect({ members, currentAssignee }: { members: Membership[]; currentAssignee?: string | null }) {
   const { t } = useI18n();
-  // Keep the current historical assignment successful in FormData. Disabling its
-  // option would omit it from submission even while it remains selected.
-  const options = members.filter(member => member.role !== 'disabled' || member.user_id === currentAssignee);
-  return <Field label={t('Zugewiesen an')}><select name="assignee" defaultValue={currentAssignee || ''}>
-    <option value="">{t('Noch nicht zugewiesen')}</option>
-    {options.map(member => <option value={member.user_id} key={member.user_id}>
-      {member.display_name || member.email}{member.role === 'disabled' ? t(' (deaktiviert)') : ''}
-    </option>)}
-  </select></Field>;
+  const available = members.filter(member => member.role !== 'disabled' || member.user_id === currentAssignee);
+  return <Field label={t('Zugewiesen an')}><SelectMenu name="assignee" label={t('Zugewiesen an')} defaultValue={currentAssignee || ''} options={assigneeOptions(members, currentAssignee, t)} tabs={memberTabs(available, t)}/></Field>;
 }

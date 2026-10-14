@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+# Publishes the static frontend after every merge to main — but only once the
+# "Verify VAVE.LOG" workflow has passed on that commit. The published site is
+# the browser app only: /api/mcp and the server-sent security headers remain a
+# feature of the Node/Worker deployment (the document carries a <meta> CSP).
+#
+# Setup (once):
+#   1. Settings → Pages → Source: "GitHub Actions" (or let configure-pages enable it).
+#   2. Repo variables (Settings → Secrets and variables → Actions → Variables):
+#      SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (public client configuration).
+#      Without them the site deploys in the honest "setup" state.
+#   3. Supabase Auth → URL Configuration: add the Pages URL as redirect URL.
+# Note: a Pages site is publicly reachable. Keep this disabled if the
+# deployment must stay owner-private.
+on:
+  workflow_run:
+    workflows: [Verify VAVE.LOG]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/configure-pages@v5
+        id: pages
+        with:
+          enablement: true
+      - run: npm ci
+      - name: Build static bundle
+        run: npm run build:pages
+        env:
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
+          APP_URL: ${{ steps.pages.outputs.base_url }}/
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/pages
+      - uses: actions/deploy-pages@v4
+        id: deployment

@@ -15,7 +15,7 @@ export function PwaProvider({children}:{children:ReactNode}){
   const display=window.matchMedia('(display-mode: standalone)');
   return createPwaController({events:window,display,serviceWorker:'serviceWorker'in navigator?navigator.serviceWorker:undefined,
    online:()=>navigator.onLine,standalone:()=>display.matches||!!(navigator as Navigator&{standalone?:boolean}).standalone,
-   enabled:import.meta.env.PROD&&window.isSecureContext,reload:()=>window.location.reload()});
+   enabled:import.meta.env.PROD&&window.isSecureContext,base:import.meta.env.BASE_URL,reload:()=>window.location.reload()});
  });
  const state=useSyncExternalStore(controller?.subscribe||noopSubscribe,controller?.getSnapshot||serverSnapshot,serverSnapshot);
  useEffect(()=>controller?.start(),[controller]);

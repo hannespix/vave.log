@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {pickOption} from './select';
 import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION} from '../../src/shared/demo-data';
 test.use({locale:'en-US'});
 const user='11111111-1111-4111-8111-111111111111';
@@ -72,17 +73,17 @@ test('primary system language falls back to English, explicit choices persist, a
  await page.addInitScript(()=>{Object.defineProperty(navigator,'languages',{get:()=>['fr-FR','de-DE']});Object.defineProperty(navigator,'language',{get:()=> 'fr-FR'});});
  await page.goto('/');
  await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeVisible();
- await page.getByLabel('Language',{exact:true}).selectOption('de');
+ await pickOption(page.getByLabel('Language',{exact:true}),'Deutsch');
  await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();
  await expect(page.locator('html')).toHaveAttribute('lang','de-DE');
  await page.reload();
- await expect(page.getByLabel('Sprache',{exact:true})).toHaveValue('de');
- await page.getByLabel('Sprache',{exact:true}).selectOption('zh');
+ await expect(page.getByLabel('Sprache',{exact:true})).toHaveAttribute('data-value','de');
+ await pickOption(page.getByLabel('Sprache',{exact:true}),'简体中文');
  await expect(page.getByRole('button',{name:'登录',exact:true})).toBeVisible();
  await expect(page.locator('html')).toHaveAttribute('lang','zh-CN');
  await page.reload();
- await expect(page.getByLabel('语言',{exact:true})).toHaveValue('zh');
- await page.getByLabel('语言',{exact:true}).selectOption('system');
+ await expect(page.getByLabel('语言',{exact:true})).toHaveAttribute('data-value','zh');
+ await pickOption(page.getByLabel('语言',{exact:true}),'系统语言');
  await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>localStorage.getItem('vave-log.locale'))).toBeNull();
 });
@@ -103,7 +104,7 @@ test('member navigation is translated and never requests financial records',asyn
  const nav=page.getByRole('navigation');
  await expect(nav.getByRole('button',{name:'Projects',exact:true})).toBeVisible();
  await expect(nav.getByRole('button',{name:'Team',exact:true})).toHaveCount(0);
- await page.getByLabel('Language',{exact:true}).selectOption('zh');
+ await pickOption(page.getByLabel('Language',{exact:true}),'简体中文');
  await expect(nav.getByRole('button',{name:'项目',exact:true})).toBeVisible();
  await expect(nav.getByRole('button',{name:'团队',exact:true})).toHaveCount(0);
  await nav.getByRole('button',{name:'项目',exact:true}).click();
@@ -114,7 +115,7 @@ test('member navigation is translated and never requests financial records',asyn
 test('registration stores the selected email locale and preserves the submitted name',async({page})=>{
  await setup(page);let submitted:Record<string,unknown>|undefined;
  await page.route('https://test.supabase.co/auth/v1/signup*',async route=>{submitted=route.request().postDataJSON();await route.fulfill({json:{id:user,email:'new@example.test',user_metadata:{display_name:'Projekt',locale:'de'},identities:[]}});});
- await page.goto('/');await page.getByLabel('Language',{exact:true}).selectOption('de');
+ await page.goto('/');await pickOption(page.getByLabel('Language',{exact:true}),'Deutsch');
  await page.getByRole('button',{name:'Jetzt registrieren',exact:true}).click();
  await page.getByLabel('Dein Name',{exact:true}).fill('Projekt');
  await page.getByLabel('E-Mail-Adresse',{exact:true}).fill('new@example.test');
@@ -134,7 +135,7 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
  await page.getByRole('radio',{name:/Explore with VAVE examples/}).check();
  await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
- await page.getByRole('combobox',{name:/^Time zone /}).fill('Europe/Berlin');
+ await pickOption(page.getByRole('combobox',{name:'Time zone',exact:true}),'Europe/Berlin','Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
  await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();
@@ -246,11 +247,11 @@ async function connectedSetup(page:Page,role:'owner'|'member'='owner'){
 test('project links preserve task filters, editor defaults and browser history',async({page})=>{
  const state=await connectedSetup(page);await page.goto('/');const nav=page.getByRole('navigation',{name:'Main navigation'});
  await nav.getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Tasks: Brand Experience',exact:true}).click();
- await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'New task',exact:true}).click();let dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveValue(project);await dialog.getByLabel('Task',{exact:true}).fill('Linked task');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.createdTasks[0].project_id).toBe(project);
+ await expect(page.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'New task',exact:true}).click();let dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);await dialog.getByLabel('Task',{exact:true}).fill('Linked task');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();expect(state.createdTasks[0].project_id).toBe(project);
  await page.getByLabel('Search tasks',{exact:true}).fill('Linked');await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toHaveCount(0);await page.reload();await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('Linked');await expect(page.getByRole('button',{name:'Linked task',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Open project Brand Experience',exact:true}).click();await expect(page.getByRole('heading',{name:'Brand Experience',exact:true})).toBeVisible();await page.goBack();await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('Linked');
- await page.getByRole('button',{name:'Open project Brand Experience',exact:true}).click();await page.getByRole('button',{name:'Add time',exact:true}).click();dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveValue(project);await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await page.getByRole('button',{name:'Open project Brand Experience',exact:true}).click();await page.getByRole('button',{name:'Add time',exact:true}).click();dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
@@ -259,7 +260,7 @@ test('keyboard skip link preserves the active project and task filters',async({p
  await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
  const url=page.url();await page.locator('.skip-link').focus();await page.keyboard.press('Enter');
  await expect(page.locator('#main')).toBeFocused();expect(page.url()).toBe(url);
- await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ await expect(page.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
 });
 
 test('authorized workspace deep links survive reload and cross-workspace history',async({page})=>{
@@ -268,19 +269,19 @@ test('authorized workspace deep links survive reload and cross-workspace history
  await page.route('https://test.supabase.co/rest/v1/projects*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:state.projects.map(p=>({...p,workspace_id:id})),headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}})});
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:[{workspace_id:id,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}})});
  await page.goto(`/#w=${other}&view=tasks&project=${project}&q=sketch`);
- await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
- await page.reload();await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);
- await page.locator('#workspace-select').selectOption(ws);await expect(page.locator('#workspace-select')).toHaveValue(ws);await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Overview',exact:true})).toHaveAttribute('aria-current','page');
- await page.goBack();await expect(page.locator('#workspace-select')).toHaveValue(other);await expect(page.getByLabel('Project',{exact:true})).toHaveValue(project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
- await page.goto('/#w=missing&view=tasks');await expect(page.getByRole('heading',{name:'Workspace unavailable',exact:true})).toBeVisible();await expect(page.locator('#workspace-select')).toHaveCount(0);await page.getByRole('button',{name:'Open my workspace',exact:true}).click();await expect(page.locator('#workspace-select')).toHaveValue(ws);
+ await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',other);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ await page.reload();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',other);await expect(page.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);
+ await pickOption(page.locator('#workspace-select'),'VAVE Studio');await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',ws);await expect(page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Overview',exact:true})).toHaveAttribute('aria-current','page');
+ await page.goBack();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',other);await expect(page.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
+ await page.goto('/#w=missing&view=tasks');await expect(page.getByRole('heading',{name:'Workspace unavailable',exact:true})).toBeVisible();await expect(page.locator('#workspace-select')).toHaveCount(0);await page.getByRole('button',{name:'Open my workspace',exact:true}).click();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',ws);
 });
 
 test('task quick and advanced filters explain empty results and reset cleanly',async({page})=>{
  await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
  await page.getByRole('button',{name:'Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'More filters',exact:true}).click();await page.getByLabel('Assignee',{exact:true}).selectOption('unassigned');await expect(page.getByText('No tasks match these filters.',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'More filters',exact:true}).click();await pickOption(page.getByLabel('Assignee',{exact:true}),'Unassigned');await expect(page.getByText('No tasks match these filters.',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Remove filter: Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Museum prototype',exact:true})).toBeVisible();await page.getByRole('button',{name:'Reset filters',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();
- await page.getByLabel('Language',{exact:true}).selectOption('zh');await expect(page.getByLabel('搜索任务',{exact:true})).toBeVisible();await page.getByLabel('语言',{exact:true}).selectOption('de');await expect(page.getByLabel('Aufgaben durchsuchen',{exact:true})).toBeVisible();
+ await pickOption(page.getByLabel('Language',{exact:true}),'简体中文');await expect(page.getByLabel('搜索任务',{exact:true})).toBeVisible();await pickOption(page.getByLabel('语言',{exact:true}),'Deutsch');await expect(page.getByLabel('Aufgaben durchsuchen',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
@@ -289,8 +290,8 @@ test('project analysis loads all-time facts, retries and opens scoped finance wi
  await page.route('https://test.supabase.co/rest/v1/rpc/project_insight',r=>{expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws,p_project_id:project});attempts++;return attempts===1?r.fulfill({status:503,json:{message:'unavailable'}}):r.fulfill({json:state.insight});});
  await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Project outlook: Brand Experience',exact:true}).click();let dialog=page.getByRole('dialog');await expect(dialog.getByRole('alert')).toBeVisible();await dialog.getByRole('button',{name:'Try again',exact:true}).click();await expect(dialog.getByText('Scenario within deadline',{exact:true})).toBeVisible();await expect(dialog.getByText('40 hr',{exact:true})).toBeVisible();await dialog.getByText('How this is calculated',{exact:true}).click();await expect(dialog.getByText(/Task counts are unweighted/)).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
- await dialog.getByRole('button',{name:'Planning',exact:true}).click();await expect(page.getByRole('tab',{name:'Planning & costs',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.locator('.finance-project-filter select')).toHaveValue(project);
- await page.getByRole('tab',{name:'Invoices',exact:true}).click();await expect(page.locator('.finance-project-filter select')).toHaveValue(project);await page.goBack();await expect(page.getByRole('tab',{name:'Planning & costs',exact:true})).toHaveAttribute('aria-selected','true');await page.reload();await expect(page.locator('.finance-project-filter select')).toHaveValue(project);
+ await dialog.getByRole('button',{name:'Planning',exact:true}).click();await expect(page.getByRole('tab',{name:'Planning & costs',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.locator('.finance-project-filter [role="combobox"]')).toHaveAttribute('data-value',project);
+ await page.getByRole('tab',{name:'Invoices',exact:true}).click();await expect(page.locator('.finance-project-filter [role="combobox"]')).toHaveAttribute('data-value',project);await page.goBack();await expect(page.getByRole('tab',{name:'Planning & costs',exact:true})).toHaveAttribute('aria-selected','true');await page.reload();await expect(page.locator('.finance-project-filter [role="combobox"]')).toHaveAttribute('data-value',project);
  await page.getByRole('tab',{name:'Clients',exact:true}).click();await page.reload();await expect(page.getByRole('tab',{name:'Clients',exact:true})).toHaveAttribute('aria-selected','true');
  expect(attempts).toBe(2);
 });

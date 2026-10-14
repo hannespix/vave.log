@@ -38,7 +38,7 @@ describe('translated presentation', () => {
   it('renders the selector and form labels in the chosen locale', () => {
     const members = [{user_id:'1',role:'disabled',display_name:'Former',email:'former@example.test'}] as Membership[];
     const html = renderToStaticMarkup(createElement(I18nProvider, {initialLocale:'zh'}, createElement(TaskAssigneeSelect, {members,currentAssignee:'1'}), createElement(LanguageSwitcher)));
-    expect(html).toContain('分配给'); expect(html).toContain('Former'); expect(html).toContain('已停用'); expect(html).toContain('系统语言');
+    expect(html).toContain('分配给'); expect(html).toContain('Former'); expect(html).toContain('已停用'); expect(html).toContain('aria-label="语言"'); expect(html).toContain('data-value="system"');
   });
   it('formats exports and dates without translating notes or identifiers', () => {
     const entry = {work_date:'2026-10-13',user_id:'u',project_id:'p',minutes:75,note:'Projekt',billable:true,status:'draft'} as TimeEntry;
