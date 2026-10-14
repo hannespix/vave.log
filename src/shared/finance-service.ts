@@ -1,11 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { z } from 'zod';
 import type { BillingProfile,Expense,ExpenseInput,FinanceClient,FinanceClientInput,FinanceOverview,Invoice,InvoiceDraftInput,ProjectPlan,ProjectPlanInput,StaffRate,StaffRateInput,TimeInvoiceInput } from './finance-types.js';
-import type { Project,TimeEntry } from './types.js';
+import type { Project } from './types.js';
 import { billingProfileSchema,clientSchema,expenseSchema,financeRangeSchema,financeUuid,invoiceDraftSchema,projectPlanSchema,staffRateSchema,timeInvoiceSchema } from './finance-validation.js';
 import { projectFinancials } from './finance-math.js';
-export type FinanceErrorCode='validation'|'forbidden'|'not_found'|'conflict'|'missing_configuration'|'result_limit'|'database';
-const messages:Record<FinanceErrorCode,string>={validation:'Please check the financial input.',forbidden:'You do not have permission to access these financial records.',not_found:'The financial record was not found.',conflict:'This financial record changed or is already in use.',missing_configuration:'Complete the company, customer and rate settings before continuing.',result_limit:'More than 1,000 records matched. Please narrow the date range or scope.',database:'The financial request could not be completed. Please try again.'};
+import { readTimeEntryPages,type TimeEntryPageError } from './time-entry-pages.js';
+export type FinanceErrorCode='validation'|'forbidden'|'not_found'|'conflict'|'missing_configuration'|'result_limit'|'database'|TimeEntryPageError;
+const messages:Record<FinanceErrorCode,string>={validation:'Please check the financial input.',forbidden:'You do not have permission to access these financial records.',not_found:'The financial record was not found.',conflict:'This financial record changed or is already in use.',missing_configuration:'Complete the company, customer and rate settings before continuing.',result_limit:'More than 1,000 records matched. Please narrow the date range or scope.',time_entry_limit:'More than 50,000 time entries matched. Please narrow the date range.',result_incomplete:'Time entries could not be loaded completely. Please reload and try again.',database:'The financial request could not be completed. Please try again.'};
 export class FinanceError extends Error {readonly code:FinanceErrorCode;constructor(code:FinanceErrorCode){super(messages[code]);this.name='FinanceError';this.code=code}}
 type DbError={code?:string;message?:string};
 type Result={data:unknown;error:DbError|null;count?:number|null};
@@ -43,7 +44,7 @@ export function createFinanceService(client:SupabaseClient){
    const w=id(workspace_id),range=parse(financeRangeSchema,{from,to});
    const [plans,rates,expenses,entries,projects,workspace]=await Promise.all([
     service.listProjectPlans(w),service.listRates(w),service.listExpenses(w,range.from,range.to),
-    list<TimeEntry>(client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).gte('work_date',range.from).lte('work_date',range.to).order('work_date').order('id').limit(1001)),
+    readTimeEntryPages((start,end)=>client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).gte('work_date',range.from).lte('work_date',range.to).order('work_date').order('id').range(start,end),fail,code=>new FinanceError(code)),
     list<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',w).order('id').limit(1001)),
     one<{currency:string}>(client.from('workspaces').select('currency').eq('id',w).single())
    ]);

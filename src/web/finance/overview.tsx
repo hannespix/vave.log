@@ -4,13 +4,20 @@ import { Notice } from "../components";
 import { Section, useFinance } from "./context";
 import { downloadText, money, overviewCsv, localeCode } from "./documents";
 import type { FinanceKey } from "./catalog";
+import { summarizeInvoices } from "./invoice-summary";
 export function Overview() {
-  const { data, locale, workspace, projects, t } = useFinance(),
+  const { data, locale, workspace, projects, range, t } = useFinance(),
     [project, setProject] = useState("");
   const rows = data.overview.projects.filter(
       (p) => !project || p.project_id === project,
     ),
     m = (value: number | null) => money(value, workspace.currency, locale);
+  const invoiceTotals = summarizeInvoices(data.invoices, range, project);
+  const date = (value: string) =>
+    new Intl.DateTimeFormat(localeCode(locale), {
+      dateStyle: "medium",
+      timeZone: "UTC",
+    }).format(new Date(`${value}T00:00:00Z`));
   const total = (
     field:
       | "planned_revenue_minor"
@@ -58,7 +65,7 @@ export function Overview() {
       <div className="finance-metrics">
         {(
           [
-            ["plannedRevenue", total("planned_revenue_minor")],
+            ["projectPlanVolume", total("planned_revenue_minor")],
             ["actualCost", total("actual_cost_minor")],
             ["forecastMargin", total("forecast_margin_minor")],
           ] as [FinanceKey, number | null][]
@@ -66,11 +73,35 @@ export function Overview() {
           <div key={label} className="finance-metric">
             <span>{t(label)}</span>
             <strong>{m(value)}</strong>
-            <small>{workspace.currency}</small>
+            <small>
+              {workspace.currency} · {t(label === "actualCost" ? "selectedPeriod" : "fullProject")}
+            </small>
           </div>
         ))}
       </div>
       <p className="finance-caption">{t("marginNote")}</p>
+      <section className="finance-invoice-summary" aria-label={t("invoiceActivity")}>
+        <div className="finance-summary-heading">
+          <h2>{t("invoiceActivity")}</h2>
+          <p>
+            <time dateTime={range.from}>{date(range.from)}</time>
+            {" – "}
+            <time dateTime={range.to}>{date(range.to)}</time>
+          </p>
+        </div>
+        <div className="finance-metrics finance-metrics-invoices">
+          {(["invoicedNet", "paidNet", "openNet"] as const).map((label) => (
+            <div key={label} className="finance-metric">
+              <span>{t(label)}</span>
+              <strong>{m(invoiceTotals[label])}</strong>
+              <small>
+                {workspace.currency} · {t(label === "invoicedNet" ? "selectedPeriod" : "currentStatus")}
+              </small>
+            </div>
+          ))}
+        </div>
+        <p className="finance-caption">{t("invoiceSummaryNote")}</p>
+      </section>
       {rows.length === 0 ? (
         <div className="panel muted">{t("noProjects")}</div>
       ) : (

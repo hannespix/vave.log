@@ -1,5 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-import {DEMO_MANIFEST} from '../../src/shared/demo-data';
+import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION} from '../../src/shared/demo-data';
 test.use({locale:'en-US'});
 const user='11111111-1111-4111-8111-111111111111';
 const ws='22222222-2222-4222-8222-222222222222';
@@ -24,7 +24,7 @@ async function setup(page:Page,loggedIn=false,role:'owner'|'manager'|'member'='o
   else if(url.pathname==='/rest/v1/time_entries'){
    if(req.method()==='POST'){const body=req.postDataJSON();const e={...body,user_id:user,status:'draft',timer_id:null,created_at:'2026-10-13T09:00:00Z'};entries.push(e);data=e}else data=entries;
   }
-  await route.fulfill({json:data,headers:{'content-range':Array.isArray(data)?`0-${Math.max(0,data.length-1)}/${data.length}`:'0-0/1'}});
+  await route.fulfill({json:data,headers:{'access-control-expose-headers':'content-range','content-range':Array.isArray(data)?`0-${Math.max(0,data.length-1)}/${data.length}`:'0-0/1'}});
  });
  return entries;
 }
@@ -127,21 +127,44 @@ test('registration stores the selected email locale and preserves the submitted 
 test('first start defaults to empty and opt-in demo populates actual team profiles',async({page})=>{
  await setup(page,true);let seeded=false;let input:Record<string,unknown>|undefined;
  const workspace={id:ws,name:'VAVE · Demo',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-13T09:00:00Z'};
- await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>r.fulfill({json:seeded?[workspace]:[],headers:{'content-range':seeded?'0-0/1':'0-0/0'}}));
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>r.fulfill({json:seeded?[workspace]:[],headers:{'access-control-expose-headers':'content-range','content-range':seeded?'0-0/1':'0-0/0'}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_create_workspace',r=>{input=r.request().postDataJSON();seeded=true;return r.fulfill({json:workspace})});
- await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:seeded?{workspace_id:ws,created_by:user,request_id:input?.p_request_id,locale:'en',experience_version:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:workspace.created_at,archived_at:null}:null}));
+ await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:seeded?{workspace_id:ws,created_by:user,request_id:input?.p_request_id,locale:'en',experience_version:DEMO_EXPERIENCE_VERSION,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:workspace.created_at,archived_at:null}:null}));
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:'55555555-5555-4555-8555-555555555555',role:'manager',display_name:'Tobias Geisler',email:'sample-1@example.invalid',created_at:'',is_demo:true,demo_title:'Co-Founder & CEO',demo_studio:'',demo_origin:'public'}]}));
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
  await page.getByRole('radio',{name:/Explore with VAVE examples/}).check();
  await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
  await page.getByRole('combobox',{name:/^Time zone /}).fill('Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
+ await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
+ await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toBeVisible();
  await expect(page.getByText('Explore the public sources',{exact:true})).toHaveCount(0);
  await page.getByRole('navigation').getByRole('button',{name:'Team',exact:true}).click();
+ await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  expect(input).toMatchObject({p_name:'VAVE · Demo',p_timezone:'Europe/Berlin',p_locale:'en'});expect(input?.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('finance loads more than a thousand time entries and keeps million-euro metrics inside the viewport',async({page})=>{
+ await setup(page,true);
+ const people=Array.from({length:111},(_,i)=>`90000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`);
+ const entries=Array.from({length:1105},(_,i)=>({id:`80000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,workspace_id:ws,project_id:project,user_id:people[i%people.length],work_date:'2026-10-13',minutes:5,note:'Fictional production time',billable:true,status:'approved',timer_id:null,created_at:'2026-10-13T09:00:00Z'}));
+ const offsets:number[]=[];
+ await page.route('https://test.supabase.co/rest/v1/time_entries*',route=>{
+  const url=new URL(route.request().url()),offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||1000),slice=entries.slice(offset,offset+limit);offsets.push(offset);
+  return route.fulfill({json:slice,headers:{'access-control-expose-headers':'content-range','content-range':`${offset}-${offset+slice.length-1}/${entries.length}`}});
+ });
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
+ await page.route('https://test.supabase.co/rest/v1/finance_staff_rates*',r=>r.fulfill({json:people.map((person,i)=>({id:String(i),workspace_id:ws,user_id:person,kind:'employee',effective_from:'2026-01-01',cost_rate_minor:8000,bill_rate_minor:18500})),headers:{'access-control-expose-headers':'content-range','content-range':'0-110/111'}}));
+ await page.route('https://test.supabase.co/rest/v1/finance_project_plans*',r=>r.fulfill({json:[{workspace_id:ws,project_id:project,client_id:null,billing_mode:'fixed',default_bill_rate_minor:18500,fixed_fee_minor:2255000000,planned_expenses_minor:563750000,lines:[{label:'Fictional annual production programme',kind:'employee',user_id:null,planned_minutes:7800000,cost_rate_minor:8000,bill_rate_minor:18500}],created_at:''}],headers:{'access-control-expose-headers':'content-range','content-range':'0-0/1'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'Finance',exact:true}).click();
+ await expect(page.locator('.finance-metric').filter({hasText:'22,550,000.00'})).toBeVisible();
+ await expect(page.locator('.finance-metric').filter({hasText:'7,370.35'})).toBeVisible();
+ expect(offsets.filter(x=>x===1000).length).toBeGreaterThanOrEqual(2);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
@@ -169,7 +192,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  const client={id:customer,workspace_id:ws,name:'Blue Current Foundation (fictional)',billing_address:'Example street 2',contact_email:'client@example.invalid',tax_id:'DEMO-NOT-VALID',language:'en',created_at:''};
  const line={description:'Sample spatial design',quantity:2,unit_price_minor:12500,tax_basis_points:1900,zero_tax_reason:'',time_entry_id:null,net_minor:25000,tax_minor:4750,total_minor:29750};
  const invoice:Record<string,unknown>={id:draftId,workspace_id:ws,client_id:customer,project_id:project,language:'en',currency:'EUR',issue_date:'2026-10-13',due_date:'2026-11-13',service_from:'2026-10-01',service_to:'2026-10-13',notes:'Fictional demo',payment_instructions:'Do not pay',lines:[line],net_minor:25000,tax_minor:4750,total_minor:29750,status:'draft',number:null,is_demo:true,created_at:'2026-10-13T09:00:00Z',issued_at:null,issuer_snapshot:null,customer_snapshot:null,cancellation_of:null,cancellation_id:null,cancellation_reason:'',paid:false};
- await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?2:1,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null}}));
+ await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?DEMO_EXPERIENCE_VERSION:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null}}));
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},...(upgraded?[{workspace_id:ws,user_id:person,role:'member',display_name:'Elena Weber',email:'elena@example.invalid',created_at:'',is_demo:true,demo_title:'Finance & Operations Lead',demo_studio:'Frankfurt',demo_origin:'fictional'}]:[])]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_upgrade_workspace',r=>{
   expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});upgraded++;
@@ -181,7 +204,9 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await page.route('https://test.supabase.co/rest/v1/finance_billing_profiles*',r=>r.fulfill({json:profile}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:upgraded?[invoice]:[]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_issue_invoice',r=>{issued++;expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws,p_id:draftId});Object.assign(invoice,{status:'issued',number:'DEMO-000001',issued_at:'2026-10-13T09:00:00Z',issuer_snapshot:profile,customer_snapshot:client});return r.fulfill({json:invoice})});
- await page.goto('/');await page.getByRole('button',{name:'Complete demo',exact:true}).click();
+ await page.goto('/');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);
+ await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('button',{name:'Complete demo',exact:true}).click();
  await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
  const nav=page.getByRole('navigation');await nav.getByRole('button',{name:'Team',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
@@ -194,5 +219,5 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  const dialog=page.getByRole('dialog');await expect(dialog).toContainText('No payment is due.');expect(issued).toBe(0);
  await dialog.getByRole('button',{name:'Issue sample invoice',exact:true}).click();await expect(dialog).not.toBeVisible();expect(issued).toBe(1);
  await expect(page.getByRole('button',{name:'DEMO-000001',exact:true})).toBeVisible();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
- await page.reload();await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await page.reload();await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
 });

@@ -1,6 +1,6 @@
 # Finance contract (2026-10-13)
 
-`createFinanceService(client: SupabaseClient)` exports inferred `FinanceService`. All calls use the acting user's client, never a service-role key. Inputs/outputs are exported from `src/shared/finance-types.ts` and use snake_case. All list results are bounded to 1,000, with an explicit limit error instead of silent truncation.
+`createFinanceService(client: SupabaseClient)` exports inferred `FinanceService`. All calls use the acting user's client, never a service-role key. Inputs/outputs are exported from `src/shared/finance-types.ts` and use snake_case. Ordinary lists are bounded to 1,000. The overview loads up to 50,000 time entries in scoped, deterministically ordered pages, failing the whole calculation on missing pages, count changes, duplicate identities or limits. It never returns knowingly partial totals. Separate requests are not a transactional snapshot.
 
 | Method | Input | Promise result |
 |---|---|---|
