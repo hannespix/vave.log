@@ -47,6 +47,7 @@ export function createService(client:SupabaseClient){
   deleteEntry:async(id:string)=>{await one(client.from('time_entries').delete().eq('id',parse(uuid,id)).select('id').single())},
   submitEntries:(input:{workspace_id:string;from:string;to:string})=>{const {workspace_id,...range}=input;const v=parse(dateRangeSchema,range);return rpc<number>('submit_entries',{p_workspace_id:parse(uuid,workspace_id),p_from:v.from,p_to:v.to})},
   reviewEntry:(input:{id:string;approve:boolean})=>{const v=parse(z.strictObject({id:uuid,approve:z.boolean()}),input);return rpc<TimeEntry>('review_entry',{p_id:v.id,p_approve:v.approve})},
+  reviewEntries:(input:{workspace_id:string;ids:string[];approve:boolean})=>{const v=parse(z.strictObject({workspace_id:uuid,ids:z.array(uuid).min(1).max(500),approve:z.boolean()}),input);return rpc<number>('review_entries',{p_workspace_id:v.workspace_id,p_ids:v.ids,p_approve:v.approve})},
   revokeApproval:(id:string)=>rpc<TimeEntry>('revoke_approval',{p_id:parse(uuid,id)}),
   // Range-independent approval queue: how many submitted entries exist in the
   // workspace at all, and the oldest work date, so the review view can widen

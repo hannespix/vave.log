@@ -304,6 +304,18 @@ describe('database entries and workflow', () => {
     await login(manager); expect((await first('select * from public.revoke_approval($1)',[e.id])).status).toBe('draft');
     await login(member); expect(await rows('update public.time_entries set minutes=95 where id=$1 returning minutes',[e.id])).toEqual([{minutes:95}]);
   });
+  it('approves a submitted batch in one call, skipping entries decided in the meantime', async () => {
+    const a=await entry(60); const b=await entry(30); const c=await entry(45);
+    await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await login(manager);
+    await db.query('select public.review_entry($1,false)',[c.id]);
+    await expect(attempt('select public.review_entries($1,$2,null)',[workspace,[a.id,b.id]])).rejects.toThrow(/Freigabe-Entscheidung/);
+    expect((await first('select public.review_entries($1,$2,true) as n',[workspace,[a.id,b.id,c.id]])).n).toBe(2);
+    expect((await rows('select status from public.time_entries where id=any($1::uuid[])',[[a.id,b.id]])).map(r=>r.status)).toEqual(['approved','approved']);
+    expect((await first('select status from public.time_entries where id=$1',[c.id])).status).toBe('draft');
+    await login(member); await expect(attempt('select public.review_entries($1,$2,false)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
+    await login(outsider); await expect(attempt('select public.review_entries($1,$2,true)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
+  });
   it('manages invitations: managers list, owners revoke, conflicts and expiry cleanup', async () => {
     await login(owner); await db.query("select public.invite_member($1,'new@example.org','member')",[workspace]);
     await login(member); await expect(attempt('select * from public.list_invitations($1)',[workspace])).rejects.toThrow(/Berechtigung/);
