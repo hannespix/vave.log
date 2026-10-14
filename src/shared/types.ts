@@ -6,7 +6,7 @@ export interface Project { id: string; workspace_id: string; code: string; name:
 export type ProjectInput = Omit<Project,'id'|'created_at'|'progress_updated_at'>;
 export interface Task { id:string; workspace_id:string; project_id:string; title:string; status:'todo'|'doing'|'done'; assignee_id:string|null; due_date:string|null; estimated_minutes?:number|null; is_milestone?:boolean; created_by:string; created_at:string }
 export type TaskInput = Omit<Task,'id'|'created_at'|'created_by'>;
-export interface TimeEntry { id:string; workspace_id:string; project_id:string; user_id:string; work_date:string; minutes:number; note:string; billable:boolean; status:'draft'|'submitted'|'approved'; timer_id:string|null; created_at:string }
+export interface TimeEntry { id:string; workspace_id:string; project_id:string; user_id:string; work_date:string; minutes:number; note:string; billable:boolean; status:'draft'|'submitted'|'approved'; timer_id:string|null; task_id?:string|null; created_at:string }
 export type EntryInput = Omit<TimeEntry,'id'|'created_at'|'user_id'|'status'|'timer_id'>;
-export interface RunningTimer { id:string; workspace_id:string; project_id:string; user_id:string; started_at:string; note:string; billable:boolean }
-export interface TimerInput { workspace_id:string; project_id:string; note:string; billable:boolean }
+export interface RunningTimer { id:string; workspace_id:string; project_id:string; user_id:string; started_at:string; note:string; billable:boolean; task_id?:string|null }
+export interface TimerInput { workspace_id:string; project_id:string; note:string; billable:boolean; task_id?:string|null }

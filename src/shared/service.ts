@@ -54,7 +54,7 @@ export function createService(client:SupabaseClient){
   // its range to cover them (RLS scopes members to their own entries).
   approvalQueue:async(workspaceId:string)=>{const {data,error,count}=await client.from('time_entries').select('work_date',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('status','submitted').order('work_date',{ascending:true}).limit(1);fail(error);return {count:count??0,oldest:(data as {work_date:string}[]|null)?.[0]?.work_date??null};},
   getTimer:async()=>{const {data,error}=await client.from('running_timers').select('*').maybeSingle();fail(error);return data as RunningTimer|null},
-  startTimer:(input:TimerInput)=>{const v=parse(timerSchema,input);return rpc<RunningTimer>('start_timer',{p_workspace_id:v.workspace_id,p_project_id:v.project_id,p_note:v.note,p_billable:v.billable})},
+  startTimer:(input:TimerInput)=>{const v=parse(timerSchema,input);return rpc<RunningTimer>('start_timer',{p_workspace_id:v.workspace_id,p_project_id:v.project_id,p_note:v.note,p_billable:v.billable,p_task_id:v.task_id??null})},
   stopTimer:(id:string)=>rpc<TimeEntry[]>('stop_timer',{p_timer_id:parse(uuid,id)}),
   discardTimer:async(id:string)=>{await rpcVoid('discard_timer',{p_timer_id:parse(uuid,id)})}
  };
