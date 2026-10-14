@@ -520,6 +520,7 @@ type LineEdit = {
   tax: string;
   zeroReason: string;
   timeId: string | null;
+  timeIds: string[] | null;
   sourceNet?: number;
 };
 export function DraftEditor({
@@ -554,6 +555,7 @@ export function DraftEditor({
         tax: String(line.tax_basis_points / 100),
         zeroReason: line.zero_tax_reason,
         timeId: line.time_entry_id,
+        timeIds: line.time_entry_ids ?? null,
         sourceNet: line.net_minor,
       })) || [
         {
@@ -564,6 +566,7 @@ export function DraftEditor({
           tax: "",
           zeroReason: "",
           timeId: null,
+          timeIds: null,
         },
       ],
   );
@@ -579,6 +582,7 @@ export function DraftEditor({
       tax_basis_points: decimalToMinor(line.tax || "0", "EUR"),
       zero_tax_reason: line.zeroReason,
       time_entry_id: line.timeId,
+      time_entry_ids: line.timeIds,
     };
   }
   let total: number | null = 0;
@@ -586,7 +590,7 @@ export function DraftEditor({
     for (const line of lines) {
       const input = toInput(line);
       total +=
-        line.timeId && line.sourceNet !== undefined
+        (line.timeId || line.timeIds) && line.sourceNet !== undefined
           ? line.sourceNet +
             roundRatio(line.sourceNet * input.tax_basis_points, 10000)
           : lineTotals(input).total_minor;
@@ -696,7 +700,7 @@ export function DraftEditor({
                 <Trash2 size={15} />
               </button>
             </div>
-            {line.timeId && <p className="finance-caption">{t("timeLine")}</p>}
+            {!!(line.timeId || line.timeIds) && <p className="finance-caption">{t("timeLine")}</p>}
             <div className="finance-invoice-line-values">
               <Field label={t("quantity")}>
                 <input
@@ -706,7 +710,7 @@ export function DraftEditor({
                   max="1000000"
                   required
                   value={line.quantity}
-                  readOnly={!!line.timeId}
+                  readOnly={!!(line.timeId || line.timeIds)}
                   onChange={(e) => edit(line.key, { quantity: e.target.value })}
                 />
               </Field>
@@ -716,7 +720,7 @@ export function DraftEditor({
                   step={10 ** -currencyDigits(workspace.currency)}
                   min="0"
                   required
-                  readOnly={!!line.timeId}
+                  readOnly={!!(line.timeId || line.timeIds)}
                   value={line.price}
                   onChange={(e) => edit(line.key, { price: e.target.value })}
                 />
@@ -760,6 +764,7 @@ export function DraftEditor({
                 tax: "",
                 zeroReason: "",
                 timeId: null,
+                timeIds: null,
               },
             ])
           }
@@ -810,7 +815,8 @@ export function TimeDraft({
     [language, setLanguage] = useState<InvoiceLanguage>(
       data.clients[0]?.language || locale,
     ),
-    [clientId, setClientId] = useState(data.clients[0]?.id || "");
+    [clientId, setClientId] = useState(data.clients[0]?.id || ""),
+    [grouped, setGrouped] = useState(true);
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -826,6 +832,7 @@ export function TimeDraft({
         due_date: formText(f, "due_date"),
         tax_basis_points: decimalToMinor(tax, "EUR"),
         zero_tax_reason: formText(f, "zero_tax_reason"),
+        group_lines: grouped ? "person" : "entry",
       });
       onSaved(saved.id);
     }, onClose);
@@ -894,6 +901,14 @@ export function TimeDraft({
             />
           </Field>
         )}
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={grouped}
+            onChange={(e) => setGrouped(e.target.checked)}
+          />
+          {t("groupTimeLines")}
+        </label>
         <Actions label="draft" onClose={onClose} />
       </form>
     </Dialog>

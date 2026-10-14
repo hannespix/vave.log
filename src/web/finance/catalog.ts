@@ -325,6 +325,11 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  groupTimeLines: [
+    "Combine entries per person and rate",
+    "Einträge je Person und Satz zusammenfassen",
+    "按人员和费率合并工时行",
+  ],
   searchInvoices: [
     "Search number, client, notes …",
     "Nummer, Kunde, Notizen durchsuchen …",
