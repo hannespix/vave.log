@@ -1,3 +1,4 @@
+import { expectChoiceValue } from './select-helpers';
 import {test,expect,type Page} from '@playwright/test';
 import type {WorkspaceAdminSummary} from '../../src/shared/workspace-admin-types';
 
@@ -52,7 +53,7 @@ test('owners delete archived demos and the last active studio only after explici
 
 test('current studio deletion clears its route and moves to the next accessible studio',async({page})=>{
  await setup(page,{twoActive:true});await page.goto(`/#w=${ws}&view=settings`);await manager(page).click();await dialog(page).getByRole('button',{name:'Delete: North & Süd 工作室',exact:true}).click();await confirm(page,'North & Süd 工作室');await remove(page).click();await dialog(page).getByRole('button',{name:'Close dialog',exact:true}).click();
- await expect(page).toHaveURL(new RegExp(`w=${other}&view=overview`));await expect(page.getByLabel('Switch workspace')).toHaveValue(other);
+ await expect(page).toHaveURL(new RegExp(`w=${other}&view=overview`));await expectChoiceValue(page.getByLabel('Switch workspace'),other);
  await page.evaluate(({ws})=>{history.pushState(null,'',`/#w=${ws}&view=finance`);window.dispatchEvent(new PopStateEvent('popstate'));},{ws});
  await expect(page.getByText('Workspace unavailable',{exact:true})).toBeVisible();await expect(page.getByLabel('Switch workspace')).toHaveCount(0);
 });

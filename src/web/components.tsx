@@ -1,3 +1,5 @@
+import { personOption } from './select-data';
+import { SmartSelect } from './smart-select';
 import { useI18n } from './i18n';
 import type { Membership } from '../shared/types';
 import { useEffect, useId, useRef, type ReactNode } from 'react';
@@ -25,10 +27,10 @@ export function TaskAssigneeSelect({ members, currentAssignee }: { members: Memb
   // Keep the current historical assignment successful in FormData. Disabling its
   // option would omit it from submission even while it remains selected.
   const options = members.filter(member => member.role !== 'disabled' || member.user_id === currentAssignee);
-  return <Field label={t('Zugewiesen an')}><select name="assignee" defaultValue={currentAssignee || ''}>
+  return <Field label={t('Zugewiesen an')}><SmartSelect name="assignee" defaultValue={currentAssignee || ''}>
     <option value="">{t('Noch nicht zugewiesen')}</option>
-    {options.map(member => <option value={member.user_id} key={member.user_id}>
+    {options.map(member => <option {...personOption(member)} value={member.user_id} key={member.user_id}>
       {member.display_name || member.email}{member.role === 'disabled' ? t(' (deaktiviert)') : ''}
     </option>)}
-  </select></Field>;
+  </SmartSelect></Field>;
 }

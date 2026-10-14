@@ -1,3 +1,5 @@
+import { personOption } from '../select-data';
+import { SmartSelect } from '../smart-select';
 import { useRef, useState, type FormEvent } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type {
@@ -118,17 +120,17 @@ function PlanEditor({ projectId }: { projectId: string }) {
     <form className="form-stack finance-plan-form" onSubmit={submit}>
       <div className="form-grid">
         <Field label={t("clients")}>
-          <select name="client_id" defaultValue={plan?.client_id || ""}>
+          <SmartSelect name="client_id" defaultValue={plan?.client_id || ""}>
             <option value="">{t("none")}</option>
             {data.clients.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.id} data-detail={c.contact_email} data-keywords={c.billing_address}>
                 {c.name}
               </option>
             ))}
-          </select>
+          </SmartSelect>
         </Field>
         <Field label={t("billingMode")}>
-          <select
+          <SmartSelect
             value={billing}
             onChange={(e) => setBilling(e.target.value as BillingMode)}
           >
@@ -137,7 +139,7 @@ function PlanEditor({ projectId }: { projectId: string }) {
                 {t(mode)}
               </option>
             ))}
-          </select>
+          </SmartSelect>
         </Field>
         <MoneyField
           name="default_bill_rate_minor"
@@ -207,7 +209,7 @@ function PlanEditor({ projectId }: { projectId: string }) {
           </div>
           <div className="finance-line-grid">
             <Field label={t("kind")}>
-              <select
+              <SmartSelect
                 value={line.kind}
                 onChange={(e) =>
                   update(line.key, { kind: e.target.value as WorkerKind })
@@ -215,20 +217,20 @@ function PlanEditor({ projectId }: { projectId: string }) {
               >
                 <option value="employee">{t("employee")}</option>
                 <option value="freelancer">{t("freelancer")}</option>
-              </select>
+              </SmartSelect>
             </Field>
             <Field label={t("person")}>
-              <select
+              <SmartSelect
                 value={line.user_id}
                 onChange={(e) => update(line.key, { user_id: e.target.value })}
               >
                 <option value="">{t("noAccount")}</option>
                 {members.map((m) => (
-                  <option value={m.user_id} key={m.user_id}>
+                  <option {...personOption(m)} value={m.user_id} key={m.user_id}>
                     {m.display_name || m.email}
                   </option>
                 ))}
-              </select>
+              </SmartSelect>
             </Field>
             <Field label={t("hours")}>
               <input
@@ -396,23 +398,23 @@ function RateEditor({
     <Dialog title={t("rates")} onClose={onClose} busy={busy}>
       <form className="form-stack" onSubmit={submit}>
         <Field label={t("person")}>
-          <select name="user_id" required defaultValue={item?.user_id || ""}>
+          <SmartSelect name="user_id" required defaultValue={item?.user_id || ""}>
             <option value="" disabled>
               {t("select")}
             </option>
             {members.map((m) => (
-              <option value={m.user_id} key={m.user_id}>
+              <option {...personOption(m)} value={m.user_id} key={m.user_id}>
                 {m.display_name || m.email}
               </option>
             ))}
-          </select>
+          </SmartSelect>
         </Field>
         <div className="form-grid">
           <Field label={t("kind")}>
-            <select name="kind" defaultValue={item?.kind || "employee"}>
+            <SmartSelect name="kind" defaultValue={item?.kind || "employee"}>
               <option value="employee">{t("employee")}</option>
               <option value="freelancer">{t("freelancer")}</option>
-            </select>
+            </SmartSelect>
           </Field>
           <Field label={t("effective")}>
             <input
@@ -621,10 +623,10 @@ function ExpenseEditor({
             />
           </Field>
           <Field label={t("category")}>
-            <select name="category" defaultValue={item?.category || "external"}>
+            <SmartSelect name="category" defaultValue={item?.category || "external"}>
               <option value="external">{t("external")}</option>
               <option value="other">{t("other")}</option>
-            </select>
+            </SmartSelect>
           </Field>
         </div>
         <Field label={t("description")}>
