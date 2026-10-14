@@ -185,6 +185,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
  const nav=page.getByRole('navigation');await nav.getByRole('button',{name:'Team',exact:true}).click();
  await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
+ console.log('mobile navigation geometry',await nav.getByRole('button',{name:/^Time/}).evaluate(el=>{const r=el.getBoundingClientRect(),n=el.parentElement!,p=n.parentElement!,hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {rect:r.toJSON(),hit:hit?.outerHTML,scrollY,innerHeight,visual:visualViewport&&{top:visualViewport.offsetTop,pageTop:visualViewport.pageTop,height:visualViewport.height,scale:visualViewport.scale},navStyle:[getComputedStyle(n).position,getComputedStyle(n).zIndex],parentStyle:[getComputedStyle(p).position,getComputedStyle(p).zIndex],viewport:document.querySelector('meta[name=viewport]')?.outerHTML}}));
  await nav.getByRole('button',{name:/^Time/}).click();await page.getByRole('button',{name:'Team time',exact:true}).click();
  await page.getByRole('button',{name:/Approve.*Elena Weber/}).click();await expect(page.getByRole('row').filter({hasText:'Sample concept workshop'}).getByText('Approved',{exact:true})).toBeVisible();
  await nav.getByRole('button',{name:'Finance',exact:true}).click();await page.getByRole('tab',{name:'Invoices',exact:true}).click();
