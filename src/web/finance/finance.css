@@ -570,3 +570,31 @@
 .finance-metric-overdue span {
   color: #a33d32;
 }
+.finance-logo-field input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.finance-logo-field .button-row {
+  position: relative;
+}
+.finance-logo-field label.button {
+  cursor: pointer;
+}
+.finance-logo-field label.button:focus-within {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+.finance-logo-preview {
+  align-self: flex-start;
+  max-height: 64px;
+  max-width: 240px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+}

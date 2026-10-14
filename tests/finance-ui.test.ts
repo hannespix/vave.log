@@ -116,6 +116,26 @@ describe("finance documents", () => {
     expect(html).toContain("Steuer 7&nbsp;% <small>(50,00\u00a0€)</small></span><span>3,50\u00a0€</span>");
     expect(html).toContain("Steuer 0&nbsp;% <small>(20,00\u00a0€)</small></span><span>0,00\u00a0€</span>");
   });
+  it("prints only safe frozen raster logos in the letterhead", () => {
+    const logo = "data:image/png;base64,iVBORw0KGgo=";
+    const html = invoiceHtml({ ...invoice, issuer_snapshot: { ...issuer, logo_data: logo } });
+    expect(html).toContain(`<img class="logo" src="${logo}"`);
+    expect(invoiceHtml(invoice)).not.toContain('class="logo"');
+    for (const bad of [
+      "javascript:alert(1)",
+      "data:image/svg+xml;base64,PHN2Zz4=",
+      "https://example.test/logo.png",
+      'data:image/png;base64,abc" onerror="x',
+    ])
+      expect(
+        invoiceHtml({ ...invoice, issuer_snapshot: { ...issuer, logo_data: bad } }),
+      ).not.toContain('class="logo"');
+    const draft = invoiceHtml(
+      { ...invoice, status: "draft", number: null, issuer_snapshot: null, customer_snapshot: null },
+      { profile: { ...issuer, logo_data: logo }, customer },
+    );
+    expect(draft).toContain('<img class="logo"');
+  });
   it("marks draft previews from the workspace while issued documents use the durable flag only", () => {
     const draft = { ...invoice, status: "draft" as const };
     expect(invoiceHtml(draft, { isDemo: true })).toContain("DEMO — Nicht zur Zahlung");

@@ -24,6 +24,7 @@ import {
   decimalToMinor,
   displayDate,
   invoiceCsv,
+  invoiceLogo,
   isDemoInvoice,
   minorInput,
   money,
@@ -265,6 +266,13 @@ function InvoiceDetail({
       </div>
       <div className="finance-invoice-parties">
         <div>
+          {!!invoiceLogo(issuer) && (
+            <img
+              className="finance-logo-preview"
+              src={invoiceLogo(issuer)}
+              alt=""
+            />
+          )}
           <h3>{issuer?.legal_name || t("company")}</h3>
           <p className="finance-prewrap muted">
             {issuer?.billing_address || "–"}

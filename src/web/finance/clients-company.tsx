@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Plus, Pencil } from "lucide-react";
 import type {
   FinanceClient,
@@ -141,9 +141,47 @@ function ClientEditor({
     </Dialog>
   );
 }
+const LOGO_LIMIT = 300000,
+  LOGO_EDGE = 480;
+/** Rastert jedes Bild (auch SVG) über Canvas auf höchstens 480 px Kante — klein genug für den Snapshot, scharf genug für den Druck. */
+async function readLogo(file: File): Promise<string> {
+  const fail = () => Object.assign(new Error("logo"), { code: "logo_invalid" });
+  if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) throw fail();
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.addEventListener("load", () => resolve(img));
+      img.addEventListener("error", () => reject(fail()));
+      img.src = url;
+    });
+    const width = image.naturalWidth || LOGO_EDGE,
+      height = image.naturalHeight || LOGO_EDGE,
+      scale = Math.min(1, LOGO_EDGE / Math.max(width, height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw fail();
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    // JPEG bleibt JPEG (Fotos blähen als PNG auf); alles andere behält als PNG seine Transparenz.
+    const data =
+      file.type === "image/jpeg"
+        ? canvas.toDataURL("image/jpeg", 0.9)
+        : canvas.toDataURL("image/png");
+    if (!data.startsWith("data:image/") || data.length > LOGO_LIMIT)
+      throw fail();
+    return data;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 export function Company() {
   const { data, workspace, role, t, service, run, busy, isDemo } = useFinance(),
-    profile = data.profile;
+    profile = data.profile,
+    // undefined = Logo nie angefasst und keins geladen: der Schlüssel bleibt dann
+    // aus dem Upsert heraus, damit eine Live-DB ohne logo_data-Spalte weiter speichert.
+    [logo, setLogo] = useState<string | undefined>(profile?.logo_data);
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (role !== "owner") return;
@@ -157,8 +195,14 @@ export function Company() {
         payment_details: formText(f, "payment_details"),
         invoice_prefix: formText(f, "invoice_prefix"),
         footer: formText(f, "footer"),
+        ...(logo === undefined ? {} : { logo_data: logo }),
       }),
     );
+  }
+  function pickLogo(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) void run(async () => setLogo(await readLogo(file)));
   }
   return (
     <div className="finance-company">
@@ -222,6 +266,33 @@ export function Company() {
                 maxLength={4000}
               />
             </Field>
+            <div className="field finance-logo-field">
+              <span>{t("logo")}</span>
+              {logo ? (
+                <img className="finance-logo-preview" src={logo} alt={t("logo")} />
+              ) : (
+                <p className="muted">{t("logoHint")}</p>
+              )}
+              <div className="button-row">
+                <label className="button secondary small">
+                  {t("logoUpload")}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={pickLogo}
+                  />
+                </label>
+                {!!logo && (
+                  <button
+                    type="button"
+                    className="button secondary small"
+                    onClick={() => setLogo("")}
+                  >
+                    {t("logoRemove")}
+                  </button>
+                )}
+              </div>
+            </div>
           </fieldset>
           {role === "owner" && (
             <button className="button primary align-right" disabled={busy}>
