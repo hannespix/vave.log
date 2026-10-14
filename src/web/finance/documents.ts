@@ -73,6 +73,7 @@ export function escapeHtml(value: unknown): string {
 }
 export function csvCell(value: unknown): string {
   let text = String(value ?? "");
+  // oxlint-disable-next-line no-control-regex -- CSV-Injection-Schutz prüft bewusst auf Steuerzeichen.
   if (/^[\s\u0000-\u001f]*[=+@-]/.test(text)) text = "'" + text;
   return '"' + text.replace(/"/g, '""') + '"';
 }
@@ -192,12 +193,12 @@ export function printInvoice(
   frame.style.cssText =
     "position:fixed;width:1px;height:1px;left:-10000px;border:0";
   frame.srcdoc = invoiceHtml(invoice, context);
-  frame.onload = () => {
+  frame.addEventListener("load", () => {
     frame.contentWindow?.addEventListener("afterprint", () => frame.remove(), {
       once: true,
     });
     frame.contentWindow?.focus();
     frame.contentWindow?.print();
-  };
+  });
   document.body.appendChild(frame);
 }

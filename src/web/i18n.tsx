@@ -56,8 +56,10 @@ export function LanguageSwitcher() {
 // Metadata selects future email language only; it must never be used for authorization.
 export function useLocaleMetadata(client: SupabaseClient, user: User | undefined) {
   const { locale } = useI18n();
+  // Bewusst feinkörnig: nur Nutzerkennung und gespeicherte Sprache lösen den Abgleich aus.
+  const userId = user?.id, storedLocale = user?.user_metadata?.locale;
   useEffect(() => {
-    if (!user || user.user_metadata?.locale === locale) return;
+    if (!userId || storedLocale === locale) return;
     void client.auth.updateUser({ data: { locale } }).catch(() => { /* Local preference remains usable offline. */ });
-  }, [client, user?.id, user?.user_metadata?.locale, locale]);
+  }, [client, userId, storedLocale, locale]);
 }

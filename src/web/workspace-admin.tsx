@@ -40,6 +40,7 @@ export function WorkspaceAdminDialog({service,currentId,onClose,onDeleted}:{serv
  const [confirmationName,setConfirmationName]=useState('');const [confirmed,setConfirmed]=useState(false);const [loading,setLoading]=useState(true);const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');const [deleted,setDeleted]=useState(false);const [online,setOnline]=useState(()=>typeof navigator==='undefined'||navigator.onLine);
  const alive=useRef(true);const generation=useRef(0);const submitting=useRef(false);const content=useRef<HTMLDivElement>(null);
+ // oxlint-disable-next-line react-hooks/exhaustive-deps -- Alive-Flag: .current im Cleanup ist der Zweck des Refs.
  useEffect(()=>{alive.current=true;const update=()=>setOnline(navigator.onLine);window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{alive.current=false;generation.current++;window.removeEventListener('online',update);window.removeEventListener('offline',update);};},[]);
  const load=useCallback(async()=>{const request=++generation.current;setLoading(true);setError('');try{const list=await service.listOwned();if(alive.current&&request===generation.current)setWorkspaces(list);}catch{if(alive.current&&request===generation.current)setError('loadError');}finally{if(alive.current&&request===generation.current)setLoading(false);}},[service]);
  useEffect(()=>{void load();},[load]);

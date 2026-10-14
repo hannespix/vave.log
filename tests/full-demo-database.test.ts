@@ -2,7 +2,6 @@ import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEMO_MANIFEST } from '../src/shared/demo-data.js';
 
 // These tests exercise the actual PostgreSQL privileges, RLS, RPCs and triggers.
 // Removing atomic seed ownership, archive authorization, or the issue hook makes
