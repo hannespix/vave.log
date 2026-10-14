@@ -12,6 +12,15 @@ import {
   formText,
   useFinance,
 } from "./context";
+/** Live-Drift wie beim Logo: der country-Schlüssel reist nur mit, wenn der
+ * Datensatz ihn kennt oder der Wert vom Standard DE abweicht — so speichert
+ * auch eine Live-DB vor der E-Rechnungs-Migration. */
+const normalizedCountry = (value: string) => (value.trim().toUpperCase() || "DE");
+const clientCountry = (item: { country?: string } | null | undefined, value: string) => {
+  const country = normalizedCountry(value);
+  return item?.country === undefined && country === "DE" ? {} : { country };
+};
+const profileCountry = clientCountry;
 export function Clients() {
   const { data, t } = useFinance(),
     [editor, setEditor] = useState<FinanceClient | "new" | null>(null);
@@ -93,6 +102,7 @@ function ClientEditor({
           contact_email: formText(f, "contact_email"),
           tax_id: formText(f, "tax_id"),
           language: formText(f, "language") as InvoiceLanguage,
+          ...(clientCountry(item, formText(f, "country"))),
         }),
       onClose,
     );
@@ -133,6 +143,15 @@ function ClientEditor({
           </Field>
           <Field label={t("taxId")}>
             <input name="tax_id" defaultValue={item?.tax_id} maxLength={100} />
+          </Field>
+          <Field label={t("countryLabel")}>
+            <input
+              name="country"
+              defaultValue={item?.country ?? "DE"}
+              maxLength={2}
+              pattern="[A-Za-z]{2}"
+              autoComplete="country"
+            />
           </Field>
         </div>
         <LanguageSelect value={item?.language || locale} />
@@ -202,6 +221,7 @@ export function Company() {
         ...(profile?.payment_terms_days === undefined && terms === 14
           ? {}
           : { payment_terms_days: terms }),
+        ...(profileCountry(profile, formText(f, "country"))),
       }),
     );
   }
@@ -253,6 +273,15 @@ export function Company() {
                   defaultValue={profile?.invoice_prefix || "INV"}
                   maxLength={16}
                   pattern="[A-Z0-9][A-Z0-9-]{0,15}"
+                />
+              </Field>
+              <Field label={t("countryLabel")}>
+                <input
+                  name="country"
+                  defaultValue={profile?.country ?? "DE"}
+                  maxLength={2}
+                  pattern="[A-Za-z]{2}"
+                  autoComplete="country"
                 />
               </Field>
               <Field label={t("paymentTerms")} hint={t("paymentTermsHint")}>

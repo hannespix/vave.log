@@ -325,6 +325,8 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  eInvoice: ["E-invoice (XML)", "E-Rechnung (XML)", "电子发票 (XML)"],
+  countryLabel: ["Country (ISO code)", "Land (ISO-Code)", "国家（ISO 代码）"],
   payments: ["Payments", "Zahlungen", "付款"],
   recordPayment: ["Record payment", "Zahlung erfassen", "记录付款"],
   paidOn: ["Paid on", "Zahlungseingang", "付款日期"],
