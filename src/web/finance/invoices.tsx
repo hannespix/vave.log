@@ -29,13 +29,23 @@ import {
   money,
   printInvoice,
 } from "./documents";
-import { downloadText } from "../helpers";
+import { dateInZone, downloadText } from "../helpers";
+import { isOverdue } from "./invoice-summary";
+type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
   const { data, t, locale, workspace, isDemo } = useFinance(),
     { projectId, setProjectId, available } = useFinanceProject(),
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
+    [status, setStatus] = useState<InvoiceStatusFilter>("all"),
     [selected, setSelected] = useState("");
-  const invoices = data.invoices.filter((item) => available && (!projectId || item.project_id === projectId));
+  const today = dateInZone(workspace.timezone);
+  const matchesStatus = (i: Invoice) =>
+    status === "all" ? true :
+    status === "draft" ? i.status === "draft" :
+    status === "paid" ? i.status === "issued" && i.paid :
+    status === "overdue" ? isOverdue(i, today) :
+    i.status === "issued" && !i.paid && !i.cancellation_id;
+  const invoices = data.invoices.filter((item) => available && (!projectId || item.project_id === projectId) && matchesStatus(item));
   const invoice = invoices.find((i) => i.id === selected);
   return (
     <div className="finance-stack">
@@ -61,7 +71,21 @@ export function Invoices() {
           </div>
         }
       >
-        <FinanceProjectFilter projectId={projectId} onChange={setProjectId} />
+        <div className="finance-toolbar">
+          <FinanceProjectFilter projectId={projectId} onChange={setProjectId} />
+          <div className="segmented" role="group" aria-label={t("filterInvoiceStatus")}>
+            {(["all", "open", "overdue", "paid", "draft"] as const).map((key) => (
+              <button
+                key={key}
+                aria-pressed={status === key}
+                className={status === key ? "selected" : ""}
+                onClick={() => setStatus(key)}
+              >
+                {t(key === "all" ? "filterAll" : key === "open" ? "unpaid" : key)}
+              </button>
+            ))}
+          </div>
+        </div>
         {!data.clients.length && (
           <Notice kind="info">{t("clientsHint")}</Notice>
         )}
@@ -124,7 +148,9 @@ export function Invoices() {
                         )}
                       </span>
                       {invoice.status === "issued" && (
-                        <small>{t(invoice.paid ? "paid" : "unpaid")}</small>
+                        isOverdue(invoice, today)
+                          ? <small className="finance-overdue">{t("overdue")} · {displayDate(invoice.due_date, locale)}</small>
+                          : <small>{t(invoice.paid ? "paid" : "unpaid")}</small>
                       )}
                     </td>
                   </tr>
@@ -260,7 +286,7 @@ function InvoiceDetail({
         </div>
         <div>
           <dt>{t("dueDate")}</dt>
-          <dd>{displayDate(invoice.due_date, locale)}</dd>
+          <dd>{displayDate(invoice.due_date, locale)}{isOverdue(invoice, dateInZone(workspace.timezone)) && <span className="finance-overdue"> · {t("overdue")}</span>}</dd>
         </div>
         <div>
           <dt>{t("serviceFrom")}</dt>

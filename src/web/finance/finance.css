@@ -562,3 +562,11 @@
     max-width: 58%;
   }
 }
+.finance-overdue {
+  color: #a33d32;
+  font-weight: 600;
+}
+.finance-metric-overdue strong,
+.finance-metric-overdue span {
+  color: #a33d32;
+}

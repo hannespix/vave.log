@@ -65,6 +65,11 @@ const catalog = {
   invoicedNet: ["Invoiced net", "Fakturiert netto", "已开票净额"],
   paidNet: ["Paid net", "Bezahlt netto", "已付款净额"],
   openNet: ["Open net", "Offen netto", "未付款净额"],
+  overdueNet: ["Overdue net", "Überfällig netto", "逾期净额"],
+  overdue: ["Overdue", "Überfällig", "已逾期"],
+  overdueCountNote: ["invoices past their due date", "Rechnungen über dem Zahlungsziel", "张发票已超过付款期限"],
+  filterAll: ["All", "Alle", "全部"],
+  filterInvoiceStatus: ["Filter invoice status", "Rechnungsstatus filtern", "筛选发票状态"],
   invoiceSummaryNote: [
     "By invoice issue date, net of cancellations. Paid and open show current status for these invoices, excluding cancelled invoices; they are not cash flow or bank balance.",
     "Nach Rechnungsdatum, abzüglich Stornierungen. Bezahlt und offen zeigen den aktuellen Status dieser Rechnungen ohne stornierte Rechnungen; sie sind weder Zahlungsfluss noch Kontostand.",
