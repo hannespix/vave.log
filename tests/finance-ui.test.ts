@@ -15,6 +15,7 @@ import {
   money,
   invoiceHtml,
   invoiceCsv,
+  taxBreakdown,
 } from "../src/web/finance/documents";
 import type {
   Invoice,
@@ -96,6 +97,24 @@ describe("finance documents", () => {
       expect(invoiceCsv(sample, { isDemo: false })).toContain(notice);
       expect(html).toContain("119");
     }
+  });
+  it("itemizes tax per rate on the document and keeps the breakdown stable (§ 14 UStG)", () => {
+    const lines = [
+      { description: "Design", quantity: 1, unit_price_minor: 10000, tax_basis_points: 1900, zero_tax_reason: "", time_entry_id: null, net_minor: 10000, tax_minor: 1900, total_minor: 11900 },
+      { description: "Buch", quantity: 1, unit_price_minor: 5000, tax_basis_points: 700, zero_tax_reason: "", time_entry_id: null, net_minor: 5000, tax_minor: 350, total_minor: 5350 },
+      { description: "Export", quantity: 1, unit_price_minor: 2000, tax_basis_points: 0, zero_tax_reason: "Reverse charge", time_entry_id: null, net_minor: 2000, tax_minor: 0, total_minor: 2000 },
+      { description: "Design 2", quantity: 1, unit_price_minor: 3000, tax_basis_points: 1900, zero_tax_reason: "", time_entry_id: null, net_minor: 3000, tax_minor: 570, total_minor: 3570 },
+    ];
+    expect(taxBreakdown(lines)).toEqual([
+      { basisPoints: 0, net_minor: 2000, tax_minor: 0 },
+      { basisPoints: 700, net_minor: 5000, tax_minor: 350 },
+      { basisPoints: 1900, net_minor: 13000, tax_minor: 2470 },
+    ]);
+    const multi = { ...invoice, lines, net_minor: 20000, tax_minor: 2820, total_minor: 22820 } as Invoice;
+    const html = invoiceHtml(multi);
+    expect(html).toContain("Steuer 19&nbsp;% <small>(130,00\u00a0€)</small></span><span>24,70\u00a0€</span>");
+    expect(html).toContain("Steuer 7&nbsp;% <small>(50,00\u00a0€)</small></span><span>3,50\u00a0€</span>");
+    expect(html).toContain("Steuer 0&nbsp;% <small>(20,00\u00a0€)</small></span><span>0,00\u00a0€</span>");
   });
   it("marks draft previews from the workspace while issued documents use the durable flag only", () => {
     const draft = { ...invoice, status: "draft" as const };
