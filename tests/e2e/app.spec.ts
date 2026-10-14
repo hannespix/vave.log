@@ -333,3 +333,10 @@ test('small custom menus stay compact and close on outside click without changin
  await setup(page,true);await page.goto('/');const language=page.getByRole('combobox',{name:'Language',exact:true});await openChoice(language);await expect(page.getByRole('option')).toHaveCount(4);await expect(language).toHaveAttribute('inputmode','none');
  await page.getByRole('heading',{level:1}).click();await expect(page.getByRole('listbox')).toHaveCount(0);await expectChoiceValue(language,'system');
 });
+
+test('required custom project validates the form without submitting an empty value',async({page})=>{
+ const state=await connectedSetup(page);state.projects.splice(0);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();await page.getByRole('button',{name:'New task',exact:true}).click();
+ const dialog=page.getByRole('dialog');const projectBox=dialog.getByRole('combobox',{name:'Project',exact:true});await expect(projectBox).toHaveAttribute('aria-required','true');
+ await dialog.getByLabel('Task',{exact:true}).fill('Cannot submit without project');await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).toBeVisible();await expect(projectBox).toHaveAttribute('aria-invalid','true');expect(state.createdTasks).toHaveLength(0);
+ await projectBox.press('Escape');await expect(dialog).toBeVisible();
+});
