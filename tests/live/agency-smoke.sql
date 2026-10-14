@@ -163,16 +163,40 @@ begin
   select id into demo_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   select id into demo_retry_id from public.demo_create_workspace('Rollback-only agency demo','UTC','en',request_id);
   if demo_id is distinct from demo_retry_id then raise exception 'FAIL: demo retry duplicated workspace'; end if;
-  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and d.experience_version=2 and jsonb_typeof(d.manifest)='object') then
+  if not exists(select 1 from public.workspace_demos d where d.workspace_id=smoke.demo_id and d.created_by=smoke.owner_id and d.archived_at is null and d.experience_version=3 and jsonb_typeof(d.manifest)='object') then
     raise exception 'FAIL: owner cannot get demo metadata';
   end if;
   select i.id into demo_invoice_id from public.finance_invoices i where i.workspace_id=smoke.demo_id and i.status='draft' order by i.created_at limit 1;
   if demo_invoice_id is null then raise exception 'FAIL: demo invoice draft missing'; end if;
   select count(*) into before_entries from public.time_entries e where e.workspace_id=smoke.demo_id;
-  if before_entries<>353 then raise exception 'FAIL: full demo history missing'; end if;
+  if before_entries<>3713 then raise exception 'FAIL: full demo history missing'; end if;
+  if (select sum(e.minutes)/60.0 from public.time_entries e where e.workspace_id=smoke.demo_id) not between 24000 and 28000
+    or exists(select 1 from public.time_entries e where e.workspace_id=smoke.demo_id group by e.user_id,e.work_date having sum(e.minutes)>480)
+    or exists(select 1 from public.time_entries e where e.workspace_id=smoke.demo_id and e.work_date>current_date) then
+    raise exception 'FAIL: enterprise time history is not a realistic six-week workload';
+  end if;
+  if (select count(*) from public.memberships m join public.finance_staff_rates r using(workspace_id,user_id) where m.workspace_id=smoke.demo_id and m.is_demo and r.kind='employee')<>100
+    or (select count(*) from public.memberships m join public.finance_staff_rates r using(workspace_id,user_id) where m.workspace_id=smoke.demo_id and m.is_demo and r.kind='freelancer')<>12 then
+    raise exception 'FAIL: enterprise employee/freelancer mix';
+  end if;
+  if (select sum(p.fixed_fee_minor) from public.finance_project_plans p where p.workspace_id=smoke.demo_id and p.fixed_fee_minor>=100000000)<>2255000000
+    or (select sum((l->>'planned_minutes')::bigint)/60 from public.finance_project_plans p cross join lateral jsonb_array_elements(p.lines) l where p.workspace_id=smoke.demo_id and p.fixed_fee_minor>=100000000)<>130000 then
+    raise exception 'FAIL: enterprise annual portfolio economics';
+  end if;
+  if exists(select 1 from public.finance_project_plans p where p.workspace_id=smoke.demo_id and p.fixed_fee_minor>=100000000
+    and (p.fixed_fee_minor-p.planned_expenses_minor-(select sum((l->>'planned_minutes')::numeric/60*(l->>'cost_rate_minor')::numeric) from jsonb_array_elements(p.lines) l))/p.fixed_fee_minor not between 0.20 and 0.35) then
+    raise exception 'FAIL: enterprise contribution margins';
+  end if;
+  if (select coalesce(sum(i.net_minor),0) from public.finance_invoices i join public.finance_payments p on p.invoice_id=i.id
+    where i.workspace_id=smoke.demo_id and i.status='issued' and p.paid and i.issue_date>=date_trunc('month',current_date)::date)<100000000
+    or (select coalesce(sum(i.net_minor),0) from public.finance_invoices i left join public.finance_payments p on p.invoice_id=i.id
+    where i.workspace_id=smoke.demo_id and i.status='issued' and not coalesce(p.paid,false) and i.issue_date>=date_trunc('month',current_date)::date
+    and not exists(select 1 from public.finance_invoices c where c.cancellation_of=i.id))<100000000 then
+    raise exception 'FAIL: enterprise current-month paid and open invoice balances';
+  end if;
   perform public.demo_upgrade_workspace(demo_id);
   if (select count(*) from public.time_entries e where e.workspace_id=smoke.demo_id)<>before_entries then raise exception 'FAIL: completed upgrade duplicated history'; end if;
-  if (select count(*) from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo)<>57
+  if (select count(*) from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo)<>112
     or exists(select 1 from public.memberships m where m.workspace_id=smoke.demo_id and m.is_demo and (m.auth_user_id is not null or m.role='owner' or m.email not like '%@example.invalid'))
     or exists(select 1 from public.running_timers r where r.workspace_id=smoke.demo_id)
     or exists(select 1 from public.invitations i where i.workspace_id=smoke.demo_id) then raise exception 'FAIL: demo personas are not isolated non-login identities'; end if;

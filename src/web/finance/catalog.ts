@@ -52,6 +52,19 @@ const catalog = {
     "实际数据按此日期范围计算。估算仍以整个项目为基准。",
   ],
   plannedRevenue: ["Planned revenue", "Geplanter Umsatz", "计划收入"],
+  projectPlanVolume: ["Project plan volume", "Geplantes Projektvolumen", "项目计划金额"],
+  fullProject: ["Full project", "Gesamtes Projekt", "整个项目"],
+  selectedPeriod: ["Selected period", "Gewählter Zeitraum", "所选期间"],
+  currentStatus: ["Current status", "Aktueller Status", "当前状态"],
+  invoiceActivity: ["Invoice activity", "Rechnungsübersicht", "发票概览"],
+  invoicedNet: ["Invoiced net", "Fakturiert netto", "已开票净额"],
+  paidNet: ["Paid net", "Bezahlt netto", "已付款净额"],
+  openNet: ["Open net", "Offen netto", "未付款净额"],
+  invoiceSummaryNote: [
+    "By invoice issue date, net of cancellations. Paid and open show current status for these invoices, excluding cancelled invoices; they are not cash flow or bank balance.",
+    "Nach Rechnungsdatum, abzüglich Stornierungen. Bezahlt und offen zeigen den aktuellen Status dieser Rechnungen ohne stornierte Rechnungen; sie sind weder Zahlungsfluss noch Kontostand.",
+    "按开票日期统计，扣除冲销。已付款与未付款反映这些发票的当前状态，不含已冲销的发票；不代表期间现金流或银行余额。",
+  ],
   plannedCost: ["Planned cost", "Geplante Kosten", "计划成本"],
   plannedMargin: [
     "Planned contribution",
@@ -352,6 +365,16 @@ const catalog = {
     "Zu viele Datensätze für diese Ansicht. Zeitraum eingrenzen oder Workspace-Inhaber kontaktieren.",
     "此视图记录过多。请缩小日期范围或联系工作区所有者。",
   ],
+  time_entry_limit: [
+    "More than 50,000 time entries matched. Please narrow the date range.",
+    "Mehr als 50.000 Zeiteinträge. Bitte Zeitraum verkleinern.",
+    "匹配的工时记录超过 50,000 条，请缩小日期范围。",
+  ],
+  result_incomplete: [
+    "Time entries could not be loaded completely. Please reload and try again.",
+    "Zeiteinträge konnten nicht vollständig geladen werden. Bitte neu laden und erneut versuchen.",
+    "无法完整加载工时记录，请刷新后重试。",
+  ],
 } as const;
 export type FinanceKey = keyof typeof catalog;
 export function ft(locale: InvoiceLanguage, key: FinanceKey): string {
@@ -372,6 +395,8 @@ export function financeError(error: unknown, locale: InvoiceLanguage) {
         "conflict",
         "missing_configuration",
         "result_limit",
+        "time_entry_limit",
+        "result_incomplete",
       ] as string[]
     ).includes(code)
       ? (code as FinanceKey)

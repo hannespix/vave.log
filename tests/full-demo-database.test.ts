@@ -48,19 +48,19 @@ afterEach(async()=>{await db.exec('rollback')});
 describe('complete demo security and scenarios',()=>{
  it('creates every persona as an isolated non-login identity and fills the actual work tables',async()=>{
   const w=await create();
-  expect(await one('select experience_version from public.workspace_demos')).toEqual({experience_version:2});
-  expect(await rows('select * from public.memberships where is_demo')).toHaveLength(57);
+  expect(await one('select experience_version from public.workspace_demos')).toEqual({experience_version:3});
+  expect(await rows('select * from public.memberships where is_demo')).toHaveLength(112);
   expect(await rows("select * from public.memberships where is_demo and (role='owner' or auth_user_id is not null or email not like '%@example.invalid')")).toEqual([]);
-  expect(await rows('select * from public.projects')).toHaveLength(13);
+  expect(await rows('select * from public.projects')).toHaveLength(25);
   expect(await rows('select distinct status from public.projects')).toHaveLength(3);
   expect(await rows('select distinct status from public.tasks')).toHaveLength(3);
   expect(await rows('select distinct billing_mode from public.finance_project_plans')).toHaveLength(3);
-  expect(await rows('select * from public.finance_staff_rates')).toHaveLength(58);
+  expect(await rows('select * from public.finance_staff_rates')).toHaveLength(113);
   expect(await rows('select distinct status from public.time_entries where user_id=$1',[owner])).toHaveLength(3);
   expect(await rows('select * from public.running_timers')).toEqual([]);
   expect(await rows('select * from public.invitations')).toEqual([]);
-  expect((await one<{n:number}>('select count(*)::int n from public.time_entries')).n).toBeGreaterThan(300);
-  expect((await one<{n:number}>('select count(*)::int n from public.time_entries')).n).toBeLessThan(1000);
+  expect((await one<{n:number}>('select count(*)::int n from public.time_entries')).n).toBeGreaterThan(3000);
+  expect((await one<{n:number}>('select count(*)::int n from public.time_entries')).n).toBeLessThan(4000);
   expect(await rows('select * from public.tasks where assignee_id=$1',[owner])).not.toHaveLength(0);
   const invoices=(await one<{v:any[]}>('select public.finance_list_invoices($1) v',[w.id])).v;
   expect(invoices.some(x=>x.status==='draft')).toBe(true);
@@ -137,8 +137,8 @@ describe('complete demo security and scenarios',()=>{
   await create();expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(1);
   await db.query('select public.demo_upgrade_workspace($1)',[w.id]);
   for(const table of tables){const after=await rows(`select * from public.${table} where workspace_id=$1`,[w.id]);for(const row of before[table]!)expect(after).toContainEqual(row)}
-  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(2);
-  expect(await rows("select * from public.finance_invoices where status='issued'")).toHaveLength(4);
+  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(3);
+  expect(await rows("select * from public.finance_invoices where status='issued'")).toHaveLength(29);
   const counts=await one('select (select count(*) from public.memberships)::int people,(select count(*) from public.time_entries)::int entries');
   await db.query('select public.demo_upgrade_workspace($1)',[w.id]);
   expect(await one('select (select count(*) from public.memberships)::int people,(select count(*) from public.time_entries)::int entries')).toEqual(counts);
@@ -152,7 +152,7 @@ describe('complete demo security and scenarios',()=>{
   expect(await rows('select * from public.memberships')).toHaveLength(1);
   await db.exec('reset role');expect(await rows('select * from private.demo_seed_context')).toEqual([]);await db.exec('drop trigger test_fail_enrichment on public.memberships');
   await login(owner);await db.query('select public.demo_upgrade_workspace($1)',[w.id]);
-  expect(await rows('select * from public.memberships')).toHaveLength(58);
+  expect(await rows('select * from public.memberships')).toHaveLength(113);
  });
  it('keeps sample time review, invoice claims and cross-workspace membership links protected',async()=>{
   const w=await create();const e=await one<{id:string;project_id:string;user_id:string}>("select id,project_id,user_id from public.time_entries where status='submitted' and billable and user_id<>$1 limit 1",[owner]);

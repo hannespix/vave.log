@@ -382,6 +382,8 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Die Anfrage konnte nicht gespeichert oder geladen werden. Bitte erneut versuchen.": {"en": "The request could not be saved or loaded. Please try again.", "de": "Die Anfrage konnte nicht gespeichert oder geladen werden. Bitte erneut versuchen.", "zh": "无法保存或加载请求，请重试。"},
   "Keine Daten zurückgegeben. Bitte neu laden.": {"en": "No data returned. Please refresh.", "de": "Keine Daten zurückgegeben. Bitte neu laden.", "zh": "未返回数据，请刷新。"},
   "Mehr als 1.000 Einträge. Bitte Zeitraum oder Umfang verkleinern.": {"en": "More than 1,000 entries. Please narrow the period or scope.", "de": "Mehr als 1.000 Einträge. Bitte Zeitraum oder Umfang verkleinern.", "zh": "记录超过 1,000 条，请缩小期间或范围。"},
+  "Mehr als 50.000 Zeiteinträge. Bitte Zeitraum verkleinern.": {"en": "More than 50,000 time entries matched. Please narrow the date range.", "de": "Mehr als 50.000 Zeiteinträge. Bitte Zeitraum verkleinern.", "zh": "匹配的工时记录超过 50,000 条，请缩小日期范围。"},
+  "Zeiteinträge konnten nicht vollständig geladen werden. Bitte neu laden und erneut versuchen.": {"en": "Time entries could not be loaded completely. Please reload and try again.", "de": "Zeiteinträge konnten nicht vollständig geladen werden. Bitte neu laden und erneut versuchen.", "zh": "无法完整加载工时记录，请刷新后重试。"},
   "Bitte Eingaben prüfen.": {"en": "Please check your input.", "de": "Bitte Eingaben prüfen.", "zh": "请检查输入。"},
   "{count} Zeiteinträge im Zeitraum": {"en": "{count} time entries in this period", "de": "{count} Zeiteinträge im Zeitraum", "zh": "本期间共 {count} 条工时记录"},
   "{percent} % deiner erfassten Zeit": {"en": "{percent}% of your tracked time", "de": "{percent} % deiner erfassten Zeit", "zh": "占你已记录工时的 {percent}%"},

@@ -30,7 +30,7 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('list_tasks','List workspace tasks.',{workspace_id:uuid},true,a=>service.listTasks(a.workspace_id));
  tool('save_task','Create or update a task in the workspace. assignee_id and due_date may be null.',taskSchema.shape,false,a=>service.saveTask(a));
  tool('delete_task','Permanently delete one task. Ask for explicit confirmation first.',{id:uuid},false,a=>service.deleteTask(a.id),true);
- tool('list_time_entries','Read own times, or team times if owner/manager. Inclusive date range, at most 366 days and 1000 records.',{workspace_id:uuid,from:date,to:date},true,a=>service.listEntries(a.workspace_id,a.from,a.to));
+ tool('list_time_entries','Read own times, or team times if owner/manager. Inclusive date range, at most 366 days and 50,000 time entries, loaded in pages. Narrow the date range if the limit is exceeded.',{workspace_id:uuid,from:date,to:date},true,a=>service.listEntries(a.workspace_id,a.from,a.to));
  tool('save_time_entry','Create or update your own draft time entry. Minutes 1–1440. Use a stable UUID id for safe retry. Confirm project/date/minutes first. Submitted/approved entries cannot be edited.',entrySchema.shape,false,a=>service.saveEntry(a));
  tool('delete_time_entry','Delete one of your own draft time entries. Confirm first.',{id:uuid},false,a=>service.deleteEntry(a.id),true);
  tool('submit_time_entries','Submit your draft entries in the inclusive date range for team review. Confirm date range first.',{workspace_id:uuid,from:date,to:date},false,a=>service.submitEntries(a),false,true);

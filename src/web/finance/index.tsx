@@ -161,7 +161,6 @@ function AuthorizedFinance({
         </div>
         <ArrowUpRight size={48} aria-hidden="true" />
       </div>
-      {isDemo && <Notice kind="info">{t("demoNote")}</Notice>}
       <div className="finance-tabs" role="tablist" aria-label={t("title")}>
         {(
           ["overview", "clients", "planning", "invoices", "company"] as const

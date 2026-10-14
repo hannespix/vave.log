@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { dateRangeSchema,entrySchema,inviteSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
 import type { Workspace,Membership,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role } from './types.js';
+import { readTimeEntryPages } from './time-entry-pages.js';
 
 export class AppError extends Error { constructor(message:string,public code='request_failed'){super(message);this.name='AppError'} }
 function fail(error:{code?:string;message?:string}|null) {
@@ -37,7 +38,7 @@ export function createService(client:SupabaseClient){
   listTasks:(workspaceId:string)=>rows<Task>(client.from('tasks').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   saveTask:(input:TaskInput&{id?:string})=>one<Task>(client.from('tasks').upsert(parse(taskSchema,input)).select().single()),
   deleteTask:async(id:string)=>{await one(client.from('tasks').delete().eq('id',parse(uuid,id)).select('id').single())},
-  listEntries:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to});return rows<TimeEntry>(client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).gte('work_date',v.from).lte('work_date',v.to).order('work_date',{ascending:false}).order('created_at',{ascending:false}).order('id').limit(1001))},
+  listEntries:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to}),w=parse(uuid,workspaceId);return readTimeEntryPages((start,end)=>client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).gte('work_date',v.from).lte('work_date',v.to).order('work_date',{ascending:false}).order('created_at',{ascending:false}).order('id').range(start,end),fail,code=>new AppError(code==='time_entry_limit'?'Mehr als 50.000 Zeiteinträge. Bitte Zeitraum verkleinern.':'Zeiteinträge konnten nicht vollständig geladen werden. Bitte neu laden und erneut versuchen.',code))},
   saveEntry:(input:EntryInput&{id?:string})=>one<TimeEntry>(client.from('time_entries').upsert(parse(entrySchema,input)).select().single()),
   deleteEntry:async(id:string)=>{await one(client.from('time_entries').delete().eq('id',parse(uuid,id)).select('id').single())},
   submitEntries:(input:{workspace_id:string;from:string;to:string})=>{const {workspace_id,...range}=input;const v=parse(dateRangeSchema,range);return rpc<number>('submit_entries',{p_workspace_id:parse(uuid,workspace_id),p_from:v.from,p_to:v.to})},

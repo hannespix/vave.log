@@ -1,5 +1,5 @@
 import type {Locale} from '../shared/i18n';
-import type {DemoWorkspace} from '../shared/demo-data';
+import {DEMO_EXPERIENCE_VERSION, type DemoWorkspace} from '../shared/demo-data';
 import type {Project,Task} from '../shared/types';
 import {useI18n} from './i18n';
 import {downloadCalendar} from './calendar';
@@ -13,11 +13,11 @@ const copy={
  empty:['Start empty','Leer starten','从空白开始'],
  emptyNote:['Your own projects, people and plans.','Eigene Projekte, Menschen und Planungen.','创建自己的项目、团队与计划。'],
  demo:['Explore with VAVE examples','Mit VAVE-Beispielen erkunden','探索 VAVE 示例'],
- demoNote:['A complete sample agency: people, projects, tasks, time, costs and invoices in a separate EUR workspace.','Eine komplette Beispielagentur: Menschen, Projekte, Aufgaben, Zeiten, Kosten und Rechnungen in einem eigenen EUR-Workspace.','完整的示例工作室：在独立的欧元工作区探索团队、项目、任务、工时、成本及发票。'],
+ demoNote:['An international agency with 100 employees, freelance specialists and multi-million-euro projects. Explore fictional work, budgets and invoices in a separate EUR workspace.','Eine internationale Agentur mit 100 Mitarbeitenden, freien Spezialisten und Projekten im Millionenbereich. Erkunde fiktive Arbeit, Budgets und Rechnungen in einem eigenen EUR-Workspace.','拥有 100 名员工、自由职业专家和数百万欧元项目的国际工作室。在独立的欧元工作区探索虚构的工作、预算及发票。'],
  demoBadge:['DEMO WORKSPACE','DEMO-WORKSPACE','示例工作区'],
  disclosure:['Explore a sample agency with team, projects, time, planning and invoices. Names include public VAVE credits and invented people; all operating and billing data is fictional. Sample people have no login. DEMO invoices are not for payment.','Erkunde eine Beispielagentur mit Team, Projekten, Zeiten, Planung und Rechnungen. Namen stammen aus öffentlichen VAVE-Projektcredits oder sind erfunden; alle Arbeits- und Rechnungsdaten sind fiktiv. Beispielpersonen haben keinen Login. DEMO-Rechnungen sind nicht zur Zahlung bestimmt.','探索包含团队、项目、工时、规划及发票的示例工作室。姓名来自 VAVE 公开项目署名或虚构人物；所有工作及账单数据均为虚构。示例人物无法登录，DEMO 发票无需付款。'],
  completeDemo:['Complete demo','Demo vervollständigen','补全示例'],
- completeDemoNote:['Add the full sample team, planning and invoice scenarios. Your existing work is kept.','Ergänze das vollständige Beispielteam, Planung und Rechnungsszenarien. Deine vorhandenen Daten bleiben erhalten.','添加完整的示例团队、规划及发票场景，并保留你已有的工作。'],
+ completeDemoNote:['Add the 100-person agency scenario, enterprise projects and invoices in the millions. Existing records and your edits are kept.','Ergänze das Szenario einer Agentur mit 100 Mitarbeitenden, Großprojekten und Rechnungen im Millionenbereich. Vorhandene Datensätze und deine Änderungen bleiben erhalten.','添加 100 名员工的工作室场景、大型项目和数百万欧元的发票。现有记录及你的修改均会保留。'],
  demoCompleted:['The full demo agency is ready.','Die vollständige Demo-Agentur ist bereit.','完整的示例工作室已准备就绪。'],
  samplePerson:['DEMO','DEMO','示例'],
  samplePublic:['Public project credit','Öffentlicher Projektcredit','公开项目署名'],
@@ -50,7 +50,7 @@ export function DemoChoice({value,onChange,disabled=false}:{value:WorkspaceStart
 }
 export function DemoBanner({demo,canArchive,onArchive,onUpgrade,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onUpgrade:()=>void;busy:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
- const incomplete=(demo.experience_version??1)<2;
+ const incomplete=(demo.experience_version??1)<DEMO_EXPERIENCE_VERSION;
  return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{incomplete&&canArchive&&<p>{t('completeDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{incomplete&&<button className="button primary small" disabled={busy} onClick={onUpgrade}>{t('completeDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
 }
 export function Connections({tasks,projects,manager}:{tasks:Task[];projects:Project[];manager:boolean}){

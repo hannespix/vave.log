@@ -50,13 +50,13 @@ describe('researched demo workspaces',()=>{
     await expect(create()).resolves.toMatchObject({name:'VAVE demo',currency:'EUR',created_by:owner,timezone:'Europe/Berlin'});
     const w=await one<{id:string}>('select id from public.workspaces');
     expect(await rows('select role,user_id from public.memberships where not is_demo')).toEqual([{role:'owner',user_id:owner}]);
-    for(const [table,count] of [['projects',13],['tasks',66],['finance_clients',13],['finance_project_plans',13],['finance_expenses',28],['finance_staff_rates',58],['time_entries',353],['finance_invoices',7]] as const)
+    for(const [table,count] of [['projects',25],['tasks',102],['finance_clients',25],['finance_project_plans',25],['finance_expenses',64],['finance_staff_rates',113],['time_entries',3713],['finance_invoices',45]] as const)
       expect(await rows(`select * from public.${table} where workspace_id=$1`,[w.id])).toHaveLength(count);
     expect(await rows('select * from public.invitations')).toEqual([]);
     const d=await one<{manifest:any;manifest_version:string;locale:string;archived_at:null;experience_version:number}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
     expect(d.manifest.version).toBe(d.manifest_version);expect(d.manifest).toEqual(DEMO_MANIFEST);
-    expect(d.manifest.projects).toHaveLength(8);expect(d.manifest.people).toHaveLength(57);expect(d.manifest.studios).toHaveLength(8);
-    expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(2);
+    expect(d.manifest.projects).toHaveLength(8);expect(d.manifest.people).toHaveLength(112);expect(d.manifest.studios).toHaveLength(8);
+    expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(3);
     expect(d.manifest.projects.every((p:any)=>p.source_url.startsWith('https://www.vave.studio/project/'))).toBe(true);
     expect(d.archived_at).toBeNull();expect(d.locale).toBe('en');
     expect(await rows("select * from public.finance_clients where contact_email<>'' and contact_email not like '%@example.invalid'")).toEqual([]);
@@ -68,9 +68,9 @@ describe('researched demo workspaces',()=>{
     const first=await create(),retry=await create('de',requestId,'Changed name','UTC');
     expect(retry).toEqual(first);
     expect(await rows('select * from public.workspaces')).toHaveLength(1);
-    expect(await rows('select * from public.projects')).toHaveLength(13);
-    expect(await rows('select * from public.time_entries')).toHaveLength(353);
-    expect(await rows('select * from public.finance_invoices')).toHaveLength(7);
+    expect(await rows('select * from public.projects')).toHaveLength(25);
+    expect(await rows('select * from public.time_entries')).toHaveLength(3713);
+    expect(await rows('select * from public.finance_invoices')).toHaveLength(45);
   });
 
   it.each(['de','zh'])('uses %s labels while preserving original public project names',async(locale)=>{
@@ -152,7 +152,7 @@ describe('researched demo workspaces',()=>{
   it('hides archived data through existing RLS while retaining entries, invoices and the last owner',async()=>{
     const w=await create();
     await db.query("select public.submit_entries($1,date_trunc('week',now() at time zone 'Europe/Berlin')::date,date_trunc('week',now() at time zone 'Europe/Berlin')::date+6)",[w.id]);
-    const entry=await one<{id:string}>('select id from public.time_entries limit 1');
+    const entry=await one<{id:string}>("select id from public.time_entries where status='submitted' and user_id=$1 limit 1",[owner]);
     await db.query('select public.review_entry($1,true)',[entry.id]);
     await db.query('select public.demo_archive_workspace($1)',[w.id]);
     expect((await one('select private.current_role($1) role',[w.id])).role).toBeNull();
@@ -160,9 +160,9 @@ describe('researched demo workspaces',()=>{
     await expect(attempt("insert into public.projects(workspace_id,code,name) values($1,'BAD','Hidden write')",[w.id])).rejects.toThrow();
     await expect(attempt('select public.finance_list_invoices($1)',[w.id])).rejects.toThrow(/FINANCE_FORBIDDEN/);
     await db.exec('reset role');
-    expect(await rows('select * from public.time_entries where workspace_id=$1',[w.id])).toHaveLength(353);
+    expect(await rows('select * from public.time_entries where workspace_id=$1',[w.id])).toHaveLength(3713);
     expect(await rows("select * from public.time_entries where id=$1 and status='approved'",[entry.id])).toHaveLength(1);
-    expect(await rows('select * from public.finance_invoices where workspace_id=$1',[w.id])).toHaveLength(7);
+    expect(await rows('select * from public.finance_invoices where workspace_id=$1',[w.id])).toHaveLength(45);
     expect(await rows("select * from public.memberships where workspace_id=$1 and role='owner'",[w.id])).toHaveLength(1);
     expect((await one('select archived_at from public.workspace_demos where workspace_id=$1',[w.id])).archived_at).not.toBeNull();
   });

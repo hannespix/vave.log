@@ -1,5 +1,5 @@
-/** Public facts only. Operational figures are separately seeded as fictional data.
- * Keep this versioned manifest identical to private.demo_manifest() in its migration.
+/** Public reference facts and explicitly fictional people/projects. All operations are fictional.
+ * Keep this versioned manifest identical to private.demo_manifest() in the latest migration.
  * Full provenance and uncertainty notes: docs/research/vave-public-research.md. */
 export type DemoLocale = 'en'|'de'|'zh';
 export type DemoLabels = Record<DemoLocale,string>;
@@ -8,8 +8,9 @@ export interface DemoProject { code:string; name:string; client:string; year:num
 export interface DemoPerson { name:string; role:string; source_url:string; origin?:'public'|'fictional'; studio?:string; kind?:'employee'|'freelancer' }
 export interface DemoManifest { version:string; researched_at:string; disclosure:DemoLabels; studios:DemoStudio[]; projects:DemoProject[]; people:DemoPerson[]; fictional_projects?:{code:string;name:string;client:string}[]; phases:DemoLabels[]; sources:string[] }
 export interface DemoWorkspace { workspace_id:string; created_by:string; request_id:string; locale:DemoLocale; manifest_version:string; manifest:DemoManifest; created_at:string; archived_at:string|null; experience_version?:number }
+export const DEMO_EXPERIENCE_VERSION = 3;
 export const DEMO_MANIFEST:DemoManifest = {
-  "version": "vave-full-2026-10-14.2",
+  "version": "vave-enterprise-2026-10-14.3",
   "researched_at": "2026-10-14",
   "disclosure": {
     "en": "Public project credits are historical context, not a current employment roster. All demo roles, assignments, time and financial details are fictional. DEMO — DO NOT PAY.",
@@ -538,6 +539,446 @@ export const DEMO_MANIFEST:DemoManifest = {
       "kind": "freelancer",
       "source_url": "",
       "origin": "fictional"
+    },
+    {
+      "name": "Elena Fischer",
+      "role": "Senior Experience Designer",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Jonas Weber",
+      "role": "Project Director",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Amira Keller",
+      "role": "Spatial Designer",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Felix Brandt",
+      "role": "Creative Technologist",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Clara Weiss",
+      "role": "Content Strategist",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Leon Richter",
+      "role": "Design Producer",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Sofia Hartmann",
+      "role": "Motion Designer",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "David Sommer",
+      "role": "Technical Director",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Mira Vogel",
+      "role": "Interaction Designer",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Nico Baumann",
+      "role": "Account Director",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Lena Hoffmann",
+      "role": "Experience Researcher",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Oliver Beck",
+      "role": "Senior Experience Designer",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Yuna Mori",
+      "role": "Project Director",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Mei Han",
+      "role": "Spatial Designer",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Kai Wu",
+      "role": "Creative Technologist",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Jun Qiao",
+      "role": "Content Strategist",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Anya Zhou",
+      "role": "Design Producer",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Rui Zhao",
+      "role": "Motion Designer",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Yue Chen",
+      "role": "Technical Director",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Bo Liang",
+      "role": "Interaction Designer",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Lin Huang",
+      "role": "Account Director",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Tao Xu",
+      "role": "Experience Researcher",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Nina Gu",
+      "role": "Senior Experience Designer",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Iris Fang",
+      "role": "Project Director",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Zhen Lu",
+      "role": "Spatial Designer",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Kira Sun",
+      "role": "Creative Technologist",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Aaron Zheng",
+      "role": "Content Strategist",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Eva Jiang",
+      "role": "Design Producer",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Sean He",
+      "role": "Motion Designer",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Vera Song",
+      "role": "Technical Director",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Leila Haddad",
+      "role": "Interaction Designer",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Omar Faris",
+      "role": "Account Director",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Nadia Karim",
+      "role": "Experience Researcher",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Samir Nasser",
+      "role": "Senior Experience Designer",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Rana Mansour",
+      "role": "Project Director",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Yasmin Saleh",
+      "role": "Spatial Designer",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Tariq Amin",
+      "role": "Creative Technologist",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Dalia Noor",
+      "role": "Content Strategist",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Zara Malik",
+      "role": "Design Producer",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Amal Darwish",
+      "role": "Motion Designer",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Priya Menon",
+      "role": "Technical Director",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Arjun Rao",
+      "role": "Interaction Designer",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Neha Kapoor",
+      "role": "Account Director",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Rohan Das",
+      "role": "Experience Researcher",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Anika Shah",
+      "role": "Senior Experience Designer",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Dev Patel",
+      "role": "Project Director",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Sara Lim",
+      "role": "Spatial Designer",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Ethan Goh",
+      "role": "Creative Technologist",
+      "studio": "Digital Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Chloe Teo",
+      "role": "Content Strategist",
+      "studio": "Frankfurt",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Lucas Ong",
+      "role": "Design Producer",
+      "studio": "Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Hana Park",
+      "role": "Motion Designer",
+      "studio": "Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Daniel Kwon",
+      "role": "Technical Director",
+      "studio": "Dubai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Sora Kim",
+      "role": "Interaction Designer",
+      "studio": "Imagination Shanghai",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Jules Martin",
+      "role": "Account Director",
+      "studio": "Imagination Shenzhen",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
+    },
+    {
+      "name": "Camille Laurent",
+      "role": "Experience Researcher",
+      "studio": "Digital Singapore",
+      "kind": "employee",
+      "source_url": "",
+      "origin": "fictional"
     }
   ],
   "phases": [
@@ -600,6 +1041,66 @@ export const DEMO_MANIFEST:DemoManifest = {
       "code": "SIGNAL26",
       "name": "Signal Garden Installation",
       "client": "Lumina City Festival"
+    },
+    {
+      "code": "NOVA26",
+      "name": "Life Science Discovery Network — fictional demo",
+      "client": "Sinovac Life Sciences"
+    },
+    {
+      "code": "CULT26",
+      "name": "Cultural Futures World Tour — fictional demo",
+      "client": "Dubai Culture Arts Authority"
+    },
+    {
+      "code": "LEAP27",
+      "name": "Connected Cities Global Showcase — fictional demo",
+      "client": "stc"
+    },
+    {
+      "code": "BLN26",
+      "name": "Next Retail Experience Network — fictional demo",
+      "client": "Bailian Group"
+    },
+    {
+      "code": "ACC26",
+      "name": "Applied Intelligence Visitor Campus — fictional demo",
+      "client": "Accenture"
+    },
+    {
+      "code": "SAP27",
+      "name": "Industrial Futures Experience Platform — fictional demo",
+      "client": "SAP"
+    },
+    {
+      "code": "POR27",
+      "name": "Electric Performance Global Experience — fictional demo",
+      "client": "Porsche AG"
+    },
+    {
+      "code": "RAIL27",
+      "name": "Regional Mobility Discovery Network — fictional demo",
+      "client": "DB Regio"
+    },
+    {
+      "code": "HORIZ26",
+      "name": "Global Energy Experience Centres — fictional demo",
+      "client": "Horizon Grid Group (fictional)"
+    },
+    {
+      "code": "AERO26",
+      "name": "Future Flight Brand World — fictional demo",
+      "client": "Aurelia Aerospace (fictional)"
+    },
+    {
+      "code": "HELIX26",
+      "name": "Connected Health Discovery Campus — fictional demo",
+      "client": "Helix Meridian Group (fictional)"
+    },
+    {
+      "code": "TERRA27",
+      "name": "Circular Materials Global Pavilion — fictional demo",
+      "client": "TerraNova Industries (fictional)"
     }
   ]
 };
