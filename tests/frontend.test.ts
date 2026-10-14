@@ -3,7 +3,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {I18nProvider} from '../src/web/i18n.js';
 import {TaskAssigneeSelect} from '../src/web/components.js';
 import {DemoBanner} from '../src/web/agency.js';
-import {DEMO_MANIFEST, type DemoWorkspace} from '../src/shared/demo-data.js';
+import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION, type DemoWorkspace} from '../src/shared/demo-data.js';
 import type {Membership} from '../src/shared/types.js';
 import {describe,it,expect} from 'vitest';
 import {csvCell,dateInZone,weekFor,minutesLabel,validRange,shortDate,longDate} from '../src/web/helpers.js';
@@ -16,7 +16,7 @@ describe('presentation data safety',()=>{
 describe('enterprise demo upgrade',()=>{
  const demo:DemoWorkspace={workspace_id:'sample',created_by:'owner',request_id:'request',locale:'en',manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null,experience_version:2};
  const render=(version:number,canArchive=true)=>renderToStaticMarkup(createElement(I18nProvider,{initialLocale:'en'},createElement(DemoBanner,{demo:{...demo,experience_version:version},canArchive,busy:false,onUpgrade:()=>{},onArchive:()=>{}})));
- it('offers the new scenario to owners of the previous complete demo',()=>{expect(render(2)).toContain('Complete demo');expect(render(3)).not.toContain('Complete demo');});
+ it('offers the new scenario to owners of the previous complete demo',()=>{expect(render(2)).toContain('Complete demo');expect(render(DEMO_EXPERIENCE_VERSION)).not.toContain('Complete demo');});
  it('does not offer a creator-owner upgrade to other members',()=>{expect(render(2,false)).not.toContain('Complete demo');});
 });
 

@@ -4,11 +4,12 @@ import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/st
 import {createHttpHandler} from '../src/server/http.js';
 import {AppError,type Service} from '../src/shared/service.js';
 import type {FinanceService} from '../src/shared/finance-service.js';
+import {WorkspaceAdminError,type WorkspaceAdminService} from '../src/shared/workspace-admin-service.js';
 import type {DemoService} from '../src/shared/demo-service.js';
 const id='11111111-1111-4111-8111-111111111111';
 const config={supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_publishable_test',appUrl:'https://log.example.com',configured:true};
-async function connect(finance:Partial<FinanceService>,locale='en',service:Partial<Service>={},demo?:Partial<DemoService>){
- const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service,finance:finance as FinanceService,...(demo?{demo:demo as DemoService}:{})})});
+async function connect(finance:Partial<FinanceService>,locale='en',service:Partial<Service>={},demo?:Partial<DemoService>,workspaceAdmin?:Partial<WorkspaceAdminService>){
+ const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service,finance:finance as FinanceService,...(demo?{demo:demo as DemoService}:{}),...(workspaceAdmin?{workspaceAdmin:workspaceAdmin as WorkspaceAdminService}:{})})});
  const transport=new StreamableHTTPClientTransport(new URL(config.appUrl+'/api/mcp'),{requestInit:{headers:{Authorization:'Bearer test-token','Accept-Language':locale}},fetch:async(input,init)=>handler(new Request(input,init))});
  const client=new Client({name:'agency-test',version:'1.0.0'});await client.connect(transport);return client;
 }
@@ -21,6 +22,28 @@ describe('agency MCP wire contract',()=>{
    const ok=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id}});expect(ok.isError).not.toBe(true);expect(upgrade).toHaveBeenCalledWith(id);
    const denied=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id,is_demo:false}});expect(denied.isError).toBe(true);expect(upgrade).toHaveBeenCalledTimes(1);
   }finally{await c.close()}
+ });
+ it('exposes owner deletion with exact confirmation, destructive annotations and no extra fields',async()=>{
+  const listOwned=vi.fn(async()=>[]),deleteWorkspace=vi.fn(async()=>{});
+  const c=await connect({},'en',{}, {},{listOwned,deleteWorkspace});
+  try{const {tools}=await c.listTools();expect(tools).toHaveLength(47);
+   expect(tools.find(t=>t.name==='list_owned_workspaces')?.annotations?.readOnlyHint).toBe(true);
+   expect(tools.find(t=>t.name==='delete_workspace')?.annotations).toMatchObject({readOnlyHint:false,destructiveHint:true,idempotentHint:false});
+   await c.callTool({name:'list_owned_workspaces',arguments:{}});expect(listOwned).toHaveBeenCalledOnce();
+   for(const args of [{workspace_id:id,confirmation_name:'Demo'},{workspace_id:id,confirmation_name:'Demo',confirmed:false},{workspace_id:id,confirmation_name:'Demo',confirmed:true,force:true}]){
+    expect((await c.callTool({name:'delete_workspace',arguments:args})).isError).toBe(true);
+   }
+   expect(deleteWorkspace).not.toHaveBeenCalled();
+   expect((await c.callTool({name:'delete_workspace',arguments:{workspace_id:id,confirmation_name:'Demo',confirmed:true}})).isError).not.toBe(true);
+   expect(deleteWorkspace).toHaveBeenCalledWith({workspaceId:id,confirmationName:'Demo',confirmed:true});
+  }finally{await c.close()}
+ });
+ it('explains owner deletion blockers in the requested language without leaking diagnostics',async()=>{
+  const c=await connect({},'en',{}, {},{deleteWorkspace:async()=>{throw new WorkspaceAdminError('running_timers')}});
+  try{for(const [locale,message] of [['en','running timers'],['de','laufenden Timer'],['zh','计时器']]){
+   const result=await c.callTool({name:'delete_workspace',arguments:{workspace_id:id,confirmation_name:'Demo',confirmed:true,response_locale:locale}});
+   expect(result.isError).toBe(true);expect(JSON.stringify(result)).toContain(message);
+  }}finally{await c.close()}
  });
  it('offers financial tools with reviewable effect annotations',async()=>{
   const c=await connect({});try{const {tools}=await c.listTools();

@@ -48,7 +48,7 @@ afterEach(async()=>{await db.exec('rollback')});
 describe('complete demo security and scenarios',()=>{
  it('creates every persona as an isolated non-login identity and fills the actual work tables',async()=>{
   const w=await create();
-  expect(await one('select experience_version from public.workspace_demos')).toEqual({experience_version:3});
+  expect(await one('select experience_version from public.workspace_demos')).toEqual({experience_version:5});
   expect(await rows('select * from public.memberships where is_demo')).toHaveLength(112);
   expect(await rows("select * from public.memberships where is_demo and (role='owner' or auth_user_id is not null or email not like '%@example.invalid')")).toEqual([]);
   expect(await rows('select * from public.projects')).toHaveLength(25);
@@ -137,7 +137,7 @@ describe('complete demo security and scenarios',()=>{
   await create();expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(1);
   await db.query('select public.demo_upgrade_workspace($1)',[w.id]);
   for(const table of tables){const after=await rows(`select * from public.${table} where workspace_id=$1`,[w.id]);for(const row of before[table]!)expect(after).toContainEqual(row)}
-  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(3);
+  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(5);
   expect(await rows("select * from public.finance_invoices where status='issued'")).toHaveLength(29);
   const counts=await one('select (select count(*) from public.memberships)::int people,(select count(*) from public.time_entries)::int entries');
   await db.query('select public.demo_upgrade_workspace($1)',[w.id]);

@@ -8,6 +8,7 @@ import { AuthForm, ConfirmEmail, OAuthConsent, PasswordReset, Setup, type Runtim
 import { Spinner, Notice } from './components';
 const WorkspaceApp = React.lazy(() => import('./workspace').then(module => ({ default: module.WorkspaceApp })));
 import { errorMessage } from './helpers';
+import { PwaProvider } from './pwa';
 
 function Connected({ config }: { config: RuntimeConfig }) {
   const { t } = useI18n();
@@ -31,4 +32,4 @@ function Root() {
   if (error || !config?.configured) return <Setup error={error} onRetry={() => window.location.reload()}/>;
   return <Connected config={config}/>;
 }
-createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider><Root/></I18nProvider></React.StrictMode>);
+createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider><PwaProvider><Root/></PwaProvider></I18nProvider></React.StrictMode>);

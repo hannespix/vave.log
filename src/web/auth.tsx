@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { OAuthAuthorizationDetails, OAuthGrant, Session, SupabaseClient } from '@supabase/supabase-js';
 import { ArrowRight, ArrowUpRight, Check, CheckCircle2, Circle, Clock3, ExternalLink, LockKeyhole, LogOut, ShieldCheck, Sparkles, Unplug } from 'lucide-react';
 import { Logo } from './Logo';
+import { PwaInstallLink } from './pwa';
 import { Field, Notice, Spinner } from './components';
 import { errorMessage, safeRedirect } from './helpers';
 export type RuntimeConfig = { supabaseUrl: string; supabasePublishableKey: string; appUrl: string; configured: boolean };
@@ -10,7 +11,7 @@ function authError(e: unknown) { return errorMessage(e); }
 
 export function AuthShell({ children, caption = 'Gute Arbeit braucht Freiraum.' }: { children: ReactNode; caption?: string }) {
   const { t } = useI18n();
-  return <div className="welcome-shell"><aside className="welcome-story"><Logo large/><div className="welcome-main"><p className="eyebrow">{t('WENIGER VERWALTEN. MEHR MACHEN.')}</p><h1>{t(caption)}</h1><p className="welcome-description">{t('Projekte im Blick.')}<br/>{t('Aufgaben im Fluss.')}<br/>{t('Zeit für das Wesentliche.')}</p><div className="brand-sculpture" aria-hidden="true"><div/><div/><div/><span>{t('work')}<br/>{t('in flow.')}</span></div></div><footer><span>VAVE.STUDIO</span><span>{t('MAKE GOOD THINGS ↗')}</span></footer></aside><main className="welcome-content" id="main"><LanguageSwitcher/><div className="mobile-brand"><Logo/></div>{children}<p className="auth-footnote">{t('Ein Ort für dein Team. Raum für gute Arbeit.')}</p></main></div>;
+  return <div className="welcome-shell"><aside className="welcome-story"><Logo large/><div className="welcome-main"><p className="eyebrow">{t('WENIGER VERWALTEN. MEHR MACHEN.')}</p><h1>{t(caption)}</h1><p className="welcome-description">{t('Projekte im Blick.')}<br/>{t('Aufgaben im Fluss.')}<br/>{t('Zeit für das Wesentliche.')}</p><div className="brand-sculpture" aria-hidden="true"><div/><div/><div/><span>{t('work')}<br/>{t('in flow.')}</span></div></div><footer><span>VAVE.STUDIO</span><span>{t('MAKE GOOD THINGS ↗')}</span></footer></aside><main className="welcome-content" id="main"><LanguageSwitcher/><div className="mobile-brand"><Logo/></div>{children}<PwaInstallLink/><p className="auth-footnote">{t('Ein Ort für dein Team. Raum für gute Arbeit.')}</p></main></div>;
 }
 export function Setup({ error, onRetry }: { error?: string; onRetry: () => void }) {
   const { t } = useI18n();

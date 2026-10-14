@@ -49,7 +49,7 @@ afterEach(async()=>{await db.exec('rollback')});
 describe('enterprise demo scale',()=>{
  it('models 100 fictional demo employees plus 12 freelancers and a profitable multi-million annual portfolio',async()=>{
   const w=await create();
-  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(3);
+  expect((await one('select experience_version from public.workspace_demos')).experience_version).toBe(5);
   expect(await rows(`select r.kind,count(*)::int n from public.memberships m join public.finance_staff_rates r using(workspace_id,user_id) where m.is_demo group by r.kind order by r.kind`)).toEqual([{kind:'employee',n:100},{kind:'freelancer',n:12}]);
   expect(await rows('select * from public.projects')).toHaveLength(25);
   const economics=await one<any>(`select sum(fixed_fee_minor)::bigint fees,sum(planned_expenses_minor)::bigint expenses from public.finance_project_plans where fixed_fee_minor>=100000000`);
@@ -104,6 +104,6 @@ describe('enterprise demo scale',()=>{
   await login(owner);await expect(attempt('select public.demo_upgrade_workspace($1)',[w.id])).rejects.toThrow(/injected enterprise failure/);
   expect((await one<any>('select experience_version from public.workspace_demos')).experience_version).toBe(2);expect(await rows('select * from public.projects')).toHaveLength(13);expect(await rows('select * from public.memberships')).toHaveLength(58);
   await db.exec('reset role');expect(await rows('select * from private.demo_seed_context')).toEqual([]);await db.exec('drop trigger test_fail_enterprise on public.finance_invoices');await login(owner);
-  await db.query('select public.demo_upgrade_workspace($1)',[w.id]);expect((await one<any>('select experience_version from public.workspace_demos')).experience_version).toBe(3);
+  await db.query('select public.demo_upgrade_workspace($1)',[w.id]);expect((await one<any>('select experience_version from public.workspace_demos')).experience_version).toBe(5);
  });
 });

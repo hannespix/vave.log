@@ -8,7 +8,7 @@ export interface DemoProject { code:string; name:string; client:string; year:num
 export interface DemoPerson { name:string; role:string; source_url:string; origin?:'public'|'fictional'; studio?:string; kind?:'employee'|'freelancer' }
 export interface DemoManifest { version:string; researched_at:string; disclosure:DemoLabels; studios:DemoStudio[]; projects:DemoProject[]; people:DemoPerson[]; fictional_projects?:{code:string;name:string;client:string}[]; phases:DemoLabels[]; sources:string[] }
 export interface DemoWorkspace { workspace_id:string; created_by:string; request_id:string; locale:DemoLocale; manifest_version:string; manifest:DemoManifest; created_at:string; archived_at:string|null; experience_version?:number }
-export const DEMO_EXPERIENCE_VERSION = 3;
+export const DEMO_EXPERIENCE_VERSION = 5;
 export const DEMO_MANIFEST:DemoManifest = {
   "version": "vave-enterprise-2026-10-14.3",
   "researched_at": "2026-10-14",
