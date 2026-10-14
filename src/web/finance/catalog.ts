@@ -320,6 +320,12 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  paymentTerms: ["Payment terms (days)", "Zahlungsziel (Tage)", "付款期限（天）"],
+  paymentTermsHint: [
+    "Prefills the due date of new invoices: issue date plus this many days.",
+    "Belegt die Fälligkeit neuer Rechnungen vor: Ausstellungsdatum plus diese Tage.",
+    "预填新发票的到期日：开票日期加上此天数。",
+  ],
   logo: ["Logo", "Logo", "标志"],
   logoHint: [
     "PNG, JPEG, WebP or SVG. The image is scaled down and printed in the letterhead of new invoices; issued documents keep the logo they were issued with.",

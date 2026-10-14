@@ -32,7 +32,7 @@ import {
   taxBreakdown,
   taxRateLabel,
 } from "./documents";
-import { dateInZone, downloadText } from "../helpers";
+import { addDays, dateInZone, downloadText } from "../helpers";
 import { isOverdue } from "./invoice-summary";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
@@ -629,7 +629,10 @@ export function DraftEditor({
               type="date"
               name="due_date"
               required
-              defaultValue={invoice?.due_date || range.to}
+              defaultValue={
+                invoice?.due_date ||
+                addDays(range.to, data.profile?.payment_terms_days ?? 14)
+              }
             />
           </Field>
           <Field label={t("serviceFrom")}>
@@ -845,7 +848,10 @@ export function TimeDraft({
             <input
               type="date"
               name="due_date"
-              defaultValue={range.to}
+              defaultValue={addDays(
+                range.to,
+                data.profile?.payment_terms_days ?? 14,
+              )}
               required
             />
           </Field>
