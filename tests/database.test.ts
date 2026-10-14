@@ -295,6 +295,16 @@ describe('database entries and workflow', () => {
     await login(manager); expect((await first('select * from public.review_entry($1,false)',[e.id])).status).toBe('draft');
     await login(member); expect(await rows('update public.time_entries set minutes=90 where id=$1 returning minutes',[e.id])).toEqual([{minutes:90}]);
   });
+  it('lets a manager revoke an approval back to draft, but never members or non-approved entries', async () => {
+    const e=await entry(); await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await expect(attempt('select * from public.revoke_approval($1)',[e.id])).rejects.toThrow(/Berechtigung/);
+    await login(manager);
+    await expect(attempt('select * from public.revoke_approval($1)',[e.id])).rejects.toThrow(/freigegebene/);
+    expect((await first('select * from public.review_entry($1,true)',[e.id])).status).toBe('approved');
+    await login(outsider); await expect(attempt('select * from public.revoke_approval($1)',[e.id])).rejects.toThrow(/Berechtigung/);
+    await login(manager); expect((await first('select * from public.revoke_approval($1)',[e.id])).status).toBe('draft');
+    await login(member); expect(await rows('update public.time_entries set minutes=95 where id=$1 returning minutes',[e.id])).toEqual([{minutes:95}]);
+  });
   it('records meaningful audit events and prevents tampering', async () => {
     const e=await entry(); await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
     await login(owner);

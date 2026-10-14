@@ -45,6 +45,11 @@ export function createService(client:SupabaseClient){
   deleteEntry:async(id:string)=>{await one(client.from('time_entries').delete().eq('id',parse(uuid,id)).select('id').single())},
   submitEntries:(input:{workspace_id:string;from:string;to:string})=>{const {workspace_id,...range}=input;const v=parse(dateRangeSchema,range);return rpc<number>('submit_entries',{p_workspace_id:parse(uuid,workspace_id),p_from:v.from,p_to:v.to})},
   reviewEntry:(input:{id:string;approve:boolean})=>{const v=parse(z.strictObject({id:uuid,approve:z.boolean()}),input);return rpc<TimeEntry>('review_entry',{p_id:v.id,p_approve:v.approve})},
+  revokeApproval:(id:string)=>rpc<TimeEntry>('revoke_approval',{p_id:parse(uuid,id)}),
+  // Range-independent approval queue: how many submitted entries exist in the
+  // workspace at all, and the oldest work date, so the review view can widen
+  // its range to cover them (RLS scopes members to their own entries).
+  approvalQueue:async(workspaceId:string)=>{const {data,error,count}=await client.from('time_entries').select('work_date',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('status','submitted').order('work_date',{ascending:true}).limit(1);fail(error);return {count:count??0,oldest:(data as {work_date:string}[]|null)?.[0]?.work_date??null};},
   getTimer:async()=>{const {data,error}=await client.from('running_timers').select('*').maybeSingle();fail(error);return data as RunningTimer|null},
   startTimer:(input:TimerInput)=>{const v=parse(timerSchema,input);return rpc<RunningTimer>('start_timer',{p_workspace_id:v.workspace_id,p_project_id:v.project_id,p_note:v.note,p_billable:v.billable})},
   stopTimer:(id:string)=>rpc<TimeEntry[]>('stop_timer',{p_timer_id:parse(uuid,id)}),

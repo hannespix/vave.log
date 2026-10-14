@@ -67,3 +67,7 @@ body.timer-floating.timer-open .app-shell{padding-bottom:calc(var(--mobile-nav-h
 .times-timer{margin:0 0 23px}
 .times-timer .timer-panel{max-width:460px}
 @media(max-width:700px){.times-timer{margin-bottom:18px}.times-timer .timer-panel{max-width:none}}
+
+/* Review queue: submitted entries outside the visible range. */
+.queue-notice{margin:0 0 18px}
+.queue-notice .text-button{font-size:inherit}

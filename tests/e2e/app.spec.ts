@@ -24,7 +24,7 @@ async function setup(page:Page,loggedIn=false,role:'owner'|'manager'|'member'='o
   else if(url.pathname==='/rest/v1/projects')data=[{id:project,workspace_id:ws,code:'VAV-001',name:'Brand Experience',client:'VAVE',budget_minutes:600,status:'active',color:'#641dff',created_at:'2026-10-01T10:00:00Z'}];
   else if(url.pathname==='/rest/v1/running_timers'||url.pathname==='/rest/v1/workspace_demos')data=null;
   else if(url.pathname==='/rest/v1/time_entries'){
-   if(req.method()==='POST'){const body=req.postDataJSON();const e={...body,user_id:user,status:'draft',timer_id:null,created_at:'2026-10-13T09:00:00Z'};entries.push(e);data=e}else data=entries;
+   if(req.method()==='POST'){const body=req.postDataJSON();const e={...body,user_id:user,status:'draft',timer_id:null,created_at:'2026-10-13T09:00:00Z'};entries.push(e);data=e}else{const st=url.searchParams.get('status');data=st?entries.filter(e=>`eq.${(e as {status:string}).status}`===st):entries;}
   }
   await route.fulfill({json:data,headers:{'access-control-expose-headers':'content-range','content-range':Array.isArray(data)?`0-${Math.max(0,data.length-1)}/${data.length}`:'0-0/1'}});
  });
@@ -156,8 +156,8 @@ test('finance loads more than a thousand time entries and keeps million-euro met
  const entries=Array.from({length:1105},(_,i)=>({id:`80000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`,workspace_id:ws,project_id:project,user_id:people[i%people.length],work_date:'2026-10-13',minutes:5,note:'Fictional production time',billable:true,status:'approved',timer_id:null,created_at:'2026-10-13T09:00:00Z'}));
  const offsets:number[]=[];
  await page.route('https://test.supabase.co/rest/v1/time_entries*',route=>{
-  const url=new URL(route.request().url()),offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||1000),slice=entries.slice(offset,offset+limit);offsets.push(offset);
-  return route.fulfill({json:slice,headers:{'access-control-expose-headers':'content-range','content-range':`${offset}-${offset+slice.length-1}/${entries.length}`}});
+  const url=new URL(route.request().url()),st=url.searchParams.get('status'),pool=st?entries.filter(e=>`eq.${e.status}`===st):entries,offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||1000),slice=pool.slice(offset,offset+limit);offsets.push(offset);
+  return route.fulfill({json:slice,headers:{'access-control-expose-headers':'content-range','content-range':`${offset}-${offset+slice.length-1}/${pool.length}`}});
  });
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
  await page.route('https://test.supabase.co/rest/v1/finance_staff_rates*',r=>r.fulfill({json:people.map((person,i)=>({id:String(i),workspace_id:ws,user_id:person,kind:'employee',effective_from:'2026-01-01',cost_rate_minor:8000,bill_rate_minor:18500})),headers:{'access-control-expose-headers':'content-range','content-range':'0-110/111'}}));
@@ -351,6 +351,36 @@ test('the phone bottom bar keeps four areas tappable and groups the rest behind 
  await nav.getByRole('button',{name:'More',exact:true}).click();
  await page.keyboard.press('Escape');
  await expect(page.locator('.nav-more-sheet')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('the review queue surfaces old submissions and approvals can be revoked',async({page})=>{
+ await connectedSetup(page);
+ const team='70000000-0000-4000-8000-000000000001';
+ const old={id:'80000000-0000-4000-8000-000000000042',workspace_id:ws,project_id:project,user_id:team,work_date:'2026-09-20',minutes:120,note:'September concept',billable:true,status:'submitted',timer_id:null,created_at:'2026-09-20T09:00:00Z'};
+ await page.route('https://test.supabase.co/rest/v1/time_entries*',route=>{
+  const url=new URL(route.request().url()),st=url.searchParams.get('status');
+  const pool=st?[old].filter(e=>`eq.${e.status}`===st):(url.searchParams.get('work_date')&&`${url.searchParams.get('work_date')}`.includes('2026-09')?[old]:[old].filter(e=>e.work_date>='2026-10-01'));
+  return route.fulfill({json:pool,headers:{'access-control-expose-headers':'content-range','content-range':`0-${Math.max(0,pool.length-1)}/${pool.length}`}});
+ });
+ await page.route('https://test.supabase.co/rest/v1/rpc/review_entry',r=>{old.status='approved';return r.fulfill({json:{...old}})});
+ let revoked=0;
+ await page.route('https://test.supabase.co/rest/v1/rpc/revoke_approval',r=>{revoked++;old.status='draft';return r.fulfill({json:{...old}})});
+ await page.goto('/');
+ const nav=page.getByRole('navigation',{name:'Main navigation'});
+ await nav.getByRole('button',{name:/^Time\b/}).click();
+ await expect(page.getByText(/1 submitted entr/).first()).toBeVisible();
+ await page.getByRole('button',{name:'Show all pending reviews',exact:true}).click();
+ await expect(page.getByText('September concept',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Approve/}).click();
+ await pickOption(page.getByRole('combobox',{name:'Filter time status',exact:true}),'All statuses');
+ await expect(page.getByRole('button',{name:/Revoke approval for/})).toBeVisible();
+ await page.getByRole('button',{name:/Revoke approval for/}).click();
+ const dialog=page.getByRole('dialog');
+ await expect(dialog.getByText(/becomes a draft again/)).toBeVisible();
+ await dialog.getByRole('button',{name:'Revoke approval',exact:true}).click();
+ await expect(dialog).not.toBeVisible();
+ expect(revoked).toBe(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
