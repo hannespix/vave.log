@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { absenceSchema,dateRangeSchema,entrySchema,inviteSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput } from './types.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -57,6 +57,9 @@ export function createService(client:SupabaseClient){
   // workspace at all, and the oldest work date, so the review view can widen
   // its range to cover them (RLS scopes members to their own entries).
   approvalQueue:async(workspaceId:string)=>{const {data,error,count}=await client.from('time_entries').select('work_date',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('status','submitted').order('work_date',{ascending:true}).limit(1);fail(error);return {count:count??0,oldest:(data as {work_date:string}[]|null)?.[0]?.work_date??null};},
+  // Ungelesene In-App-Benachrichtigungen (RLS liefert nur eigene Zeilen).
+  listNotifications:(workspaceId:string)=>rows<AppNotification>(client.from('notifications').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).is('read_at',null).order('created_at').order('id').limit(1001)),
+  markNotificationsRead:(workspaceId:string)=>rpc<number>('mark_notifications_read',{p_workspace_id:parse(uuid,workspaceId)}),
   getTimer:async()=>{const {data,error}=await client.from('running_timers').select('*').maybeSingle();fail(error);return data as RunningTimer|null},
   startTimer:(input:TimerInput)=>{const v=parse(timerSchema,input);return rpc<RunningTimer>('start_timer',{p_workspace_id:v.workspace_id,p_project_id:v.project_id,p_note:v.note,p_billable:v.billable,p_task_id:v.task_id??null})},
   stopTimer:(id:string)=>rpc<TimeEntry[]>('stop_timer',{p_timer_id:parse(uuid,id)}),
