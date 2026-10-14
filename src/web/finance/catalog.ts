@@ -320,6 +320,19 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  logo: ["Logo", "Logo", "标志"],
+  logoHint: [
+    "PNG, JPEG, WebP or SVG. The image is scaled down and printed in the letterhead of new invoices; issued documents keep the logo they were issued with.",
+    "PNG, JPEG, WebP oder SVG. Das Bild wird verkleinert und im Briefkopf neuer Rechnungen gedruckt; ausgestellte Belege behalten das Logo ihrer Ausstellung.",
+    "支持 PNG、JPEG、WebP 或 SVG。图片会被缩小并印在新发票的信头上；已开具的单据保留开具时的标志。",
+  ],
+  logoUpload: ["Choose logo", "Logo auswählen", "选择标志"],
+  logoRemove: ["Remove logo", "Logo entfernen", "移除标志"],
+  logo_invalid: [
+    "The logo could not be used. Choose a PNG, JPEG, WebP or SVG image.",
+    "Das Logo konnte nicht übernommen werden. Bitte ein PNG-, JPEG-, WebP- oder SVG-Bild wählen.",
+    "无法使用该标志。请选择 PNG、JPEG、WebP 或 SVG 图片。",
+  ],
   profileHint: [
     "Configure your real company identity and payment details before issuing invoices.",
     "Vor der Ausstellung echte Unternehmens- und Zahlungsdaten hinterlegen.",
@@ -400,6 +413,7 @@ export function financeError(error: unknown, locale: InvoiceLanguage) {
     (
       [
         "validation",
+        "logo_invalid",
         "forbidden",
         "not_found",
         "conflict",
