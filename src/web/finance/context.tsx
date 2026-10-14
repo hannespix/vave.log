@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import type { FinanceService } from "../../shared/finance-service";
 import type {
   BillingProfile,
@@ -23,6 +23,17 @@ export interface FinanceData {
   invoices: Invoice[];
   overview: FinanceOverview;
 }
+export type FinanceTab = "overview" | "clients" | "planning" | "invoices" | "company";
+export interface FinanceNavigation {
+  projectId: string;
+  tab: FinanceTab;
+  revision: number;
+}
+export interface FinanceNavigationTarget {
+  view: "projects" | "tasks" | "time" | "reports" | "finance";
+  projectId: string;
+  financeTab?: FinanceTab;
+}
 export interface FinanceContextValue {
   service: FinanceService;
   workspace: Workspace;
@@ -35,6 +46,9 @@ export interface FinanceContextValue {
   isDemo: boolean;
   errorMessage: string | null;
   range: { from: string; to: string };
+  projectId?: string;
+  setProjectId?: (projectId: string) => void;
+  navigate?: (target: FinanceNavigationTarget) => void;
   t: (key: FinanceKey) => string;
   run: (
     action: () => Promise<unknown>,
@@ -46,6 +60,58 @@ export function useFinance() {
   const context = useContext(FinanceContext);
   if (!context) throw new Error("Finance context required");
   return context;
+}
+/** An unavailable explicit scope stays unavailable until the user resets it. */
+export function useFinanceProject() {
+  const { projectId, setProjectId, projects, workspace } = useFinance();
+  const [localProjectId, setLocalProjectId] = useState("");
+  const selected = projectId ?? localProjectId;
+  const project = projects.find((project) => project.id === selected && project.workspace_id === workspace.id);
+  return {
+    projectId: selected,
+    setProjectId: setProjectId ?? setLocalProjectId,
+    project,
+    available: !selected || !!project,
+  };
+}
+export function ProjectLink({ projectId }: { projectId: string }) {
+  const { projects, navigate, workspace } = useFinance();
+  const project = projects.find((item) => item.id === projectId && item.workspace_id === workspace.id);
+  if (!project || !navigate) return <>{project?.name || projectId}</>;
+  return (
+    <button type="button" className="text-button finance-project-link" aria-label={project.name}
+      onClick={() => navigate({ view: "projects", projectId })}>
+      {project.name}
+    </button>
+  );
+}
+export function FinanceProjectFilter({ projectId, onChange }: {
+  projectId: string;
+  onChange: (projectId: string) => void;
+}) {
+  const { projects: allProjects, workspace, navigate, t } = useFinance();
+  const projects = allProjects.filter((item) => item.workspace_id === workspace.id);
+  const project = projects.find((item) => item.id === projectId);
+  return (
+    <div className="finance-project-filter">
+      <Field label={t("project")}>
+        <select value={projectId} onChange={(event) => onChange(event.target.value)}>
+          <option value="">{t("allProjects")}</option>
+          {!!projectId && !project && <option value={projectId}>{t("projectUnavailable")}</option>}
+          {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+      </Field>
+      {!!projectId && <button type="button" className="text-button" onClick={() => onChange("")}>{t("allProjects")}</button>}
+      {project && navigate && <details className="finance-project-work">
+        <summary>{t("projectWork")}</summary>
+        <div className="button-row">
+          <ProjectLink projectId={project.id} />
+          <button type="button" className="text-button" onClick={() => navigate({ view: "tasks", projectId })}>{t("tasks")}</button>
+          <button type="button" className="text-button" onClick={() => navigate({ view: "time", projectId })}>{t("time")}</button>
+        </div>
+      </details>}
+    </div>
+  );
 }
 export function Actions({
   onClose,

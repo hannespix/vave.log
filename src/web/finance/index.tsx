@@ -12,7 +12,7 @@ import { createFinanceService } from "../../shared/finance-service";
 import type { Membership, Project, Role, Workspace } from "../../shared/types";
 import { useI18n } from "../i18n";
 import { Field, Notice, Spinner } from "../components";
-import { FinanceContext, type FinanceData } from "./context";
+import { FinanceContext, type FinanceData, type FinanceNavigation, type FinanceNavigationTarget, type FinanceTab } from "./context";
 import { financeError, ft, type FinanceKey } from "./catalog";
 import { Overview } from "./overview";
 import { Clients, Company } from "./clients-company";
@@ -26,6 +26,8 @@ export interface FinanceAreaProps {
   projects: Project[];
   role: Role;
   isDemo?: boolean;
+  navigation?: FinanceNavigation;
+  onNavigate?: (target: FinanceNavigationTarget) => void;
 }
 /** The outer guard unmounts financial data immediately on a role downgrade. */
 export function FinanceArea(props: FinanceAreaProps) {
@@ -40,6 +42,8 @@ function AuthorizedFinance({
   projects,
   role,
   isDemo = false,
+  navigation,
+  onNavigate,
 }: FinanceAreaProps) {
   const { locale } = useI18n(),
     t = (key: FinanceKey) => ft(locale, key),
@@ -54,9 +58,38 @@ function AuthorizedFinance({
       from: today.slice(0, 7) + "-01",
       to: today,
     }),
-    [tab, setTab] = useState<
-      "overview" | "clients" | "planning" | "invoices" | "company"
-    >("overview");
+    [tab, setTab] = useState<FinanceTab>(navigation?.tab ?? "overview"),
+    [projectId, setProjectId] = useState(navigation?.projectId ?? ""),
+    [receivedNavigation, setReceivedNavigation] = useState(navigation);
+  // Apply browser/back context before children render, including open editors.
+  // Only user events notify the workspace, so synchronization cannot push history.
+  if (navigation && (
+    receivedNavigation?.revision !== navigation.revision ||
+    receivedNavigation?.projectId !== navigation.projectId ||
+    receivedNavigation?.tab !== navigation.tab
+  )) {
+    setReceivedNavigation(navigation);
+    setTab(navigation.tab);
+    setProjectId(navigation.projectId);
+  }
+  function changeTab(next: FinanceTab) {
+    setTab(next);
+    setSaved(false);
+    onNavigate?.({ view: "finance", projectId, financeTab: next });
+  }
+  function changeProject(next: string) {
+    setProjectId(next);
+    setSaved(false);
+    onNavigate?.({ view: "finance", projectId: next, financeTab: tab });
+  }
+  function navigate(target: FinanceNavigationTarget) {
+    if (target.view === "finance") {
+      setProjectId(target.projectId);
+      setTab(target.financeTab ?? "overview");
+      setSaved(false);
+    }
+    onNavigate?.(target);
+  }
   const [data, setData] = useState<FinanceData | null>(null),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
@@ -193,13 +226,12 @@ function AuthorizedFinance({
                         : null;
               if (next) {
                 event.preventDefault();
-                setTab(next);
+                changeTab(next);
                 document.getElementById(`finance-tab-${next}`)?.focus();
               }
             }}
             onClick={() => {
-              setTab(id);
-              setSaved(false);
+              changeTab(id);
             }}
           >
             {t(id)}
@@ -272,11 +304,15 @@ function AuthorizedFinance({
             isDemo,
             errorMessage: error == null ? null : financeError(error, locale),
             range,
+            projectId,
+            setProjectId: changeProject,
+            navigate: onNavigate ? navigate : undefined,
             t,
             run,
           }}
         >
           <div
+            key={`${tab}:${projectId}`}
             role="tabpanel"
             id="finance-content"
             aria-labelledby={`finance-tab-${tab}`}

@@ -10,7 +10,7 @@ Manager/Owner erhalten Kunden, Kosten-/Verrechnungssätze, Mitarbeiter-/Freelanc
 
 Erster Start bietet leeren Workspace (voreingestellt) oder recherchierte VAVE-Beispieldaten: acht öffentliche Studioreferenzen, 49 öffentlich genannte Personen und 63 erfundene Profile bilden das fiktive Szenario mit 100 Mitarbeitenden und zwölf freien Spezialisten. Acht öffentliche und 17 erfundene Projekte füllen die Ansichten; zwölf zusätzliche Großprojekte haben zusammen 22,55 Mio. EUR geplantes Auftragsvolumen. Aufgaben, Arbeitszeiten, Kostensätze, Budgets, Ausgaben sowie offene, bezahlte und stornierte Beispielrechnungen füllen die echten Ansichten. Operative Angaben sind fiktiv und keine Aussage über VAVEs tatsächliche Umsätze oder heutige Beschäftigte. Beispielpersonen haben keine Auth-Konten oder Zugangsdaten. Demo-Rechnungen können über die regulären Abläufe ausprobiert werden; Datenbank und Exporte erhalten dauerhaft DEMO-/Nicht-bezahlen-Markierungen. Bestehende Demos bieten „Demo vervollständigen“; Quellen bleiben in der Entwicklungsdokumentation. Ersteller/Owner kann ausschließlich seinen markierten Demo-Workspace archivieren.
 
-44 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
+45 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
 
 ## Supabase
 
@@ -23,6 +23,7 @@ Projekt `vave-log`, Referenz `ieeujtmpxqxmfyietqgw`, Frankfurt. Angewandte Migra
 - `20261013220233_finance_foreign_key_indexes`
 - `20261014052911_full_demo_experience`
 - `20261014060022_enterprise_demo_scale`
+- `20261014072035_project_planning_insights`
 
 Öffentliche Tabellen sind RLS-geschützt. Finanzdaten liegen in separaten Tabellen mit Manager-/Owner-Prüfung; Unternehmensidentität kann nur der Owner ändern. Anonyme Tabellenzugriffe sind gesperrt. Nummernzähler und Timerbelege sind auch für angemeldete Nutzer direkt gesperrt.
 
@@ -75,3 +76,12 @@ Version 3 ergänzt 55 fiktive Mitarbeitende und zwölf internationale Großproje
 Zeitlisten und Finanzübersicht laden bis zu 50.000 Einträge seitenweise. Fehlende Seiten, geänderte Mengen, doppelte IDs und Fehler verhindern unvollständige Ergebnisse. Die Finanzübersicht trennt gesamtes Projektplanvolumen, fakturierte Nettowerte sowie aktuellen Bezahlt-/Offen-Status. Das ist keine Bank-/Cashflowrechnung. Der allgemeine Demo-Hinweis mit Vervollständigen/Archivieren erscheint nur unter Einstellungen; Musterbelege behalten ihre DEMO-Markierungen.
 
 Migration `20261014060022_enterprise_demo_scale` ist live angewandt. Das Live-Rollback-Skript bestand einschließlich Größenordnung, Margen, Stundenlimits, Rollenrechten, Idempotenz und DEMO-Rechnungen. Alle Testdaten sind zurückgerollt. Lokaler vollständiger Check: 218 Tests in 19 Suites, TypeScript, E-Mail-Vorlagen und Produktionsbuild erfolgreich. Unabhängiges Review ohne Blocker. Advisors zeigen keine neuen unerwarteten Befunde. Vorhandene v2-Daten werden exakt erhalten; beim v1-Zwischenschritt werden wie bisher nur völlig unkonfigurierte Kunden-/Unternehmensfelder ergänzt. Browser-/Merge-/Deploymentstatus siehe zugehörigen GitHub- und Sites-Release.
+
+
+## Verbundene Workflows und Projektprognosen (14.10.2026)
+
+Projektkontext verbindet Projekte, Aufgaben, Zeiten, Auswertungen und Finanzplanung/Rechnungen. Neue Aufgaben, Zeiten und Rechnungsentwürfe übernehmen das gewählte Projekt. Suche, Schnellfilter und aufklappbare Aufgabenfilter bleiben beim Neuladen und über Browser-Zurück erhalten, auch beim Workspace-Wechsel. Unbekannte Workspaces/Projekte zeigen ausdrücklich einen nicht verfügbaren Kontext. Tastatur-Sprunglinks verändern diesen Kontext nicht.
+
+Die Projektplanung ergänzt optionale Deadline und gemeldeten Fortschritt; bestehende Werte und Demo-Daten bleiben unverändert. Manager/Owner öffnen die Projektprognose bei Bedarf im Dialog: sämtliche bis heute erfassten Projektstunden, Restbudget, geschätzter Gesamtaufwand und ein Szenario für den Endtermin bei gleichbleibendem Tempo. Grundlage sind die letzten 28 Kalendertage, mindestens sieben beobachtete Tage und drei Buchungstage. Fehlender/veralteter Fortschritt, fehlende Historie oder pausierte Projekte erzeugen keine grüne Terminprognose. Ungewichtete Aufgabenzahlen werden separat gezeigt. GUI und neues MCP-Werkzeug `get_project_insight` verwenden dieselbe Berechnung; sämtliche neuen Texte liegen auf EN/DE/ZH vor.
+
+Migration `20261014072035_project_planning_insights` ist live angewandt. Das exakte Rollback-Skript `tests/live/project-insight-smoke.sql` bestand auf Supabase: 1.185 Gesamtminuten, davon 1.045 im jüngsten Zeitraum, acht erwartete Zugriffsverweigerungen und Erhalt vorhandener Planungswerte. Vorher/nachher unverändert: zwei Auth-Konten, fünf Workspaces, 47 Projekte, 4.077 Zeitbuchungen und 53 Rechnungen. Keine Testdaten blieben zurück. Advisors zeigen keine neuen unerwarteten Befunde. Unabhängiges Review ist einschließlich Navigation-/Workspace-Korrekturen abgeschlossen. Lokaler vollständiger Check: 298 Tests in 24 Suites, TypeScript, E-Mail-Vorlagenprüfung und Produktionsbuild erfolgreich. CI prüft zusätzlich Desktop-/Mobil-Browserabläufe am PR; den tatsächlichen Merge-/Deploymentstatus zeigen GitHub und Sites.

@@ -10,3 +10,17 @@ describe('untrusted input validation',()=>{
  it('accepts leap day and a 366-day range',()=>{expect(entrySchema.safeParse({...entry,work_date:'2024-02-29'}).success).toBe(true);expect(dateRangeSchema.safeParse({from:'2024-01-01',to:'2024-12-31'}).success).toBe(true)});
  it('restricts text, color, timezone and task status',()=>{expect(workspaceSchema.safeParse({name:'VAVE',timezone:'Mars/Olympus',currency:'EUR'}).success).toBe(false);expect(projectSchema.safeParse({workspace_id:id,code:'A',name:'Name',client:'Client',budget_minutes:0,status:'active',color:'url(evil)'}).success).toBe(false);expect(taskSchema.safeParse({workspace_id:id,project_id:id,title:'x',status:'approved',assignee_id:null,due_date:null}).success).toBe(false)});
 });
+
+const project={workspace_id:id,code:'A',name:'Name',client:'',budget_minutes:0,status:'active',color:'#641dff'};
+describe('project planning input',()=>{
+ it('allows omitted, nullable and bounded planning values',()=>{
+  expect(projectSchema.parse(project)).not.toHaveProperty('progress_percent');
+  for(const progress_percent of [null,0,35.5,100])expect(projectSchema.safeParse({...project,due_date:'2024-02-29',progress_percent}).success).toBe(true);
+  expect(projectSchema.safeParse({...project,due_date:null}).success).toBe(true);
+ });
+ it('rejects invalid planning dates, percentages and server timestamp injection',()=>{
+  for(const progress_percent of [-1,100.1,NaN,Infinity])expect(projectSchema.safeParse({...project,progress_percent}).success).toBe(false);
+  for(const due_date of ['2026-02-30','1999-12-31','2101-01-01'])expect(projectSchema.safeParse({...project,due_date}).success).toBe(false);
+  expect(projectSchema.safeParse({...project,progress_updated_at:'2026-10-14T00:00:00Z'}).success).toBe(false);
+ });
+});

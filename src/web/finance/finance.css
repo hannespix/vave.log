@@ -78,6 +78,43 @@
 .finance-toolbar .field {
   min-width: 210px;
 }
+.finance-project-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+  min-width: 0;
+}
+.finance-project-filter > .field {
+  min-width: 180px;
+  max-width: 100%;
+}
+.finance-project-filter > .text-button,
+.finance-project-work {
+  margin-bottom: 12px;
+}
+.finance-project-work summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.finance-project-work .button-row {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.finance-project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 20px;
+}
+.finance-project-name .finance-project-link {
+  font-size: inherit;
+  text-align: left;
+}
+.finance-project-link {
+  overflow-wrap: anywhere;
+}
 .finance-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

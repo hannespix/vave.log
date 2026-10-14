@@ -6,7 +6,7 @@ export const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
 }, 'Bitte ein gültiges Datum zwischen 2000 und 2100 eingeben.');
 const text = (max:number) => z.string().trim().max(max).refine(s => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(s), 'Ungültige Steuerzeichen.');
 export const workspaceSchema = z.strictObject({ name:text(100).min(1), timezone:z.string().max(80).refine(value=>{try{new Intl.DateTimeFormat('de',{timeZone:value});return true}catch{return false}},'Ungültige Zeitzone.'), currency:z.string().regex(/^[A-Z]{3}$/) });
-export const projectSchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,code:text(24).min(1),name:text(160).min(1),client:text(160),budget_minutes:z.number().int().min(0).max(6000000),status:z.enum(['active','paused','archived']),color:z.string().regex(/^#[\da-fA-F]{6}$/)});
+export const projectSchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,code:text(24).min(1),name:text(160).min(1),client:text(160),budget_minutes:z.number().int().min(0).max(6000000),status:z.enum(['active','paused','archived']),due_date:date.nullable().optional(),progress_percent:z.number().min(0).max(100).nullable().optional(),color:z.string().regex(/^#[\da-fA-F]{6}$/)});
 export const taskSchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,project_id:uuid,title:text(240).min(1),status:z.enum(['todo','doing','done']),assignee_id:uuid.nullable(),due_date:date.nullable()});
 export const entrySchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,project_id:uuid,work_date:date,minutes:z.number().int().min(1).max(1440),note:text(2000),billable:z.boolean()});
 export const timerSchema = z.strictObject({workspace_id:uuid,project_id:uuid,note:text(2000),billable:z.boolean()});
