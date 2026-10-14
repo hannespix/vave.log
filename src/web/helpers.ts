@@ -45,7 +45,8 @@ export function entriesCsv(entries: TimeEntry[], projects: Project[], members: M
   for (const e of entries) { const p = projects.find(p => p.id === e.project_id); const m = members.find(m => m.user_id === e.user_id); rows.push([e.work_date, m?.display_name || m?.email || e.user_id, p?.code ?? '', p?.name ?? '', p?.client ?? '', e.minutes, new Intl.NumberFormat(localeTag(locale), { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(e.minutes / 60), e.note, translate(e.billable ? 'Ja' : 'Nein', locale), translate(statusNames[e.status], locale)]); }
   return '\uFEFF' + rows.map(row => row.map(csvCell).join(';')).join('\r\n');
 }
-export function downloadCsv(content: string, filename: string) { const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+export function downloadText(filename: string, value: string, type = 'text/csv;charset=utf-8') { const url = URL.createObjectURL(new Blob([value], { type })); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+export function downloadCsv(content: string, filename: string) { downloadText(filename, content); }
 // App-relative URLs that survive a base-path deployment (GitHub Pages serves
 // the app under /vave.log/): appPath for same-origin routing and history
 // entries, appHref for absolute links built from the configured app URL.

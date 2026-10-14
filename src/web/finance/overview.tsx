@@ -1,7 +1,8 @@
 import { ArrowDownToLine } from "lucide-react";
 import { Notice } from "../components";
 import { FinanceProjectFilter, ProjectLink, Section, useFinance, useFinanceProject } from "./context";
-import { downloadText, money, overviewCsv, localeCode } from "./documents";
+import { money, overviewCsv, localeCode } from "./documents";
+import { downloadText } from "../helpers";
 import type { FinanceKey } from "./catalog";
 import { summarizeInvoices } from "./invoice-summary";
 export function Overview() {
