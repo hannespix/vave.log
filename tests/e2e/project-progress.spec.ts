@@ -41,7 +41,7 @@ test('task estimates and milestones drive automatic card progress and scoped det
  const state=await setupProgress(page);await page.goto(`/#w=${ws}&view=projects`);
  const card=page.locator('.project-card');await expect(card.locator('.project-card-progress strong')).toHaveText('50%');await expect(card.getByText('Unweighted task count',{exact:true})).toBeVisible();
  await card.getByRole('button',{name:'Tasks: Automatic Project',exact:true}).click();await page.getByRole('button',{name:'Design handoff',exact:true}).click();
- let dialog=page.getByRole('dialog');await dialog.getByLabel('Estimated effort (hours)',{exact:true}).fill('3');await dialog.getByLabel('Milestone',{exact:true}).check();await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();
+ let dialog=page.getByRole('dialog');await dialog.getByLabel('Estimated effort (hours)').fill('3');await dialog.getByLabel('Milestone',{exact:true}).check();await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();
  expect(state.saved[0]).toMatchObject({estimated_minutes:180,is_milestone:true});
  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await expect(card.locator('.project-card-progress strong')).toHaveText('25%');
  await card.getByRole('button',{name:'Project outlook: Automatic Project',exact:true}).click();dialog=page.getByRole('dialog');

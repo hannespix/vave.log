@@ -6,7 +6,7 @@ const user='11111111-1111-4111-8111-111111111111';
 const workspace='22222222-2222-4222-8222-222222222222';
 const project='33333333-3333-4333-8333-333333333333';
 const config={configured:true,appUrl:'http://localhost:4173',supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_publishable_test'};
-const offlineAssets=['/favicon.svg','/offline.css','/offline.html','/offline.js'];
+const offlineAssets=['/offline.css','/offline.html','/offline.js'];
 
 async function signInOnNextNavigation(page:Page){
  await page.addInitScript(({user})=>{

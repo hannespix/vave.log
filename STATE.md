@@ -10,7 +10,7 @@ Manager/Owner erhalten Kunden, Kosten-/Verrechnungssätze, Mitarbeiter-/Freelanc
 
 Erster Start bietet leeren Workspace (voreingestellt) oder recherchierte VAVE-Beispieldaten: acht öffentliche Studioreferenzen, 49 öffentlich genannte Personen und 63 erfundene Profile bilden das fiktive Szenario mit 100 Mitarbeitenden und zwölf freien Spezialisten. Acht öffentliche und 17 erfundene Projekte füllen die Ansichten; zwölf zusätzliche Großprojekte haben zusammen 22,55 Mio. EUR geplantes Auftragsvolumen. Aufgaben, Arbeitszeiten, Kostensätze, Budgets, Ausgaben sowie offene, bezahlte und stornierte Beispielrechnungen füllen die echten Ansichten. Operative Angaben sind fiktiv und keine Aussage über VAVEs tatsächliche Umsätze oder heutige Beschäftigte. Beispielpersonen haben keine Auth-Konten oder Zugangsdaten. Demo-Rechnungen können über die regulären Abläufe ausprobiert werden; Datenbank und Exporte erhalten dauerhaft DEMO-/Nicht-bezahlen-Markierungen. Bestehende Demos bieten „Demo vervollständigen“; Quellen bleiben in der Entwicklungsdokumentation. Ersteller/Owner kann ausschließlich seinen markierten Demo-Workspace archivieren.
 
-45 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
+47 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
 
 ## Supabase
 
@@ -89,7 +89,7 @@ Migration `20261014072035_project_planning_insights` ist live angewandt. Das exa
 
 ## PWA und automatischer Projektfortschritt (14.10.2026)
 
-Das vollständige Tool ist als PWA installierbar. Dezente Installation unter Anmeldung/Einstellungen, EN/DE/ZH-Anleitung, App-Icons, eigenes Fenster und sichere Bildschirmränder. Der Service Worker speichert nur vier öffentliche Offline-Gestaltungsdateien; keine Projektdaten, API-Antworten, Exporte oder Tokens. Arbeiten und Speichern benötigen Internet; es gibt keine Offline-Schreibwarteschlange. Updates werden nur ausdrücklich aus den Einstellungen aktiviert und laden andere Tabs nicht automatisch neu. Details: `docs/pwa.md`.
+Das vollständige Tool ist als PWA installierbar. Dezente Installation unter Anmeldung/Einstellungen, EN/DE/ZH-Anleitung, App-Icons, eigenes Fenster und sichere Bildschirmränder. Der Service Worker speichert nur drei öffentliche Offline-Gestaltungsdateien; keine Projektdaten, API-Antworten, Exporte oder Tokens. Arbeiten und Speichern benötigen Internet; es gibt keine Offline-Schreibwarteschlange. Updates werden nur ausdrücklich aus den Einstellungen aktiviert und laden andere Tabs nicht automatisch neu. Details: `docs/pwa.md`.
 
 Fortschritt wird jetzt dynamisch aus Aufgaben berechnet. Vollständige Aufwandsschätzungen gewichten erledigte Aufgaben; bei fehlenden Schätzungen wird der klar bezeichnete ungewichtete Aufgabenanteil gezeigt. Laufende Aufgaben erhalten keinen erfundenen Teilfortschritt. Alte manuelle Prozentwerte bleiben gespeichert, steuern aber weder Anzeige noch Prognose. Die Detailansicht erklärt Aufgabenstatus, Meilensteine, Verbrauch, Budgetprognose, Endtermin und fehlende Daten mit passenden Kontextlinks. Alle erfassten Aufgaben erledigt bedeutet ausdrücklich nicht, dass ein Kunde das Projekt abgenommen hat. Aufgaben erhalten optionale Aufwandsschätzung und Meilenstein-Kennzeichen, auch über MCP.
 

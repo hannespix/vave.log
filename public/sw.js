@@ -3,7 +3,7 @@ const CACHE_PREFIX = 'vave-log-offline-';
 const CACHE_NAME = CACHE_PREFIX + '__VAVE_OFFLINE_VERSION__';
 const OFFLINE_ASSETS = new Map([
   ['/offline.html', 'text/html'], ['/offline.css', 'text/css'],
-  ['/offline.js', 'text/javascript'], ['/favicon.svg', 'image/svg+xml'],
+  ['/offline.js', 'text/javascript'],
 ]);
 self.addEventListener('install', event => {
   event.waitUntil((async () => {

@@ -4,7 +4,7 @@ The full tool can be installed from the quiet **Install app** link on the sign-i
 
 Projects, time, invoices and account operations require a connection. There is no offline write queue or offline database. A previously loaded app shows connection status; an offline navigation displays a branded retry page without workspace content. Query-bearing authentication links, OAuth, API, MCP, non-GET requests and external requests bypass the worker.
 
-The root service worker stores only `/offline.html`, `/offline.css`, `/offline.js` and `/favicon.svg`. Installation validates MIME types, successful status and absence of redirects before caching. The application document, configuration, exports, Supabase responses and tokens are never added to CacheStorage. Existing Supabase authentication persistence is unchanged.
+The root service worker stores only `/offline.html`, `/offline.css`, and `/offline.js`. The small favicon is embedded in the offline document, so it does not add a network dependency to installation. Installation validates MIME types, successful status and absence of redirects before caching. The application document, configuration, exports, Supabase responses and tokens are never added to CacheStorage. Existing Supabase authentication persistence is unchanged.
 
 Updates wait for an explicit **Reload and update** action in Settings. Save open work first. Other tabs are not automatically reloaded. The worker version follows the build contents, including application-only changes; owned old caches are removed on activation. A registration failure leaves the ordinary online app usable.
 
