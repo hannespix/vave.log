@@ -15,6 +15,7 @@ import {
   ProjectLink,
   ProjectSelect,
   Section,
+  formMoney,
   formText,
   useFinance,
   useFinanceProject,
@@ -169,7 +170,7 @@ export function Invoices() {
                       {invoice.status === "issued" && (
                         isOverdue(invoice, today)
                           ? <small className="finance-overdue">{t("overdue")} · {displayDate(invoice.due_date, locale)}</small>
-                          : <small>{t(invoice.paid ? "paid" : "unpaid")}</small>
+                          : <small>{t(invoice.paid ? "paid" : (invoice.paid_minor ?? 0) > 0 ? "partiallyPaid" : "unpaid")}</small>
                       )}
                     </td>
                   </tr>
@@ -218,6 +219,22 @@ function InvoiceDetail({
       ? data.clients.find((c) => c.id === invoice.client_id)
       : invoice.customer_snapshot,
     issuer = draft ? data.profile : invoice.issuer_snapshot;
+  function addPayment(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget,
+      f = new FormData(form);
+    void run(
+      () =>
+        service.recordPayment({
+          workspace_id: workspace.id,
+          invoice_id: invoice.id,
+          paid_on: formText(f, "paid_on"),
+          amount_minor: formMoney(f, "amount", invoice.currency) as number,
+          note: formText(f, "note"),
+        }),
+      () => form.isConnected && form.reset(),
+    );
+  }
   function action(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -414,6 +431,61 @@ function InvoiceDetail({
           <dd>{money(invoice.total_minor, invoice.currency, locale)}</dd>
         </div>
       </dl>
+      {invoice.status === "issued" && (
+        <section className="finance-payments">
+          <h3>{t("payments")}</h3>
+          {(invoice.payments ?? []).length > 0 && (
+            <ul className="finance-payment-list">
+              {(invoice.payments ?? []).map((payment) => (
+                <li key={payment.id}>
+                  <span>{displayDate(payment.paid_on, locale)}</span>
+                  <strong>{money(payment.amount_minor, invoice.currency, locale)}</strong>
+                  {payment.note && <span className="muted">{payment.note}</span>}
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label={`${t("remove")}: ${displayDate(payment.paid_on, locale)}`}
+                    disabled={busy}
+                    onClick={() =>
+                      void run(() => service.deletePayment(workspace.id, payment.id))
+                    }
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {(invoice.paid_minor ?? 0) > 0 && !invoice.paid && (
+            <p className="finance-caption finance-overdue">
+              {t("partiallyPaid")}: {money(invoice.paid_minor ?? 0, invoice.currency, locale)} · {t("remaining")}: {money(invoice.total_minor - (invoice.paid_minor ?? 0), invoice.currency, locale)}
+            </p>
+          )}
+          {!invoice.cancellation_id && (
+            <form className="finance-payment-form" onSubmit={addPayment}>
+              <Field label={t("paidOn")}>
+                <input type="date" name="paid_on" required defaultValue={dateInZone(workspace.timezone)} />
+              </Field>
+              <Field label={`${t("amountLabel")} (${invoice.currency})`}>
+                <input
+                  type="number"
+                  name="amount"
+                  required
+                  min={10 ** -currencyDigits(invoice.currency)}
+                  step={10 ** -currencyDigits(invoice.currency)}
+                  defaultValue={minorInput(Math.max(0, invoice.total_minor - (invoice.paid_minor ?? 0)), invoice.currency)}
+                />
+              </Field>
+              <Field label={t("notes")}>
+                <input name="note" maxLength={500} />
+              </Field>
+              <button className="button secondary small" disabled={busy}>
+                {t("recordPayment")}
+              </button>
+            </form>
+          )}
+        </section>
+      )}
       {invoice.notes && <p className="finance-prewrap">{invoice.notes}</p>}
       {invoice.payment_instructions && (
         <>

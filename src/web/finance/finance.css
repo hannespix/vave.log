@@ -601,3 +601,45 @@
 .finance-toolbar .finance-search {
   flex: 1 1 220px;
 }
+.finance-payments {
+  display: grid;
+  gap: 10px;
+}
+.finance-payment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.finance-payment-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.finance-payment-list li .muted {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.finance-payment-list li .icon-button {
+  margin-left: auto;
+}
+.finance-payment-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.finance-payment-form .field {
+  flex: 1 1 140px;
+}
+.finance-payment-form .button {
+  margin-bottom: 2px;
+}
