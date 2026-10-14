@@ -35,6 +35,7 @@ import {
 } from "./documents";
 import { addDays, dateInZone, downloadText } from "../helpers";
 import { einvoiceXml } from "./e-invoice";
+import { DATEV_DEFAULT_REVENUE, datevCsv, type DatevOptions } from "./datev";
 import { invoiceMatchesQuery, isOverdue } from "./invoice-summary";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
@@ -43,6 +44,7 @@ export function Invoices() {
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
     [status, setStatus] = useState<InvoiceStatusFilter>("all"),
     [query, setQuery] = useState(""),
+    [datev, setDatev] = useState(false),
     [selected, setSelected] = useState("");
   const today = dateInZone(workspace.timezone);
   const clientName = (i: Invoice) =>
@@ -63,6 +65,14 @@ export function Invoices() {
         title="invoices"
         action={
           <div className="button-row">
+            <button
+              className="button secondary small"
+              disabled={!data.invoices.some((i) => i.status !== "draft")}
+              onClick={() => setDatev(true)}
+            >
+              <ArrowDownToLine size={16} />
+              {t("datevExport")}
+            </button>
             <button
               className="button secondary small"
               disabled={!data.clients.length || !available}
@@ -181,6 +191,7 @@ export function Invoices() {
           </div>
         )}
       </Section>
+      {datev && <DatevDialog onClose={() => setDatev(false)} />}
       {invoice && (
         <InvoiceDetail
           invoice={invoice}
@@ -200,6 +211,76 @@ export function Invoices() {
         )
       ))}
     </div>
+  );
+}
+function DatevDialog({ onClose }: { onClose: () => void }) {
+  const { t, data, workspace, range, busy } = useFinance();
+  const issued = data.invoices.filter((i) => i.status !== "draft" && i.number);
+  const rates = [...new Set(issued.flatMap((i) => i.lines.map((l) => l.tax_basis_points)))].sort((a, b) => a - b);
+  const storageKey = `vave_datev_${workspace.id}`;
+  let saved: Partial<DatevOptions> = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(storageKey) || "{}") as Partial<DatevOptions>;
+  } catch {
+    // localStorage ist reine Bequemlichkeit; ohne gemerkte Werte gelten die Vorgaben.
+  }
+  function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const options: DatevOptions = {
+      consultant: formText(f, "consultant"),
+      client: formText(f, "client"),
+      debtorAccount: formText(f, "debtor"),
+      revenueAccounts: Object.fromEntries(rates.map((bp) => [bp, formText(f, `revenue_${bp}`)])),
+      fiscalYearStart: formText(f, "fiscal"),
+      from: formText(f, "from"),
+      to: formText(f, "to"),
+    };
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(options));
+    } catch {
+      // nicht merkbar — der Export funktioniert trotzdem.
+    }
+    downloadText(`EXTF_Buchungsstapel_${options.from}_${options.to}.csv`, datevCsv(data.invoices, options));
+    onClose();
+  }
+  return (
+    <Dialog title={t("datevExport")} onClose={onClose} busy={busy}>
+      <form className="form-stack" onSubmit={submit}>
+        <Notice kind="info">{t("datevHint")}</Notice>
+        <div className="form-grid">
+          <Field label={t("from")}>
+            <input type="date" name="from" required defaultValue={range.from} />
+          </Field>
+          <Field label={t("to")}>
+            <input type="date" name="to" required defaultValue={range.to} />
+          </Field>
+          <Field label={t("consultantNo")}>
+            <input name="consultant" required pattern="[0-9]{1,7}" defaultValue={saved.consultant || ""} />
+          </Field>
+          <Field label={t("clientNo")}>
+            <input name="client" required pattern="[0-9]{1,5}" defaultValue={saved.client || ""} />
+          </Field>
+          <Field label={t("debtorAccount")}>
+            <input name="debtor" required pattern="[0-9]{1,9}" defaultValue={saved.debtorAccount || "10000"} />
+          </Field>
+          <Field label={t("fiscalYearStart")}>
+            <input type="date" name="fiscal" required defaultValue={saved.fiscalYearStart || `${range.from.slice(0, 4)}-01-01`} />
+          </Field>
+          {rates.map((bp) => (
+            <Field key={bp} label={`${t("revenueAccount")} ${bp / 100} %`}>
+              <input
+                name={`revenue_${bp}`}
+                required
+                pattern="[0-9]{1,9}"
+                defaultValue={saved.revenueAccounts?.[bp] || DATEV_DEFAULT_REVENUE[bp] || "8400"}
+              />
+            </Field>
+          ))}
+        </div>
+        <Actions label="csv" onClose={onClose} />
+      </form>
+    </Dialog>
   );
 }
 function InvoiceDetail({
