@@ -305,6 +305,10 @@ test('a running timer stays visible everywhere, minimizes and ticks in the tab t
  await expect(page.locator('.floating-timer')).toHaveCount(0);
  await expect(page).toHaveTitle(/^\u25B6 00:30:\d\d \u00B7 VAVE\.LOG$/);
  const nav=page.getByRole('navigation',{name:'Main navigation'});
+ await nav.getByRole('button',{name:'Time',exact:true}).click();
+ await expect(page.getByText('Your timer is running.',{exact:true})).toBeVisible();
+ await expect(page.locator('.floating-timer')).toHaveCount(0);
+ await expect(page.locator('.floating-timer-mini')).toHaveCount(0);
  await nav.getByRole('button',{name:'Tasks',exact:true}).click();
  const widget=page.locator('.floating-timer');
  await expect(widget).toBeVisible();

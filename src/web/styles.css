@@ -62,3 +62,8 @@ body.timer-floating .app-shell{padding-bottom:calc(var(--mobile-nav-h) + 70px)}
 body.timer-floating.timer-open .app-shell{padding-bottom:calc(var(--mobile-nav-h) + 180px)}
 }
 @media (prefers-reduced-motion:reduce){.nav-more-sheet{animation:none}}
+
+/* Times view: the timer is offered here too; capped on wide screens. */
+.times-timer{margin:0 0 23px}
+.times-timer .timer-panel{max-width:460px}
+@media(max-width:700px){.times-timer{margin-bottom:18px}.times-timer .timer-panel{max-width:none}}
