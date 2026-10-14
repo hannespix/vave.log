@@ -276,6 +276,33 @@ test('authorized workspace deep links survive reload and cross-workspace history
  await page.goto('/#w=missing&view=tasks');await expect(page.getByRole('heading',{name:'Workspace unavailable',exact:true})).toBeVisible();await expect(page.locator('#workspace-select')).toHaveCount(0);await page.getByRole('button',{name:'Open my workspace',exact:true}).click();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',ws);
 });
 
+test('a running timer stays visible everywhere, minimizes and ticks in the tab title',async({page})=>{
+ await connectedSetup(page);
+ await page.route('https://test.supabase.co/rest/v1/running_timers*',r=>r.fulfill({json:{id:'44444444-4444-4444-8444-444444444444',workspace_id:ws,project_id:project,user_id:user,started_at:'2026-10-13T08:30:00Z',note:'Focus block',billable:true}}));
+ await page.goto('/');
+ await expect(page.getByText('Your timer is running.',{exact:true})).toBeVisible();
+ await expect(page.locator('.floating-timer')).toHaveCount(0);
+ await expect(page).toHaveTitle(/^\u25B6 00:30:\d\d \u00B7 VAVE\.LOG$/);
+ const nav=page.getByRole('navigation',{name:'Main navigation'});
+ await nav.getByRole('button',{name:'Tasks',exact:true}).click();
+ const widget=page.locator('.floating-timer');
+ await expect(widget).toBeVisible();
+ await expect(widget.locator('.floating-clock')).toHaveText(/^00:30:\d\d$/);
+ await expect(widget.getByRole('button',{name:'Brand Experience'})).toBeVisible();
+ await widget.getByRole('button',{name:'Minimize timer',exact:true}).click();
+ await expect(page.locator('.floating-timer')).toHaveCount(0);
+ const mini=page.locator('.floating-timer-mini');
+ await expect(mini).toBeVisible();
+ await nav.getByRole('button',{name:'Projects',exact:true}).click();
+ await expect(page.locator('.floating-timer-mini')).toBeVisible();
+ await mini.click();
+ await expect(page.locator('.floating-timer')).toBeVisible();
+ await page.locator('.floating-timer').getByRole('button',{name:'Brand Experience'}).click();
+ await expect(page.getByText('Your timer is running.',{exact:true})).toBeVisible();
+ await expect(page.locator('.floating-timer')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
 test('task quick and advanced filters explain empty results and reset cleanly',async({page})=>{
  await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
  await page.getByRole('button',{name:'Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);

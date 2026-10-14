@@ -17,3 +17,23 @@
 @media(max-width:370px){.main-content{padding-left:15px;padding-right:15px}.sidebar{padding:13px 15px}.sidebar>.brand{transform:scale(.75);width:123px}.sidebar .workspace-switch{width:133px}.nav-item{font-size:7px;padding:6px 7px;min-width:43px}.sidebar nav{padding-left:4px;padding-right:4px}.page-heading h1{font-size:29px}.metric{padding:15px 12px}.metric-value{font-size:26px}.metric>div{font-size:8px}.metric>div svg{width:13px}.metric p{font-size:7px}.panel{padding:19px}.table-panel{padding:0}.range-label{font-size:9px;padding:6px 2px}.range-label svg{width:13px}.range-controls>.text-button{font-size:8px}.range-controls>.icon-button{width:24px}.welcome-content{padding-left:23px;padding-right:23px}.auth-card h2{font-size:32px}.mobile-brand{margin-bottom:45px}.form-grid{grid-template-columns:1fr}.form-actions{flex-wrap:wrap}.timer-clock{font-size:39px}.project-card{padding:22px}.segmented button{font-size:9px;padding:8px}.budget-row{grid-template-columns:31px 1fr auto;gap:9px}.budget-row .project-mark{width:31px;height:31px}.budget-name strong{font-size:11px}.budget-total{min-width:72px}.budget-total strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 @media(max-width:700px){.sidebar .workspace-switch{display:flex;align-items:center;gap:3px}.workspace-select-row{flex:1;min-width:0}.sidebar .workspace-switch>.text-button{display:flex;padding:7px;margin:0;color:var(--purple)}.sidebar .workspace-switch>.text-button>span{display:none}}
+
+/* Floating timer: the running timer stays visible outside the overview. */
+.floating-timer{position:fixed;right:18px;bottom:18px;z-index:900;width:238px;display:flex;flex-direction:column;gap:10px;background:var(--purple);color:white;border-radius:14px;padding:15px 16px;box-shadow:0 12px 38px #2a0f6e4d;animation:floating-timer-in .18s ease}
+.floating-timer-top{display:flex;align-items:center;gap:9px}
+.floating-timer .floating-clock,.floating-timer-mini .floating-clock{font-variant-numeric:tabular-nums;letter-spacing:.01em;line-height:1}
+.floating-timer .floating-clock{flex:1;font-size:21px;font-weight:400}
+.floating-timer-top .icon-button{color:#d8c8ff;width:30px;height:30px;min-height:30px}
+.floating-timer-top .icon-button:hover{color:#fff;background:#ffffff1f}
+.floating-timer-project{color:#fff;display:inline-flex;align-items:center;gap:7px;font-size:11px;text-align:left;min-width:0}
+.floating-timer-project strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:450}
+.floating-timer-project:hover{color:var(--lime)}
+.floating-timer>small{color:#d8c8ff;font-size:10px}
+.floating-timer .timer-stop{min-height:38px}
+.floating-timer-mini{position:fixed;right:18px;bottom:18px;z-index:900;display:inline-flex;align-items:center;gap:9px;background:var(--purple);color:white;border:0;border-radius:99px;padding:0 16px;min-height:42px;font-size:12px;box-shadow:0 10px 30px #2a0f6e4d;animation:floating-timer-in .18s ease}
+.floating-timer-mini:hover{background:#5412e3}
+.floating-timer-mini .live-dot{animation:floating-timer-pulse 2s ease-in-out infinite}
+@keyframes floating-timer-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes floating-timer-pulse{0%,100%{box-shadow:0 0 0 4px #ffffff18}50%{box-shadow:0 0 0 7px #ffffff2e}}
+@media (max-width:600px){.floating-timer{right:12px;bottom:12px;width:calc(100vw - 24px);max-width:300px}.floating-timer-mini{right:12px;bottom:12px}}
+@media (prefers-reduced-motion:reduce){.floating-timer,.floating-timer-mini{animation:none}.floating-timer-mini .live-dot{animation:none}}
