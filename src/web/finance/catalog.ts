@@ -320,6 +320,11 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  searchInvoices: [
+    "Search number, client, notes …",
+    "Nummer, Kunde, Notizen durchsuchen …",
+    "搜索编号、客户、备注…",
+  ],
   paymentTerms: ["Payment terms (days)", "Zahlungsziel (Tage)", "付款期限（天）"],
   paymentTermsHint: [
     "Prefills the due date of new invoices: issue date plus this many days.",

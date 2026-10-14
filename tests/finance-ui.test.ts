@@ -7,7 +7,7 @@ import { FinanceContext, type FinanceContextValue } from "../src/web/finance/con
 import { Overview } from "../src/web/finance/overview";
 import { Planning } from "../src/web/finance/planning";
 import { DraftEditor, Invoices, TimeDraft } from "../src/web/finance/invoices";
-import { isOverdue, summarizeInvoices } from "../src/web/finance/invoice-summary";
+import { invoiceMatchesQuery, isOverdue, summarizeInvoices } from "../src/web/finance/invoice-summary";
 import { describe, expect, it } from "vitest";
 import {
   currencyDigits,
@@ -425,6 +425,20 @@ describe("invoice summary project filters", () => {
     expect(summarizeInvoices(invoices, { from: "2026-10-01", to: "2026-11-01" }, "p1")).toEqual({
       invoicedNet: 0, paidNet: 0, openNet: 0, overdueNet: 0, overdueCount: 0,
     });
+  });
+  it("searches invoices tolerant of diacritics with every token required", () => {
+    const numbered = { ...invoice, number: "INV-2026-0042", notes: "Kickoff Workshop" };
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "  ")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "0042")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "mueller")).toBe(false);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "muller sohne")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "muller 0042 kickoff")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "muller 0043")).toBe(false);
+    expect(invoiceMatchesQuery(numbered, "Müller & Söhne", "ßtraße")).toBe(false);
+    expect(invoiceMatchesQuery({ ...numbered, notes: "Straße" }, "", "ßtraße")).toBe(false);
+    expect(invoiceMatchesQuery({ ...numbered, notes: "Straße" }, "", "strasse")).toBe(true);
+    expect(invoiceMatchesQuery(numbered, "", numbered.id.slice(0, 6))).toBe(true);
   });
 });
 

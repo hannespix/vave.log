@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Plus, ArrowDownToLine, Printer, Trash2 } from "lucide-react";
+import { Plus, ArrowDownToLine, Printer, Search, Trash2 } from "lucide-react";
 import type {
   Invoice,
   InvoiceLanguage,
@@ -33,22 +33,27 @@ import {
   taxRateLabel,
 } from "./documents";
 import { addDays, dateInZone, downloadText } from "../helpers";
-import { isOverdue } from "./invoice-summary";
+import { invoiceMatchesQuery, isOverdue } from "./invoice-summary";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
   const { data, t, locale, workspace, isDemo } = useFinance(),
     { projectId, setProjectId, available } = useFinanceProject(),
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
     [status, setStatus] = useState<InvoiceStatusFilter>("all"),
+    [query, setQuery] = useState(""),
     [selected, setSelected] = useState("");
   const today = dateInZone(workspace.timezone);
+  const clientName = (i: Invoice) =>
+    i.customer_snapshot?.name ||
+    data.clients.find((c) => c.id === i.client_id)?.name ||
+    "";
   const matchesStatus = (i: Invoice) =>
     status === "all" ? true :
     status === "draft" ? i.status === "draft" :
     status === "paid" ? i.status === "issued" && i.paid :
     status === "overdue" ? isOverdue(i, today) :
     i.status === "issued" && !i.paid && !i.cancellation_id;
-  const invoices = data.invoices.filter((item) => available && (!projectId || item.project_id === projectId) && matchesStatus(item));
+  const invoices = data.invoices.filter((item) => available && (!projectId || item.project_id === projectId) && matchesStatus(item) && invoiceMatchesQuery(item, clientName(item), query));
   const invoice = invoices.find((i) => i.id === selected);
   return (
     <div className="finance-stack">
@@ -76,6 +81,17 @@ export function Invoices() {
       >
         <div className="finance-toolbar">
           <FinanceProjectFilter projectId={projectId} onChange={setProjectId} />
+          <label className="workflow-search finance-search">
+            <Search size={17} aria-hidden="true" />
+            <span className="sr-only">{t("searchInvoices")}</span>
+            <input
+              type="search"
+              maxLength={240}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("searchInvoices")}
+            />
+          </label>
           <div className="segmented" role="group" aria-label={t("filterInvoiceStatus")}>
             {(["all", "open", "overdue", "paid", "draft"] as const).map((key) => (
               <button

@@ -598,3 +598,6 @@
   border-radius: 8px;
   padding: 6px;
 }
+.finance-toolbar .finance-search {
+  flex: 1 1 220px;
+}

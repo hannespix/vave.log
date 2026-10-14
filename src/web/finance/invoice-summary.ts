@@ -1,4 +1,19 @@
 import type { Invoice } from "../../shared/finance-types";
+import { fold } from "../helpers";
+
+/** Multitoken-UND-Suche (diakritikatolerant) über Nummer, Kunde, Kennung und Notizen. */
+export function invoiceMatchesQuery(
+  invoice: Invoice,
+  clientName: string,
+  query: string,
+): boolean {
+  const tokens = fold(query).split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const haystack = fold(
+    `${invoice.number || ""} ${clientName} ${invoice.id} ${invoice.notes}`,
+  );
+  return tokens.every((token) => haystack.includes(token));
+}
 
 /** Ausgestellt, unbezahlt, Zahlungsziel überschritten, nicht storniert. */
 export function isOverdue(invoice: Invoice, today: string): boolean {
