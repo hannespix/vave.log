@@ -1,6 +1,6 @@
 # VAVE.LOG — aktueller Arbeitsstand
 
-13.10.2026. Repository: hannespix/vave.log. Private Site: https://vave-log.pixer.chatgpt.site.
+14.10.2026. Repository: hannespix/vave.log. Private Site: https://vave-log.pixer.chatgpt.site.
 
 ## Anwendung
 
@@ -21,6 +21,7 @@ Projekt `vave-log`, Referenz `ieeujtmpxqxmfyietqgw`, Frankfurt. Angewandte Migra
 - `20261013220039_agency_finance`
 - `20261013220054_researched_demo_workspace`
 - `20261013220233_finance_foreign_key_indexes`
+- `20261014052911_full_demo_experience`
 
 Öffentliche Tabellen sind RLS-geschützt. Finanzdaten liegen in separaten Tabellen mit Manager-/Owner-Prüfung; Unternehmensidentität kann nur der Owner ändern. Anonyme Tabellenzugriffe sind gesperrt. Nummernzähler und Timerbelege sind auch für angemeldete Nutzer direkt gesperrt.
 
@@ -38,7 +39,7 @@ Projekt `vave-log`, Referenz `ieeujtmpxqxmfyietqgw`, Frankfurt. Angewandte Migra
 Zwei fehlende Finanz-Fremdschlüsselindizes wurden nach dem Live-Advisor ergänzt. Weitere verbleibende Hinweise:
 
 - [Authentifizierte SECURITY-DEFINER-RPCs](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable): neun bestehende, bewusst bereitgestellte RPCs prüfen Identität, Workspace-Rolle und Übergänge. Neue Finanz-/Demo-Endpunkte sind öffentliche Invoker mit geschützten privaten Implementierungen.
-- [RLS ohne Policy](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy): `private.timer_receipts` und `private.finance_number_counters` verweigern absichtlich direkten Clientzugriff.
+- [RLS ohne Policy](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy): `private.timer_receipts`, `private.finance_number_counters` und `private.demo_seed_context` verweigern absichtlich direkten Clientzugriff.
 - [Unbenutzte Indizes](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index): bei neuen Tabellen/geringem Datenvolumen erwartbar; nicht allein deshalb entfernen.
 - [Schutz vor kompromittierten Passwörtern deaktiviert](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection): im Auth-Dashboard aktivieren, soweit der Projektplan dies unterstützt. Verbundene Tools bieten keine Auth-Konfigurationsänderung an.
 
@@ -59,6 +60,8 @@ Zusätzliche additive Migration führt nicht anmeldbare Demo-Mitgliedschaften mi
 
 Neue Demos enthalten 57 Beispielprofile plus Ersteller, 13 Projekte/Kunden/Pläne, 66 Aufgaben, 353 Zeitbuchungen, 58 Kostensätze, 28 Ausgaben und sieben Rechnungen. Bei bestehenden Demos bleiben eigene Ergänzungen erhalten. Kombinierter lokaler Check: 172 Tests in 17 Suites, TypeScript, E-Mail-Vorlagenprüfung und Produktionsbuild erfolgreich. Unabhängiges Code-/Sicherheitsreview ohne blockierende Befunde.
 
-Die vollständige Demo-Migration `20261013223113_full_demo_experience.sql` ist noch NICHT live angewendet. Der Supabase-Connector meldet bei `apply_migration` wiederholt `Invalid or expired requestState`; die Remote-Migrationshistorie enthält weiterhin nur die oben aufgeführten fünf Migrationen. Lesender Live-Bestand vor dem Versuch: zwei Auth-Konten, drei Workspaces, zehn Zeitbuchungen und eine aktive ältere Demo. Die neue Migration reichert bestehende Demos nicht automatisch an; nach erfolgreicher Anwendung bietet die GUI dem Ersteller/Owner „Demo vervollständigen“ an.
+Die vollständige Demo-Migration wurde am 14.10.2026 um 05:29 UTC erfolgreich als `20261014052911_full_demo_experience.sql` live angewendet; die lokale Dateiversion entspricht der Remote-Historie. Der vorherige Connectorfehler tritt bei diesem Schreibvorgang nicht mehr auf. Die Migration reichert bestehende Demos nicht automatisch an; die GUI bietet dem Ersteller/Owner „Demo vervollständigen“ an.
 
-Deployment dieser Erweiterung benötigt zuerst die erfolgreiche Migration, das angepasste Live-Rollback-Skript und den Advisor-Check. Lokales PGlite-Rollback-Skript erfolgreich: zehn Zugriffsverweigerungen, 57 nicht anmeldbare Beispielpersonen, 353 Demozeiten, geschützte Demo-Belege einschließlich Storno; Auth-Kontenzahl unverändert. Eine lokale Prüfung ersetzt nicht die noch ausstehende Live-Prüfung. Merge-/CI-/Deploymentstatus: GitHub PR #2 und Sites-Version prüfen.
+Das angepasste `tests/live/agency-smoke.sql` ist auf echtem Supabase PostgreSQL erfolgreich: zehn erwartete Zugriffsverweigerungen, Ausstellung/Wiederholung, unveränderliche Rechnungsdaten, Storno, Zahlungsstatus, drei Audit-Aktionen, Demo-Erstellung/Archivierung, 57 nicht anmeldbare Beispielpersonen und 353 Demozeiten. Der zusätzliche Test-Stornobeleg bleibt DEMO-markiert. Alle Testdaten wurden zurückgerollt. Vorher/nachher unverändert: zwei Auth-Konten, drei Workspaces, zehn Zeitbuchungen und eine aktive ältere Demo; kein Seed-Kontext blieb bestehen.
+
+Security-/Performance-Advisors nach der Migration: keine neuen unerwarteten Befunde, keine fehlenden Fremdschlüsselindizes. Bestehende Hinweise und Betriebsgrenzen siehe oben. GitHub PR #2 ist in `main` gemergt (`0fbb36e0d48f451423996d1d0772da82566394f4`); der zugehörige CI-Lauf `38515702849` prüfte 172 Tests und 24 Desktop-/Mobil-Browserabläufe erfolgreich. Dieses Release synchronisiert nur die angewandte Migrationsversion und die Live-Prüfnachweise; den abschließenden Veröffentlichungsstatus zeigt die Sites-Version.
