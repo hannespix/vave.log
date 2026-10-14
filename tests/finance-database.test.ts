@@ -27,6 +27,22 @@ describe('finance authorization and documents',()=>{
  it('releases claimed time on cancellation and blocks deleting a workspace with issued records',async()=>{const e=await approved();await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor)values($1,$2,'2026-01-01',5000)",[w,member]);const i=await issue((await save(draft({lines:[{...draft().lines[0],time_entry_id:e}]}))).id);expect(await rows('select * from public.finance_time_claims where invoice_id=$1',[i.id])).toHaveLength(1);await expect(attempt('select * from public.revoke_approval($1)',[e])).rejects.toThrow(/fakturiert/);await db.query("select public.finance_cancel_invoice($1,$2,'Scope dropped')",[w,i.id]);expect(await rows('select * from public.finance_time_claims where invoice_id=$1',[i.id])).toEqual([]);const back=await one<{status:string}>('select * from public.revoke_approval($1)',[e]);expect(back.status).toBe('draft');await login(owner);await expect(attempt("select public.delete_workspace($1,'Studio',true)",[w])).rejects.toThrow(/WORKSPACE_ADMIN_GOBD_RECORDS/);expect((await one<{v:any[]}>('select public.list_owned_workspaces() v')).v.find(x=>x.id===w)?.issued_invoices).toBe(2)});
  it('claims approved time once, calculates exact minutes, and freezes effective rates',async()=>{const e=await approved();await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,cost_rate_minor,bill_rate_minor)values($1,$2,'2026-01-01',3000,7500)",[w,member]);const input=draft({lines:[{...draft().lines[0],time_entry_id:e,quantity:99,unit_price_minor:1}]});const a=await save(input),b=await save(input);const i=await issue(a.id);expect(i.net_minor).toBe(7625);expect(i.lines[0].minutes).toBe(61);await expect(attempt('select public.finance_issue_invoice($1,$2)',[w,b.id])).rejects.toThrow(/FINANCE_CONFLICT/);await db.query('update public.finance_staff_rates set bill_rate_minor=9000 where workspace_id=$1',[w]);expect((await issue(a.id)).net_minor).toBe(7625)});
  it('rejects approved time with missing bill rates',async()=>{const e=await approved();await expect(attempt('select public.finance_save_draft($1::jsonb)',[JSON.stringify(draft({lines:[{...draft().lines[0],time_entry_id:e}]}))])).rejects.toThrow(/FINANCE_CONFIGURATION/)});
+ it('records partial payments, marks full coverage paid and reverses it on delete',async()=>{
+  const d=await issue((await save()).id);
+  let v=(await one<{v:any}>('select public.finance_record_payment($1,$2,$3,$4,$5) v',[w,d.id,'2026-10-20',4000,'Abschlag'])).v;
+  expect(v.paid).toBe(false);expect(v.paid_minor).toBe(4000);expect(v.payments).toHaveLength(1);expect(v.payments[0].note).toBe('Abschlag');
+  v=(await one<{v:any}>('select public.finance_record_payment($1,$2,$3,$4,$5) v',[w,d.id,'2026-11-02',4925,''])).v;
+  expect(v.paid).toBe(true);expect(v.paid_minor).toBe(8925);
+  const list=(await one<{v:any}>('select public.finance_list_invoices($1) v',[w])).v;
+  expect(list.find((x:any)=>x.id===d.id)).toMatchObject({paid:true,paid_minor:8925});
+  v=(await one<{v:any}>('select public.finance_delete_payment($1,$2) v',[w,v.payments[1].id])).v;
+  expect(v.paid).toBe(false);expect(v.paid_minor).toBe(4000);expect(v.payments).toHaveLength(1);
+  const draft2=await save();
+  await expect(attempt('select public.finance_record_payment($1,$2,$3,$4,$5)',[w,draft2.id,'2026-10-20',100,''])).rejects.toThrow(/FINANCE_NOT_FOUND/);
+  await expect(attempt('select public.finance_record_payment($1,$2,$3,$4,$5)',[w,d.id,'2026-10-20',0,''])).rejects.toThrow(/FINANCE_VALIDATION/);
+  await login(member);
+  await expect(attempt('select public.finance_record_payment($1,$2,$3,$4,$5)',[w,d.id,'2026-10-20',100,''])).rejects.toThrow(/FINANCE_FORBIDDEN/);
+  await expect(attempt("insert into public.finance_invoice_payments(workspace_id,invoice_id,paid_on,amount_minor) values($1,$2,'2026-10-20',100)",[w,d.id])).rejects.toThrow()});
  it('groups a time draft per person and rate, bills the summed minutes once and claims every entry',async()=>{
   await login(member);
   const e1=await one<{id:string}>("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable) values($1,$2,'2026-10-12',61,'A',true) returning id",[w,p]);

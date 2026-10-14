@@ -325,6 +325,11 @@ const catalog = {
   legalName: ["Legal company name", "Rechtlicher Firmenname", "公司法定名称"],
   prefix: ["Invoice prefix", "Rechnungspräfix", "发票编号前缀"],
   footer: ["Invoice footer", "Rechnungsfußzeile", "发票页脚"],
+  payments: ["Payments", "Zahlungen", "付款"],
+  recordPayment: ["Record payment", "Zahlung erfassen", "记录付款"],
+  paidOn: ["Paid on", "Zahlungseingang", "付款日期"],
+  amountLabel: ["Amount", "Betrag", "金额"],
+  partiallyPaid: ["Partially paid", "Teilbezahlt", "部分已付"],
   groupTimeLines: [
     "Combine entries per person and rate",
     "Einträge je Person und Satz zusammenfassen",
