@@ -34,6 +34,7 @@ import {
   taxRateLabel,
 } from "./documents";
 import { addDays, dateInZone, downloadText } from "../helpers";
+import { einvoiceXml } from "./e-invoice";
 import { invoiceMatchesQuery, isOverdue } from "./invoice-summary";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
@@ -285,6 +286,21 @@ function InvoiceDetail({
             <ArrowDownToLine size={15} />
             {t("csv")}
           </button>
+          {!draft && (
+            <button
+              className="button secondary small"
+              onClick={() =>
+                downloadText(
+                  `e-invoice-${invoice.number}.xml`,
+                  einvoiceXml(invoice),
+                  "application/xml;charset=utf-8",
+                )
+              }
+            >
+              <ArrowDownToLine size={15} />
+              {t("eInvoice")}
+            </button>
+          )}
         </div>
       }
     >
