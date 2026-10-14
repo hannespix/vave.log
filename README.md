@@ -33,4 +33,6 @@ Die vollständige Anleitung zu Auth, OAuth, SMTP, Backups, Docker und Freigabete
 
 Privater Bereitstellungsort: https://vave-log.pixer.chatgpt.site
 
+Zusätzlich kann die Web-App als statische Seite auf GitHub Pages laufen: `.github/workflows/pages.yml` deployt nach jedem grünen CI-Lauf auf `main` automatisch (`npm run build:pages`; ohne MCP-Endpoint, Konfiguration wird beim Build eingebettet, Seite ist öffentlich erreichbar). Einrichtung und Grenzen: [docs/github-pages.md](docs/github-pages.md).
+
 Das eigene Supabase-Projekt ist eingerichtet und verbunden; Datenbank-Zugriffsregeln und Kernworkflows wurden dort geprüft. Für die Betriebsfreigabe fehlen noch die Auth-Weiterleitungen im Dashboard sowie echte Registrierungs-/OAuth-Tests. Ohne Konfiguration zeigt die Anwendung weiterhin ausdrücklich den Einrichtungszustand. Konkrete Nachweise und verbleibende Schritte stehen in [STATE.md](STATE.md).

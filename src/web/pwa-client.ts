@@ -11,6 +11,8 @@ export interface PwaState {
 export interface PwaEnvironment {
  events:EventTarget;display:EventTarget;serviceWorker?:ServiceWorkerContainer;
  online:()=>boolean;standalone:()=>boolean;reload:()=>void;enabled:boolean;
+ /** App base path ('/', or '/<repo>/' on a GitHub Pages project site). */
+ base?:string;
 }
 export const initialPwaState:PwaState={installed:false,canPrompt:false,offline:false,workerStatus:'unsupported',updateReady:false,checking:false,applying:false,installBusy:false,notice:'none'};
 
@@ -39,7 +41,7 @@ export function createPwaController(env:PwaEnvironment){
      if(!state.applying){waiting();return;}
      clearTimeout(updateTimeout);set({applying:false,updateReady:false});env.reload();
     });
-    env.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'}).then(value=>{
+    env.serviceWorker.register(`${env.base??'/'}sw.js`,{scope:env.base??'/',updateViaCache:'none'}).then(value=>{
      if(current!==generation)return;
      registration=value;set({workerStatus:'ready'});waiting();
      const watch=()=>{const worker=value.installing;if(!worker)return;const changed=()=>{
