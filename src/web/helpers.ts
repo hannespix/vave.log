@@ -7,6 +7,24 @@ export const statusNames = { draft: 'Entwurf', submitted: 'Eingereicht', approve
 export function minutesLabel(minutes: number, locale: Locale = getLocale()) { const n = Math.max(0, Math.round(minutes)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} ${locale === 'zh' ? '小时' : 'h'}`; }
 /** Diakritika-tolerante Suchnormalisierung (ä→a, ß→ss), geteilt von SelectMenu und Listen-Suchen. */
 export function fold(text: string) { return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('ß', 'ss').toLowerCase(); }
+export type PaletteEntry = { id: string; kind: 'area'|'project'|'task'|'person'; title: string; subtitle?: string; keywords: string };
+/** Globale Suche: jeder Begriff muss treffen (UND, Reihenfolge egal); Präfix schlägt Wortanfang schlägt Teiltreffer. Ohne Eingabe nur die Bereiche. */
+export function searchPalette<T extends PaletteEntry>(items: T[], query: string, limit = 12): T[] {
+  const tokens = fold(query.trim()).split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return items.filter(item => item.kind === 'area').slice(0, limit);
+  const scored: { item: T; score: number }[] = [];
+  for (const item of items) {
+    const hay = fold(`${item.title} ${item.subtitle ?? ''} ${item.keywords}`);
+    let score = 0; let ok = true;
+    for (const token of tokens) {
+      const at = hay.indexOf(token);
+      if (at < 0) { ok = false; break; }
+      score += at === 0 ? 3 : /[^\p{L}\p{N}]/u.test(hay[at - 1] ?? ' ') ? 2 : 1;
+    }
+    if (ok) scored.push({ item, score });
+  }
+  return scored.sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title, 'de')).slice(0, limit).map(s => s.item);
+}
 export function dateInZone(timezone: string, date = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
 export function addDays(iso: string, days: number) { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
 /** Werktage Mo–Fr im inklusiven Bereich (Feiertage zählen als Werktag — die pflegt das Team als Abwesenheit der Art „Feiertag"). */
