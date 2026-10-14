@@ -352,6 +352,24 @@ describe('database entries and workflow', () => {
     await login(member); await expect(attempt('select public.review_entries($1,$2,false)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
     await login(outsider); await expect(attempt('select public.review_entries($1,$2,true)',[workspace,[a.id]])).rejects.toThrow(/Berechtigung/);
   });
+  it('lets owners rename the workspace and everyone curate only their own display name', async () => {
+    await login(owner);
+    const w=await first<{name:string}>("select * from public.rename_workspace($1,'  Studio Süd  ')",[workspace]);
+    expect(w.name).toBe('Studio Süd');
+    await expect(attempt("select public.rename_workspace($1,'')",[workspace])).rejects.toThrow(/1 bis 100/);
+    await expect(attempt('select public.rename_workspace($1,$2)',[workspace,'x'.repeat(101)])).rejects.toThrow(/1 bis 100/);
+    await login(manager); await expect(attempt("select public.rename_workspace($1,'Fremd')",[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(outsider); await expect(attempt("select public.rename_workspace($1,'Fremd')",[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(member);
+    const m=await first<{display_name:string;user_id:string}>("select * from public.set_display_name($1,'  Mira M.  ')",[workspace]);
+    expect(m.display_name).toBe('Mira M.'); expect(m.user_id).toBe(member);
+    await expect(attempt("select public.set_display_name($1,'')",[workspace])).rejects.toThrow(/1 bis 120/);
+    await expect(attempt("update public.memberships set display_name='Direkt' where user_id=$1",[member])).rejects.toThrow();
+    await login(outsider); await expect(attempt("select public.set_display_name($1,'Eindringling')",[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(manager);
+    expect((await first<{display_name:string}>('select display_name from public.memberships where workspace_id=$1 and user_id=$2',[workspace,member])).display_name).toBe('Mira M.');
+    await login(owner); await db.query("select public.rename_workspace($1,'Studio')",[workspace]); await login(member);
+  });
   it('notifies entry owners about review decisions, merges unread counts, and keeps notifications private', async () => {
     const a=await entry(60); const b=await entry(30); const c=await entry(45);
     await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);

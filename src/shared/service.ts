@@ -57,6 +57,8 @@ export function createService(client:SupabaseClient){
   // workspace at all, and the oldest work date, so the review view can widen
   // its range to cover them (RLS scopes members to their own entries).
   approvalQueue:async(workspaceId:string)=>{const {data,error,count}=await client.from('time_entries').select('work_date',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('status','submitted').order('work_date',{ascending:true}).limit(1);fail(error);return {count:count??0,oldest:(data as {work_date:string}[]|null)?.[0]?.work_date??null};},
+  renameWorkspace:(input:{workspace_id:string;name:string})=>{const v=parse(z.strictObject({workspace_id:uuid,name:z.string().trim().min(1).max(100)}),input);return rpc<Workspace>('rename_workspace',{p_workspace_id:v.workspace_id,p_name:v.name})},
+  setDisplayName:(input:{workspace_id:string;name:string})=>{const v=parse(z.strictObject({workspace_id:uuid,name:z.string().trim().min(1).max(120)}),input);return rpc<Membership>('set_display_name',{p_workspace_id:v.workspace_id,p_name:v.name})},
   // Ungelesene In-App-Benachrichtigungen (RLS liefert nur eigene Zeilen).
   listNotifications:(workspaceId:string)=>rows<AppNotification>(client.from('notifications').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).is('read_at',null).order('created_at').order('id').limit(1001)),
   markNotificationsRead:(workspaceId:string)=>rpc<number>('mark_notifications_read',{p_workspace_id:parse(uuid,workspaceId)}),
