@@ -485,6 +485,7 @@ describe("connected finance project scope", () => {
       actual_expenses_minor: 0, actual_cost_minor: 0, actual_billable_value_minor: 0,
       forecast_cost_minor: 0, forecast_margin_minor: 0, missing_cost_entries: 0,
       missing_bill_entries: 0, missing_estimate_costs: 0,
+      period_cost_minor: 0, period_minutes: 30,
     }));
     value.data.plans = value.projects.map((project, index) => ({
       workspace_id: "w", project_id: project.id, client_id: "c", billing_mode: "hourly",

@@ -42,13 +42,22 @@ export function createFinanceService(client:SupabaseClient){
   setInvoicePaid:(workspace_id:string,invoice_id:string,paid:boolean)=>{if(typeof paid!=='boolean')throw new FinanceError('validation');return rpc<Invoice>('finance_set_paid',{...scoped(workspace_id,invoice_id),p_paid:paid})},
   overview:async(workspace_id:string,from:string,to:string):Promise<FinanceOverview>=>{
    const w=id(workspace_id),range=parse(financeRangeSchema,{from,to});
+   // Prognose, Restaufwand und Budgetverbrauch brauchen die GESAMTE Projekthistorie,
+   // sonst zählt Arbeit vor dem gewählten Zeitraum doppelt in „verbleibend";
+   // der Zeitraum liefert nur noch die Kennzahl „Istkosten im Zeitraum".
    const [plans,rates,expenses,entries,projects,workspace]=await Promise.all([
-    service.listProjectPlans(w),service.listRates(w),service.listExpenses(w,range.from,range.to),
-    readTimeEntryPages((start,end)=>client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).gte('work_date',range.from).lte('work_date',range.to).order('work_date').order('id').range(start,end),fail,code=>new FinanceError(code)),
+    service.listProjectPlans(w),service.listRates(w),service.listExpenses(w,'2000-01-01','2100-12-31'),
+    readTimeEntryPages((start,end)=>client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).order('work_date').order('id').range(start,end),fail,code=>new FinanceError(code)),
     list<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',w).order('id').limit(1001)),
     one<{currency:string}>(client.from('workspaces').select('currency').eq('id',w).single())
    ]);
-   return {workspace_id:w,currency:workspace.currency,from:range.from,to:range.to,projects:projects.map(p=>projectFinancials(plans.find(x=>x.project_id===p.id)??{workspace_id:w,project_id:p.id,client_id:null,billing_mode:'hourly',default_bill_rate_minor:null,fixed_fee_minor:0,planned_expenses_minor:0,lines:[],created_at:p.created_at},entries,rates,expenses))};
+   const inRange=(d:string)=>d>=range.from&&d<=range.to;
+   const periodEntries=entries.filter(e=>inRange(e.work_date)),periodExpenses=expenses.filter(e=>inRange(e.expense_date));
+   return {workspace_id:w,currency:workspace.currency,from:range.from,to:range.to,projects:projects.map(p=>{
+    const plan=plans.find(x=>x.project_id===p.id)??{workspace_id:w,project_id:p.id,client_id:null,billing_mode:'hourly' as const,default_bill_rate_minor:null,fixed_fee_minor:0,planned_expenses_minor:0,lines:[],created_at:p.created_at};
+    const period=projectFinancials(plan,periodEntries,rates,periodExpenses);
+    return {...projectFinancials(plan,entries,rates,expenses),period_cost_minor:period.actual_cost_minor,period_minutes:period.actual_minutes};
+   })};
   }
  };
  return service;

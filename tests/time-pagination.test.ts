@@ -68,7 +68,9 @@ for (const mode of ['time', 'finance'] as const) {
       expect(requests.map(r => r.url.searchParams.get('offset'))).toEqual(['0', '1000', '2000']);
       for (const { url, headers } of requests) {
         expect(url.searchParams.getAll('workspace_id')).toEqual([`eq.${workspace}`]);
-        expect(url.searchParams.getAll('work_date')).toEqual([`gte.${from}`, `lte.${to}`]);
+        // Zeiten-Liste filtert auf den Zeitraum; die Finance-Übersicht lädt die
+        // ganze Projekthistorie (M3-G) und filtert den Zeitraum im Speicher.
+        expect(url.searchParams.getAll('work_date')).toEqual(mode === 'time' ? [`gte.${from}`, `lte.${to}`] : []);
         expect(url.searchParams.get('order')).toBe(mode === 'time' ? 'work_date.desc,created_at.desc,id.asc' : 'work_date.asc,id.asc');
         expect(url.searchParams.get('limit')).toBe('1000');
         expect(headers.get('prefer')).toContain('count=exact');

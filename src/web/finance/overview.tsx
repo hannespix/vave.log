@@ -21,7 +21,7 @@ export function Overview() {
   const total = (
     field:
       | "planned_revenue_minor"
-      | "actual_cost_minor"
+      | "period_cost_minor"
       | "forecast_margin_minor",
   ) =>
     rows.some((row) => row[field] === null)
@@ -56,7 +56,7 @@ export function Overview() {
         {(
           [
             ["projectPlanVolume", total("planned_revenue_minor")],
-            ["actualCost", total("actual_cost_minor")],
+            ["actualCost", total("period_cost_minor")],
             ["forecastMargin", total("forecast_margin_minor")],
           ] as [FinanceKey, number | null][]
         ).map(([label, value]) => (
@@ -135,6 +135,7 @@ export function Overview() {
                       ["plannedRevenue", row.planned_revenue_minor],
                       ["plannedCost", row.planned_cost_minor],
                       ["plannedMargin", row.planned_margin_minor],
+                      ["periodCost", row.period_cost_minor],
                       ["laborCost", row.actual_labor_cost_minor],
                       ["expenseTotal", row.actual_expenses_minor],
                       ["billableValue", row.actual_billable_value_minor],

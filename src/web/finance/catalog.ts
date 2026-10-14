@@ -82,6 +82,11 @@ const catalog = {
     "计划贡献利润",
   ],
   actualCost: ["Actual cost", "Istkosten", "实际成本"],
+  periodCost: [
+    "Cost in selected period",
+    "Istkosten im Zeitraum",
+    "所选期间成本",
+  ],
   forecastCost: ["Forecast total cost", "Kostenprognose gesamt", "预测总成本"],
   forecastMargin: [
     "Forecast contribution",
