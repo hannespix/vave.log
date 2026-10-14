@@ -186,6 +186,9 @@ export function Company() {
     e.preventDefault();
     if (role !== "owner") return;
     const f = new FormData(e.currentTarget);
+    // Wie beim Logo: der Schlüssel reist nur mit, wenn das Profil ihn kennt oder
+    // der Wert vom Standard abweicht — so speichert auch eine Live-DB vor der Migration.
+    const terms = Number(formText(f, "payment_terms_days") || "14");
     void run(() =>
       service.saveProfile({
         workspace_id: workspace.id,
@@ -196,6 +199,9 @@ export function Company() {
         invoice_prefix: formText(f, "invoice_prefix"),
         footer: formText(f, "footer"),
         ...(logo === undefined ? {} : { logo_data: logo }),
+        ...(profile?.payment_terms_days === undefined && terms === 14
+          ? {}
+          : { payment_terms_days: terms }),
       }),
     );
   }
@@ -247,6 +253,17 @@ export function Company() {
                   defaultValue={profile?.invoice_prefix || "INV"}
                   maxLength={16}
                   pattern="[A-Z0-9][A-Z0-9-]{0,15}"
+                />
+              </Field>
+              <Field label={t("paymentTerms")} hint={t("paymentTermsHint")}>
+                <input
+                  name="payment_terms_days"
+                  type="number"
+                  min={0}
+                  max={365}
+                  step={1}
+                  required
+                  defaultValue={profile?.payment_terms_days ?? 14}
                 />
               </Field>
             </div>
