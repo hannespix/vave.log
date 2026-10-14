@@ -56,7 +56,7 @@ test('task estimates and milestones drive automatic card progress and scoped det
  await page.screenshot({path:detailScreenshot,fullPage:true,animations:'disabled'});
  await testInfo.attach('Milestones and missing data actions',{path:detailScreenshot,contentType:'image/png'});
  await missing.getByRole('button',{name:'Tasks without a due date: 1'}).click();await expect(dialog).not.toBeVisible();await expect(page.getByRole('button',{name:'Design handoff',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Discovery complete',exact:true})).toHaveCount(0);
- await page.getByLabel('Status for Design handoff',{exact:true}).selectOption('done');await expect(page.getByLabel('Status for Design handoff',{exact:true})).toBeEnabled();expect(state.saved.at(-1)).toMatchObject({status:'done',estimated_minutes:180,is_milestone:true});
+ await page.getByRole('combobox',{name:'Status for Design handoff',exact:true}).selectOption('done');await expect(page.getByRole('combobox',{name:'Status for Design handoff',exact:true})).toBeEnabled();expect(state.saved.at(-1)).toMatchObject({status:'done',estimated_minutes:180,is_milestone:true});
  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await expect(card.locator('.project-card-progress strong')).toHaveText('100%');await card.getByRole('button',{name:'Project outlook: Automatic Project',exact:true}).click();
  await expect(dialog.getByText('All tracked tasks complete',{exact:true})).toBeVisible();await expect(dialog.getByText('No completion date is recorded.').first()).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);

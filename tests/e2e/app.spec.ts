@@ -43,7 +43,7 @@ test('setup retry refreshes document CSP before connecting a newly configured ba
  await setup(page);
  let backendReady=false;let documents=0;let authRequests=0;
  await page.route('**/api/config',r=>r.fulfill({json:{...config,configured:backendReady}}));
- await page.route('http://localhost:4173/',async route=>{
+ await page.context().route('http://localhost:4173/',async route=>{
   const response=await route.fetch();documents++;
   const headers=response.headers();
   if(documents===1)headers['content-security-policy']=headers['content-security-policy'].replace("connect-src 'self' https://test.supabase.co","connect-src 'self'");
