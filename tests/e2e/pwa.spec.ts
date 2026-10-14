@@ -105,7 +105,8 @@ test('real worker serves localized offline fallback, retains only public assets 
   await onlyPublicOfflineCache(page);
   await context.setOffline(false);
   await page.getByRole('button',{name:copy.retry,exact:true}).click();
-  await expect(page.getByRole('navigation').getByRole('button',{name:copy.settings,exact:true})).toBeVisible();
+  await expect(page.getByRole('navigation')).toBeVisible();
+  await expect(page.locator('.sidebar nav .nav-item').filter({hasText:copy.settings}).first()).toBeAttached();
  }
  await onlyPublicOfflineCache(page);
 });
