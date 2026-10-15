@@ -31,6 +31,7 @@ export type FinanceTab = "overview" | "clients" | "planning" | "invoices" | "off
 export interface FinanceNavigation {
   projectId: string;
   tab: FinanceTab;
+  invoiceId: string;
   revision: number;
 }
 export interface FinanceNavigationTarget {
@@ -51,6 +52,8 @@ export interface FinanceContextValue {
   errorMessage: string | null;
   range: { from: string; to: string };
   projectId?: string;
+  /** Rechnung, die die Liste beim Öffnen auswählen soll (globale Suche, Deep-Link). */
+  invoiceId?: string;
   setProjectId?: (projectId: string) => void;
   navigate?: (target: FinanceNavigationTarget) => void;
   t: (key: FinanceKey) => string;

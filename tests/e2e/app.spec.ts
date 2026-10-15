@@ -350,6 +350,33 @@ test('a running timer stays visible everywhere, minimizes and ticks in the tab t
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
+test('help explains the tool: landing, search, article, context help and the global search all reach it',async({page})=>{
+ await setup(page,true);await page.goto('/');
+ await goArea(page,'Help');
+ await expect(page.getByRole('heading',{name:'Everything you need to know.'})).toBeVisible();
+ await expect(page.getByRole('button',{name:/Your first hours in five minutes/}).first()).toBeVisible();
+ const search=page.getByRole('searchbox',{name:'Search help',exact:true});
+ await search.fill('cancel invoice');
+ await page.getByRole('button',{name:/Cancel an invoice \(GoBD\)/}).first().click();
+ await expect(page.getByRole('heading',{name:'Cancel an invoice (GoBD)'})).toBeVisible();
+ await expect(page.getByText('Owners and managers only',{exact:true})).toBeVisible();
+ await expect(page.getByText(/cancellation invoice with its own number/)).toBeVisible();
+ await page.locator('.help-crumbs').getByRole('button',{name:'Help',exact:true}).click();
+ await expect(search).toBeVisible();
+ await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:/^Time/}).click();
+ await page.getByRole('button',{name:'Help for this area',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Add time by hand'})).toBeVisible();
+ await page.getByRole('button',{name:'Go to area',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Your time counts.'})).toBeVisible();
+ await page.keyboard.press('Control+k');
+ const palette=page.getByRole('combobox',{name:'Global search'});
+ await palette.fill('glossary');
+ await page.keyboard.press('Enter');
+ await expect(page.getByRole('heading',{name:'Glossary'})).toBeVisible();
+ await expect(page.getByText('GoBD',{exact:true}).first()).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
 test('the phone bottom bar keeps four areas tappable and groups the rest behind More',async({page,isMobile})=>{
  await connectedSetup(page);await page.goto('/');
  const nav=page.getByRole('navigation',{name:'Main navigation'});
@@ -359,10 +386,10 @@ test('the phone bottom bar keeps four areas tappable and groups the rest behind 
   return;
  }
  for(const name of ['Overview','Projects','Tasks','Time','More'])await expect(nav.getByRole('button',{name,exact:true})).toBeVisible();
- for(const name of ['Reports','Team','Finance','Settings'])await expect(nav.getByRole('button',{name,exact:true})).toHaveCount(0);
+ for(const name of ['Reports','Team','Finance','Settings','Help'])await expect(nav.getByRole('button',{name,exact:true})).toHaveCount(0);
  await nav.getByRole('button',{name:'More',exact:true}).click();
  const sheet=page.locator('.nav-more-sheet');
- for(const name of ['Reports','Team','Finance','Settings'])await expect(sheet.getByRole('button',{name,exact:true})).toBeVisible();
+ for(const name of ['Reports','Team','Finance','Settings','Help'])await expect(sheet.getByRole('button',{name,exact:true})).toBeVisible();
  await sheet.getByRole('button',{name:'Settings',exact:true}).click();
  await expect(sheet).toHaveCount(0);
  await expect(page.getByText('VAVE.LOG / SETTINGS',{exact:true})).toBeVisible();

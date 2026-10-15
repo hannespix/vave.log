@@ -18,6 +18,16 @@ describe('workspace navigation',()=>{
   expect(parseWorkflowHash(workflowHash(route),ws)).toEqual(route);
   expect(workflowHash(route)).not.toContain('code=');
  });
+ it('round trips an invoice target and a help topic, and a project change drops the invoice',()=>{
+  const route={...initialWorkflow(ws),view:'finance' as const,projectId:a,financeTab:'invoices' as const,invoiceId:b};
+  expect(parseWorkflowHash(workflowHash(route),ws)).toEqual(route);
+  const help={...initialWorkflow(ws),view:'help' as const,helpTopic:'zeiten-einreichen'};
+  expect(parseWorkflowHash(workflowHash(help),ws)).toEqual(help);
+  expect(parseWorkflowHash(`#w=${ws}&view=help&topic=${'x'.repeat(200)}&inv=${'y'.repeat(200)}`,ws)).toMatchObject({view:'help',helpTopic:'x'.repeat(80),invoiceId:'y'.repeat(80)});
+  expect(nextWorkflow(route,{view:'finance',projectId:b}).invoiceId).toBe('');
+  expect(nextWorkflow(route,{view:'finance',projectId:b,invoiceId:a}).invoiceId).toBe(a);
+  expect(nextWorkflow(route,{view:'finance',financeTab:'overview'}).invoiceId).toBe(b);
+ });
  it('does not inherit another workspace or parse an auth fragment as workflow navigation',()=>{
   expect(parseWorkflowHash(workflowHash({...initialWorkflow(ws),view:'tasks',projectId:a}),'another')).toEqual(initialWorkflow('another'));
   expect(parseWorkflowHash('#access_token=secret',ws)).toEqual(initialWorkflow(ws));
