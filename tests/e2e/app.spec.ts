@@ -146,6 +146,14 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
+ const teamSearch=page.getByRole('searchbox',{name:'Search team',exact:true});
+ await teamSearch.fill('tobias geisler');
+ await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
+ await teamSearch.fill('niemand-heisst-so');
+ await expect(page.getByText('No one found.',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Reset filters',exact:true}).click();
+ await expect(teamSearch).toHaveValue('');
+ await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
  expect(input).toMatchObject({p_name:'VAVE · Demo',p_timezone:'Europe/Berlin',p_locale:'en'});expect(input?.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
