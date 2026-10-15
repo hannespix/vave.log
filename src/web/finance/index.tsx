@@ -203,7 +203,8 @@ function AuthorizedFinance({
         </div>
         <ArrowUpRight size={48} aria-hidden="true" />
       </div>
-      <div className="finance-tabs" role="tablist" aria-label={t("title")}>
+      <div className="finance-tabs">
+      <div className="finance-tablist" role="tablist" aria-label={t("title")}>
         {(
           ["overview", "clients", "planning", "offers", "invoices", "company"] as const
         ).map((id) => (
@@ -247,6 +248,7 @@ function AuthorizedFinance({
             {t(id)}
           </button>
         ))}
+      </div>
         <button
           className="icon-button"
           type="button"

@@ -76,7 +76,7 @@ function HelpArticle({ topic, visible, x, onTopic, onNavigate }: { topic: HelpTo
     {body.steps && <ol className="help-steps">{body.steps.map((step, i) => <li key={i}>{x(step)}</li>)}</ol>}
     {body.tip && <aside className="help-callout"><Lightbulb size={16} aria-hidden="true"/><div><strong>{t('Gut zu wissen')}</strong><p>{x(body.tip)}</p></div></aside>}
     {body.why && <aside className="help-callout help-why"><Sparkles size={16} aria-hidden="true"/><div><strong>{t('Darum')}</strong><p>{x(body.why)}</p></div></aside>}
-    {body.table && <div className="table-scroll help-table"><table><thead><tr>{body.table.head.map((cell, i) => <th key={i}>{x(cell)}</th>)}</tr></thead><tbody>{body.table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{topic.id === 'ref-shortcuts' && c === 0 ? keys(x(cell)) : x(cell)}</td>)}</tr>)}</tbody></table></div>}
+    {body.table && <div className="table-scroll help-table" tabIndex={0} role="region" aria-label={x(topic.title)}><table><thead><tr>{body.table.head.map((cell, i) => <th key={i}>{x(cell)}</th>)}</tr></thead><tbody>{body.table.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{topic.id === 'ref-shortcuts' && c === 0 ? keys(x(cell)) : x(cell)}</td>)}</tr>)}</tbody></table></div>}
     {body.list && <dl className="help-list">{body.list.map((item, i) => <div key={i}><dt>{x(item.term)}</dt><dd>{x(item.def)}</dd></div>)}</dl>}
     {related.length > 0 && <div className="help-related"><p className="eyebrow">{t('Verwandte Themen').toUpperCase()}</p><div className="help-chips">{related.map(item => <button key={item.id} type="button" className="help-chip" onClick={() => onTopic(item.id)}>{x(item.title)}</button>)}</div></div>}
     <footer className="help-footer">
