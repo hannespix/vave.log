@@ -109,3 +109,50 @@ describe('finance authorization and documents',()=>{
  it('creates a bounded time draft from approved entries even with long notes',async()=>{await login(member);const e=await one<{id:string}>("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable)values($1,$2,'2026-10-13',1,$3,true)returning id",[w,p,'Work '.repeat(500)]);await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[w]);await login(manager);await db.query('select public.review_entry($1,true)',[e.id]);await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor)values($1,$2,'2026-01-01',99)",[w,member]);const input={workspace_id:w,client_id:c,project_id:p,language:'en',from:'2026-10-01',to:'2026-10-13',issue_date:'2026-10-13',due_date:'2026-11-13',tax_basis_points:1900,zero_tax_reason:''};const d=(await one<{v:any}>('select public.finance_draft_from_time($1::jsonb)v',[JSON.stringify(input)])).v;expect(d.lines).toHaveLength(1);expect(d.lines[0].description.length).toBeLessThanOrEqual(1000);expect((await issue(d.id)).net_minor).toBe(2)});
  it('validates estimate labels without accounts and prevents duplicate freelancer expense costing',async()=>{expect(await rows("insert into public.finance_project_plans(workspace_id,project_id,lines)values($1,$2,$3) returning *",[w,p,JSON.stringify([{label:'External designer',kind:'freelancer',user_id:null,planned_minutes:600,cost_rate_minor:null,bill_rate_minor:7500}])])).toHaveLength(1);await expect(attempt("insert into public.finance_expenses(workspace_id,project_id,expense_date,description,amount_minor,not_time_costed)values($1,$2,'2026-10-13','Freelancer',5000,false)",[w,p])).rejects.toThrow()});
 });
+describe('finance offers',()=>{
+ const offer=(extra:Record<string,unknown>={})=>({workspace_id:w,client_id:c,title:'Website-Relaunch',language:'de',valid_until:'2026-11-30',notes:'',lines:[{description:'Konzept',quantity:10,unit_price_minor:9000,tax_basis_points:1900,zero_tax_reason:''}],...extra});
+ const saveOffer=async(input=offer())=>(await one<{v:any}>('select public.finance_save_offer($1::jsonb) v',[JSON.stringify(input)])).v;
+ it('drafts offers, sends them with an own yearly number and frozen snapshots, and decides them',async()=>{
+  let o=await saveOffer();
+  expect(o.status).toBe('draft');expect(o.number).toBeNull();expect(o.net_minor).toBe(90000);expect(o.tax_minor).toBe(17100);expect(o.client_name).toBe('Customer');
+  o=await saveOffer(offer({id:o.id,title:'Relaunch 2027'}));expect(o.title).toBe('Relaunch 2027');
+  const sent=(await one<{v:any}>('select public.finance_send_offer($1,$2) v',[w,o.id])).v;
+  expect(sent.status).toBe('sent');expect(sent.number).toMatch(/^AN-\d{4}-0001$/);expect(sent.issuer_snapshot.legal_name).toBe('Issuer');expect(sent.customer_snapshot.name).toBe('Customer');
+  // Angebots- und Rechnungskreis bleiben getrennt.
+  expect((await issue((await save()).id)).number).not.toMatch(/^AN-/);
+  expect((await one<{v:any}>('select public.finance_send_offer($1,$2) v',[w,o.id])).v.number).toBe(sent.number);
+  await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer({id:o.id}))])).rejects.toThrow(/FINANCE_CONFLICT/);
+  for(const sql of ["update public.finance_offers set total_minor=1 where id=$1","delete from public.finance_offers where id=$1"])await expect(attempt(sql,[o.id])).rejects.toThrow(/permission denied/);
+  const accepted=(await one<{v:any}>('select public.finance_decide_offer($1,$2,true) v',[w,o.id])).v;
+  expect(accepted.status).toBe('accepted');expect(accepted.decided_at).toBeTruthy();
+  await expect(attempt('select public.finance_decide_offer($1,$2,false)',[w,o.id])).rejects.toThrow(/FINANCE_CONFLICT/);
+  expect((await one<{v:any}>('select public.finance_send_offer($1,$2) v',[w,(await saveOffer()).id])).v.number).toMatch(/-0002$/)});
+ it('turns an accepted offer into exactly one fixed-fee project',async()=>{
+  const o=await saveOffer();
+  await db.query('select public.finance_send_offer($1,$2)',[w,o.id]);
+  await expect(attempt("select public.finance_offer_project($1,$2,'WEB-01')",[w,o.id])).rejects.toThrow(/FINANCE_CONFLICT/);
+  await db.query('select public.finance_decide_offer($1,$2,true)',[w,o.id]);
+  await expect(attempt("select public.finance_offer_project($1,$2,'A')",[w,o.id])).rejects.toThrow(/FINANCE_CONFLICT/);
+  const done=(await one<{v:any}>("select public.finance_offer_project($1,$2,'WEB-01') v",[w,o.id])).v;
+  expect(done.project_id).toBeTruthy();
+  expect(await one('select code,name,client from public.projects where id=$1',[done.project_id])).toMatchObject({code:'WEB-01',name:'Website-Relaunch',client:'Customer'});
+  const plan=await one<{billing_mode:string;fixed_fee_minor:number|string}>('select billing_mode,fixed_fee_minor from public.finance_project_plans where workspace_id=$1 and project_id=$2',[w,done.project_id]);
+  expect(plan.billing_mode).toBe('fixed');expect(Number(plan.fixed_fee_minor)).toBe(90000);
+  const retry=(await one<{v:any}>("select public.finance_offer_project($1,$2,'WEB-02') v",[w,o.id])).v;
+  expect(retry.project_id).toBe(done.project_id);
+  expect(await rows("select id from public.projects where workspace_id=$1 and code='WEB-02'",[w])).toEqual([])});
+ it('deletes only drafts and declined offers and keeps offers away from members',async()=>{
+  const o=await saveOffer();
+  await db.query('select public.finance_send_offer($1,$2)',[w,o.id]);
+  await expect(attempt('select public.finance_delete_offer($1,$2)',[w,o.id])).rejects.toThrow(/FINANCE_CONFLICT/);
+  await db.query('select public.finance_decide_offer($1,$2,false)',[w,o.id]);
+  await db.query('select public.finance_delete_offer($1,$2)',[w,o.id]);
+  expect((await one<{v:any}>('select public.finance_list_offers($1) v',[w])).v).toEqual([]);
+  await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer({client_id:fc}))])).rejects.toThrow(/FINANCE_VALIDATION/);
+  await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer({title:''}))])).rejects.toThrow();
+  await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer({status:'sent'}))])).rejects.toThrow();
+  await login(member);
+  expect(await rows('select * from public.finance_offers where workspace_id=$1',[w])).toEqual([]);
+  await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer())])).rejects.toThrow(/FINANCE_FORBIDDEN/);
+  await login(manager)});
+});

@@ -7,6 +7,7 @@ import type {
   FinanceOverview,
   Invoice,
   InvoiceLanguage,
+  Offer,
   ProjectPlan,
   StaffRate,
 } from "../../shared/finance-types";
@@ -23,9 +24,10 @@ export interface FinanceData {
   plans: ProjectPlan[];
   expenses: Expense[];
   invoices: Invoice[];
+  offers: Offer[];
   overview: FinanceOverview;
 }
-export type FinanceTab = "overview" | "clients" | "planning" | "invoices" | "company";
+export type FinanceTab = "overview" | "clients" | "planning" | "invoices" | "offers" | "company";
 export interface FinanceNavigation {
   projectId: string;
   tab: FinanceTab;
