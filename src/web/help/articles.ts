@@ -284,6 +284,16 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['ref-shortcuts'],
   },
+  'ref-accessibility': {
+    steps: [
+      ['The first Tab on every page jumps to “Skip to content”; Enter moves the focus straight into the main area. Every button, link and field shows a clear purple focus ring.', 'Der erste Tab auf jeder Seite führt zu „Zum Inhalt“; Enter setzt den Fokus direkt in den Hauptbereich. Jede Schaltfläche, jeder Link und jedes Feld zeigt einen deutlichen lila Fokusrahmen.', '每页第一次按 Tab 会到达“跳到内容”；按 Enter 直接进入主区域。所有按钮、链接和字段都有清晰的紫色焦点框。'],
+      ['Everything you can do with the mouse also works with the keyboard: dragging task cards has a keyboard twin in the status field on each card; menus open with Enter or Space, ↑ ↓ choose, Esc closes and returns the focus.', 'Alles, was mit der Maus geht, geht auch mit der Tastatur: Zum Ziehen der Aufgabenkarten gibt es das Statusfeld auf jeder Karte; Auswahlmenüs öffnen mit Enter oder Leertaste, ↑ ↓ wählen, Esc schließt und gibt den Fokus zurück.', '鼠标能做的，键盘也能做：拖动任务卡片可改用每张卡片上的状态字段；菜单用 Enter 或空格打开，↑ ↓ 选择，Esc 关闭并返回焦点。'],
+      ['Screen readers hear names for every icon button, tables are announced as scrollable regions, dialogs and tabs follow the ARIA patterns, and the page language follows your language setting.', 'Screenreader hören für jede Symbolschaltfläche einen Namen, Tabellen werden als scrollbare Bereiche angesagt, Dialoge und Reiter folgen den ARIA-Mustern, und die Seitensprache folgt deiner Spracheinstellung.', '读屏软件能读出每个图标按钮的名称，表格会作为可滚动区域朗读，对话框和标签页遵循 ARIA 模式，页面语言跟随你的语言设置。'],
+      ['Zoom up to 400 % or use a phone: the layout reflows without horizontal scrolling. If your system asks for reduced motion, vave.log switches off animations, including the tilt when dragging cards.', 'Zoom bis 400 % oder Smartphone: Das Layout bricht ohne waagerechtes Scrollen um. Wünscht dein System reduzierte Bewegung, schaltet vave.log Animationen ab – auch das Kippen beim Ziehen von Karten.', '可放大至 400 % 或使用手机：布局会自动重排，无需横向滚动。若系统要求减少动态效果，vave.log 会关闭动画，包括拖动卡片时的倾斜效果。'],
+    ],
+    why: ['vave.log follows WCAG 2.2 level AA. Text contrast is at least 4.5:1, touch targets are at least 24 px, and an automated check (axe-core) tests every area, dialog and the phone layout on each change.', 'vave.log richtet sich nach WCAG 2.2 Stufe AA. Textkontrast mindestens 4,5:1, Klickflächen mindestens 24 px, und eine automatische Prüfung (axe-core) testet bei jeder Änderung alle Bereiche, Dialoge und die Smartphone-Ansicht.', 'vave.log 遵循 WCAG 2.2 AA 级。文字对比度至少 4.5:1，点击区域至少 24 px，每次更改都会用自动检查（axe-core）测试所有区域、对话框和手机布局。'],
+    related: ['ref-shortcuts'],
+  },
   'ref-shortcuts': {
     table: {
       head: [['Keys', 'Tasten', '按键'], ['Where', 'Wo', '位置'], ['What happens', 'Was passiert', '效果']],
@@ -296,7 +306,7 @@ export const HELP_BODIES: Record<string, HelpBody> = {
         [['Tab, Shift+Tab', 'Tab, Umschalt+Tab', 'Tab、Shift+Tab'], ['forms and lists', 'Formulare und Listen', '表单和列表'], ['Move focus; Enter activates buttons and links', 'Fokus bewegen; Enter löst Knöpfe und Links aus', '移动焦点；Enter 触发按钮和链接']],
       ],
     },
-    related: ['ref-search'],
+    related: ['ref-search', 'ref-accessibility'],
   },
   'ref-status': {
     table: {

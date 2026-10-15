@@ -138,7 +138,7 @@ export function Invoices() {
         {invoices.length === 0 ? (
           <Empty title={t(available ? "noInvoices" : "projectUnavailable")} text={t("noSend")} />
         ) : (
-          <div className="table-scroll">
+          <div className="table-scroll" tabIndex={0} role="region" aria-label={t("invoices")}>
             <table>
               <thead>
                 <tr>
@@ -490,7 +490,8 @@ function InvoiceDetail({
       {invoice.cancellation_reason && (
         <p className="finance-prewrap">{invoice.cancellation_reason}</p>
       )}
-      <div className="table-scroll">
+      {/* Breite Positionstabelle: per Tastatur fokussier- und scrollbar. */}
+      <div className="table-scroll" tabIndex={0} role="region" aria-label={t("invoiceLines")}>
         <table>
           <thead>
             <tr>

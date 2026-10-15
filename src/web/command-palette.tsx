@@ -27,8 +27,9 @@ export function CommandPalette({ items, onClose, placeholder }: { items: Palette
       }}/></div>
       {results.length === 0
         ? <p className="palette-empty">{t('Keine Treffer.')}</p>
-        : <ul className="palette-results" id="palette-results" role="listbox" aria-label={t('Suchergebnisse')}>{results.map((item, index) => <li key={item.id} id={`palette-item-${item.id}`} role="option" aria-selected={index === current}>
-            <button type="button" tabIndex={-1} className={index === current ? 'active' : ''} onMouseEnter={() => setActive(index)} onClick={() => pick(item)}><span className="palette-kind">{t(item.kindLabel)}</span><span className="palette-title">{item.title}</span>{item.subtitle && <span className="palette-sub">{item.subtitle}</span>}</button>
+        : <ul className="palette-results" id="palette-results" role="listbox" aria-label={t('Suchergebnisse')}>{results.map((item, index) => <li key={item.id} id={`palette-item-${item.id}`} role="option" aria-selected={index === current} className={index === current ? 'palette-row active' : 'palette-row'} onMouseEnter={() => setActive(index)} onClick={() => pick(item)}>
+            {/* Keine Schaltfläche in der Option: Bedienung läuft über das Suchfeld (Pfeiltasten, Enter), die Maus über die Zeile. */}
+            <span className="palette-kind">{t(item.kindLabel)}</span><span className="palette-title">{item.title}</span>{item.subtitle && <span className="palette-sub">{item.subtitle}</span>}
           </li>)}</ul>}
       <p className="palette-hint">{t('↑↓ wählen · Enter öffnen · Esc schließen')}</p>
     </div>

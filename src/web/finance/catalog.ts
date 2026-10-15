@@ -231,6 +231,7 @@ const catalog = {
   newExpense: ["Add expense", "Ausgabe hinzufügen", "添加支出"],
   date: ["Date", "Datum", "日期"],
   description: ["Description", "Beschreibung", "描述"],
+  invoiceLines: ["Invoice line items", "Rechnungspositionen", "发票明细"],
   amount: ["Amount", "Betrag", "金额"],
   category: ["Category", "Kategorie", "类别"],
   external: ["External", "Extern", "外部"],

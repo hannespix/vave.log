@@ -110,6 +110,15 @@ export function longDate(iso: string, locale: Locale = getLocale()) {
   const date = calendarDate(iso);
   return date ? new Intl.DateTimeFormat(localeTag(locale), { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(date) : translate('Ungültiges Datum', locale);
 }
+/** Schriftfarbe mit dem höheren Kontrast (WCAG) auf einer beliebigen Hex-Hintergrundfarbe, z. B. Projektfarben. */
+export function readableTextOn(background: string): '#ffffff' | '#1b1b1b' {
+  const hex = /^#?([0-9a-f]{6})$/i.exec(background.trim())?.[1];
+  if (!hex) return '#ffffff';
+  const channel = (offset: number) => { const c = parseInt(hex.slice(offset, offset + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const lum = 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+  const onWhite = 1.05 / (lum + 0.05), onDark = (lum + 0.05) / (0.0109 + 0.05);
+  return onWhite >= onDark ? '#ffffff' : '#1b1b1b';
+}
 export function initials(name: string) { return name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase(); }
 export function errorMessage(error: unknown, locale: Locale = getLocale()): string {
   const value = error && typeof error === 'object' ? error as {code?: unknown; message?: unknown} : {};

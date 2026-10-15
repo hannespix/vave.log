@@ -263,7 +263,7 @@ function Rates() {
       }
     >
       <p className="finance-caption">{t("rateHint")}</p>
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label={t("rates")}>
         <table>
           <thead>
             <tr>
@@ -469,7 +469,7 @@ function Expenses({ projectId }: { projectId: string }) {
         </button>
       }
     >
-      <div className="table-scroll">
+      <div className="table-scroll" tabIndex={0} role="region" aria-label={t("expenses")}>
         <table>
           <thead>
             <tr>
