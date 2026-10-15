@@ -2,6 +2,8 @@
 
 ## Stand
 
+Die Bestätigungs-, Einladungs-, Anmelde-, Passwortreset- und E-Mail-Änderungs-Links sind Token-Hash-Links auf die Site, die erst die App einlöst (siehe Abschnitt 1). Solange die Vorlagen im Dashboard nicht übernommen sind, verschickt Supabase seine Standardmail mit dem alten Weiterleitungslink; der funktioniert nur, wenn die Site URL stimmt, und ist anfällig für Link-Scanner.
+
 Die 13 gebrandeten HTML-Vorlagen sind in **Englisch, Deutsch und vereinfachtem Chinesisch** vorbereitet, **noch nicht im gehosteten Supabase aktiviert**. Ein GitHub-Push oder Sites-Deployment aktiviert keine Auth-E-Mail-Vorlagen. Die verbundene Supabase-MCP-Schnittstelle bietet keinen Zugriff auf die Auth-Konfiguration; es liegen hier weder SMTP-Zugangsdaten noch ein Management-API-Token vor. Es wurden keine Testmails verschickt.
 
 Supabase hat die Anpassung von Vorlagen für **neue Free-Projekte mit Standard-SMTP seit 3. Juni 2026 eingeschränkt**. Das VAVE.LOG-Projekt wurde danach erstellt. Ein eigener SMTP-Dienst ermöglicht die Anpassung auch im Free-Plan und ist für den Teamversand erforderlich. Ein kostenpflichtiger Supabase-Plan ist dafür nicht zwingend nötig.
@@ -28,13 +30,15 @@ Die Go-Bedingung `and .Data (eq (printf "%s" .Data.locale) "de")` (analog für `
 
 | Feld | Wert |
 | --- | --- |
-| Site URL | `https://vave-log.pixer.chatgpt.site` |
-| Redirect URL | `https://vave-log.pixer.chatgpt.site/` |
-| Weitere Redirect URL | `https://vave-log.pixer.chatgpt.site/?reset=1` |
+| Site URL | `https://hannespix.github.io/vave.log` (GitHub Pages; ohne Schrägstrich am Ende – Pages leitet `/vave.log?…` selbst auf `/vave.log/?…` um) |
+| Redirect URL | `https://hannespix.github.io/vave.log/**` |
+| Weitere Redirect URL | keine nötig – `?reset=1` liegt unter dem Muster oben |
 
 Speichern. Nicht `localhost:3000` als Produktionsadresse stehen lassen. Die App übergibt ihre Rückleitung bei Registrierung und Passwortreset bereits; Supabase muss sie zusätzlich erlauben. Weitere echte Callback-Pfade, etwa für eine Registrierung während einer OAuth-Verbindung, später gezielt ergänzen. Keine pauschale Wildcard für fremde Domains verwenden.
 
-**Fehler „Cannot GET /?code=…“ auf localhost:** Der Bestätigungslink hat zum lokalen Standardziel statt zur App geführt. Die CSP-Meldung zu `/.well-known/appspecific/com.chrome.devtools.json` kommt von Chromes DevTools und ist nicht die Ursache der falschen Rückleitung. Keine CSP-Ausnahme für localhost hinzufügen.
+**Token-Hash-Links statt Supabase-Weiterleitung (seit 15.10.2026):** Die Vorlagen verlinken nicht mehr `{{ .ConfirmationURL }}` (Supabase-Endpunkt `/auth/v1/verify`, der den Token sofort beim Abruf einlöst und dann weiterleitet), sondern `{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=…`. Erst die App löst den Token mit `verifyOtp` ein (`src/web/main.tsx`). Zwei Probleme verschwinden damit: Link-Scanner in Mailprogrammen und Sicherheitsgateways, die jeden Link vorab abrufen, verbrauchen den Token nicht mehr (Symptom: `error_code=otp_expired`, obwohl die E-Mail in `auth.users` längst bestätigt ist); und der Link funktioniert auf jedem Gerät, weil kein PKCE-Verifier aus dem Browser der Registrierung nötig ist. Landet trotzdem eine Fehlerrückleitung in der App (`error_code` in Query oder Hash), zeigt sie einen Hinweis mit „Neuen Bestätigungslink anfordern“ (`auth.resend`). Die Site URL muss dafür stimmen – ohne sie führen die Links ins Leere.
+
+**Fehler „Cannot GET /?code=…“ oder `otp_expired` auf localhost:3000:** Der Bestätigungslink hat zum lokalen Standardziel statt zur App geführt. Die CSP-Meldung zu `/.well-known/appspecific/com.chrome.devtools.json` kommt von Chromes DevTools und ist nicht die Ursache der falschen Rückleitung. Keine CSP-Ausnahme für localhost hinzufügen.
 
 Nach der Korrektur zuerst die veröffentlichte App direkt öffnen und normal anmelden: Die E-Mail kann durch den Klick bereits bestätigt sein, obwohl die anschließende Weiterleitung fehlschlug. Wenn sie noch unbestätigt ist, im Supabase-Dashboard unter Auth > Users gezielt einen neuen Bestätigungslink für das eigene Testkonto anfordern. Bereits verbrauchte Links nicht wiederverwenden. Passwortreset erneut über „Passwort vergessen?“ anfordern und im selben Browser öffnen. Der PKCE-Code braucht den dort gespeicherten Verifier; nicht in einer anderen Browser-App testen. Keine Bestätigung abschalten und keine Auth-Tabellen manuell umschreiben.
 
@@ -54,7 +58,7 @@ In [Auth > Email Templates](https://supabase.com/dashboard/project/ieeujtmpxqxmf
 - Sieben Sicherheitsbenachrichtigungen: Passwort, E-Mail, Telefon, verknüpfte/entfernte Anmeldung und hinzugefügte/entfernte Verifizierungsmethode.
 - Die Vorlagen schalten keine neuen Anmeldeverfahren ein. Sicherheitsbenachrichtigungen werden nur versendet, wenn ihre jeweiligen Schalter in Supabase aktiv sind. Diese Schalter separat prüfen; das Branding-Paket verändert sie nicht.
 - Die Supabase-Account-Einladung ist nicht die Workspace-Einladung der Anwendung. Letztere speichert weiterhin die Zuordnung ohne automatischen Mailversand und vergibt Rechte erst beim bestätigten Login.
-- Dynamische Namen und sonstige nutzersteuerbare Metadaten werden nicht in die E-Mails übernommen. Aktionslinks behalten `{{ .ConfirmationURL }}` unverändert, der Sicherheitscode verwendet `{{ .Token }}`. Keine selbst gebauten Tokenlinks, fest eingetragenen Zugangstokens oder erfundenen Ablaufzeiten.
+- Dynamische Namen und sonstige nutzersteuerbare Metadaten werden nicht in die E-Mails übernommen. Aktionslinks sind Token-Hash-Links auf die Site (`{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=signup|invite|magiclink|recovery|email_change`, Passwortreset zusätzlich mit `reset=1`), der Sicherheitscode verwendet `{{ .Token }}`. Keine fest eingetragenen Zugangstokens oder erfundenen Ablaufzeiten; die Typen müssen zu `AUTH_LINK_TYPES` in `src/web/helpers.ts` passen.
 
 Alternativ enthält [auth-email-branding.json](../supabase/auth-email-branding.json) den vollständigen, **ausschließlich auf Betreff und Inhalt begrenzten** PATCH-Body für `https://api.supabase.com/v1/projects/ieeujtmpxqxmfyietqgw/config/auth`. Vor einer Anwendung über die offizielle Management API bestehende Template-Felder sichern. Einen Management-Zugriffstoken nur über einen sicheren lokalen Secret-Kanal bereitstellen; ein Publishable- oder Service-Role-Key ersetzt diesen Token nicht. Der Body verändert weder SMTP noch Site URL, Redirects, Registrierung, Verifizierung oder Benachrichtigungsschalter.
 

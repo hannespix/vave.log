@@ -9,36 +9,36 @@ const check = process.argv.includes('--check');
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const templates = [
   {
-    key: 'confirmation', label: 'Confirm sign up', subject: 'VAVE.LOG – Bestätige deine E-Mail-Adresse',
+    key: 'confirmation', label: 'Confirm sign up', subject: 'VAVE.LOG – Bestätige deine E-Mail-Adresse', link: 'signup',
     eyebrow: 'DEIN ACCOUNT', title: 'Einmal bestätigen.<br>Dann kann es losgehen.',
     preview: 'Bestätige deine E-Mail-Adresse für VAVE.LOG.',
-    paragraphs: ['Willkommen bei VAVE.LOG. Mit einem Klick bestätigst du deine E-Mail-Adresse und schließt deine Registrierung ab.', 'Öffne den Link möglichst im selben Browser, in dem du deinen Account erstellt hast.'],
+    paragraphs: ['Willkommen bei VAVE.LOG. Mit einem Klick bestätigst du deine E-Mail-Adresse und schließt deine Registrierung ab.', 'Der Link funktioniert auf jedem Gerät – auch auf dem Smartphone.'],
     action: 'E-Mail-Adresse bestätigen',
     note: 'Du hast keinen Account erstellt? Dann ignoriere diese Nachricht. Ohne deine Bestätigung wird die Registrierung nicht abgeschlossen.',
   },
   {
-    key: 'invite', label: 'Invite user', subject: 'VAVE.LOG – Deine Einladung',
+    key: 'invite', label: 'Invite user', subject: 'VAVE.LOG – Deine Einladung', link: 'invite',
     eyebrow: 'DEINE EINLADUNG', title: 'Dein Zugang<br>zu VAVE.LOG.',
     preview: 'Du wurdest eingeladen, einen VAVE.LOG-Account anzulegen.',
     paragraphs: ['Du wurdest eingeladen, einen Account bei VAVE.LOG anzulegen. Über den folgenden Link nimmst du die Einladung an.', 'Der Zugang zu einem Workspace wird separat von dessen Administration vergeben.'],
     action: 'Einladung annehmen', note: 'Du hast diese Einladung nicht erwartet? Kläre sie mit der einladenden Person, bevor du den Link öffnest.',
   },
   {
-    key: 'magic_link', label: 'Magic link', subject: 'VAVE.LOG – Dein Anmeldelink',
+    key: 'magic_link', label: 'Magic link', subject: 'VAVE.LOG – Dein Anmeldelink', link: 'magiclink',
     eyebrow: 'DEINE ANMELDUNG', title: 'Ein Klick.<br>Du bist drin.',
     preview: 'Dein persönlicher Link zur Anmeldung bei VAVE.LOG.',
-    paragraphs: ['Du hast einen Anmeldelink für VAVE.LOG angefordert. Öffne ihn möglichst im selben Browser, in dem du die Anmeldung begonnen hast.'],
+    paragraphs: ['Du hast einen Anmeldelink für VAVE.LOG angefordert. Er funktioniert auf jedem Gerät – auch auf dem Smartphone.'],
     action: 'Bei VAVE.LOG anmelden', note: 'Du hast diesen Link nicht angefordert? Ignoriere die Nachricht und gib den Link nicht weiter.',
   },
   {
-    key: 'recovery', label: 'Reset password', subject: 'VAVE.LOG – Passwort zurücksetzen',
+    key: 'recovery', label: 'Reset password', subject: 'VAVE.LOG – Passwort zurücksetzen', link: 'recovery',
     eyebrow: 'DEIN PASSWORT', title: 'Ein neues Passwort.<br>Für deinen Account.',
     preview: 'Lege ein neues Passwort für deinen VAVE.LOG-Account fest.',
-    paragraphs: ['Du hast angefordert, dein Passwort zurückzusetzen. Über den folgenden Link kannst du ein neues Passwort festlegen.', 'Öffne den Link im selben Browser, in dem du ihn angefordert hast.'],
+    paragraphs: ['Du hast angefordert, dein Passwort zurückzusetzen. Über den folgenden Link kannst du ein neues Passwort festlegen.', 'Der Link funktioniert auf jedem Gerät – auch auf dem Smartphone.'],
     action: 'Neues Passwort festlegen', note: 'Du hast kein neues Passwort angefordert? Ignoriere diese Nachricht. Dein bisheriges Passwort bleibt gültig.',
   },
   {
-    key: 'email_change', label: 'Change email address', subject: 'VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen',
+    key: 'email_change', label: 'Change email address', subject: 'VAVE.LOG – Änderung deiner E-Mail-Adresse bestätigen', link: 'email_change',
     eyebrow: 'DEINE E-MAIL-ADRESSE', title: 'Neue Adresse.<br>Einmal bestätigen.',
     preview: 'Bestätige die angeforderte Änderung deiner E-Mail-Adresse.',
     paragraphs: ['Für deinen VAVE.LOG-Account wurde eine Änderung der E-Mail-Adresse angefordert. Bestätige die Änderung über den folgenden Link.', 'Wenn du je eine Bestätigung an deine bisherige und deine neue Adresse erhältst, öffne bitte beide Links.'],
@@ -104,7 +104,7 @@ const translations = {
     confirmation: {
       subject: 'Confirm your email address', eyebrow: 'YOUR ACCOUNT', title: 'One confirmation.<br>Then you’re ready.',
       preview: 'Confirm your email address for VAVE.LOG.',
-      paragraphs: ['Welcome to VAVE.LOG. Confirm your email address with one click to finish creating your account.', 'Open the link in the same browser you used to create your account, if possible.'],
+      paragraphs: ['Welcome to VAVE.LOG. Confirm your email address with one click to finish creating your account.', 'The link works on any device, including your phone.'],
       action: 'Confirm email address', note: 'Did not create an account? Ignore this message. Your registration will not be completed without your confirmation.',
     },
     invite: {
@@ -116,13 +116,13 @@ const translations = {
     magic_link: {
       subject: 'Your sign-in link', eyebrow: 'YOUR SIGN-IN', title: 'One click.<br>You’re in.',
       preview: 'Your personal link to sign in to VAVE.LOG.',
-      paragraphs: ['You requested a sign-in link for VAVE.LOG. Open it in the same browser you used to start signing in, if possible.'],
+      paragraphs: ['You requested a sign-in link for VAVE.LOG. It works on any device, including your phone.'],
       action: 'Sign in to VAVE.LOG', note: 'Did not request this link? Ignore the message and do not share the link.',
     },
     recovery: {
       subject: 'Reset your password', eyebrow: 'YOUR PASSWORD', title: 'A new password.<br>For your account.',
       preview: 'Choose a new password for your VAVE.LOG account.',
-      paragraphs: ['You requested a password reset. Use the following link to choose a new password.', 'Open the link in the same browser you used to request it.'],
+      paragraphs: ['You requested a password reset. Use the following link to choose a new password.', 'The link works on any device, including your phone.'],
       action: 'Choose a new password', note: 'Did not request a new password? Ignore this message. Your current password will remain valid.',
     },
     email_change: {
@@ -142,7 +142,7 @@ const translations = {
     confirmation: {
       subject: '确认你的电子邮箱', eyebrow: '你的账户', title: '确认邮箱，<br>即可开始。',
       preview: '确认你用于 VAVE.LOG 的电子邮箱。',
-      paragraphs: ['欢迎使用 VAVE.LOG。点击下方按钮确认你的电子邮箱，即可完成账户注册。', '请尽量在创建账户时使用的同一浏览器中打开链接。'],
+      paragraphs: ['欢迎使用 VAVE.LOG。点击下方按钮确认你的电子邮箱，即可完成账户注册。', '此链接可在任何设备上使用，包括手机。'],
       action: '确认电子邮箱', note: '你没有创建账户？请忽略此邮件。未经你的确认，注册不会完成。',
     },
     invite: {
@@ -154,13 +154,13 @@ const translations = {
     magic_link: {
       subject: '你的登录链接', eyebrow: '账户登录', title: '点击一次，<br>即可登录。',
       preview: '用于登录 VAVE.LOG 的专属链接。',
-      paragraphs: ['你申请了 VAVE.LOG 登录链接。请尽量在发起登录时使用的同一浏览器中打开此链接。'],
+      paragraphs: ['你申请了 VAVE.LOG 登录链接。它可在任何设备上使用，包括手机。'],
       action: '登录 VAVE.LOG', note: '你没有申请此链接？请忽略此邮件，也不要将链接分享给他人。',
     },
     recovery: {
       subject: '重置你的密码', eyebrow: '你的密码', title: '为你的账户<br>设置新密码。',
       preview: '为你的 VAVE.LOG 账户设置新密码。',
-      paragraphs: ['你申请了重置密码。请通过下方链接设置新密码。', '请在申请此链接时使用的同一浏览器中打开链接。'],
+      paragraphs: ['你申请了重置密码。请通过下方链接设置新密码。', '此链接可在任何设备上使用，包括手机。'],
       action: '设置新密码', note: '你没有申请重置密码？请忽略此邮件。你目前的密码仍然有效。',
     },
     email_change: {
@@ -211,18 +211,24 @@ function translated(template, locale) {
   const copy = translations[locale]?.[template.key];
   const required = ['subject', 'eyebrow', 'title', 'preview', 'paragraphs', 'note', ...(template.action ? ['action'] : [])];
   if (!copy || required.some(key => !copy[key])) throw new Error(`Incomplete ${locale} email copy: ${template.key}`);
-  return { key: template.key, code: template.code, notification: template.notification, ...copy, subject: `VAVE.LOG – ${copy.subject}` };
+  return { key: template.key, code: template.code, link: template.link, notification: template.notification, ...copy, subject: `VAVE.LOG – ${copy.subject}` };
 }
 
 // Go's `and` short-circuits before reading nil .Data. `printf` safely converts
 // unexpected JSON metadata types for comparison; metadata is never output.
 // Only canonical de/zh select a branch; missing/unknown values use English.
 const localized = variants => `{{ if and .Data (eq (printf "%s" .Data.locale) "de") }}${variants.de}{{ else if and .Data (eq (printf "%s" .Data.locale) "zh") }}${variants.zh}{{ else }}${variants.en}{{ end }}`;
+// Token-Hash-Links landen auf der Site und werden erst dort von der App eingelöst (verifyOtp). So verbraucht
+// kein Link-Scanner im Mailprogramm den Token, und der Link funktioniert auf jedem Gerät. `?reset=1` bringt den
+// Passwortreset in den richtigen Bildschirm, bevor der Token eingelöst ist.
+const actionLink = template => `{{ .SiteURL }}/?${template.link === 'recovery' ? 'reset=1&amp;' : ''}token_hash={{ .TokenHash }}&amp;type=${template.link}`;
 const paragraph = text => `<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">${escape(text)}</p>`;
 function card(template, locale) {
   const strings = languages[locale];
-  const action = template.action ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">${escape(template.action)}</a></td></tr></table>
-<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">${escape(strings.linkNote)}<br><a href="{{ .ConfirmationURL }}" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">{{ .ConfirmationURL }}</a></p>` : '';
+  if (template.action && !template.link) throw new Error(`Missing token link type: ${template.key}`);
+  const href = template.action ? actionLink(template) : '';
+  const action = template.action ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;"><tr><td bgcolor="#641dff" style="border-radius:8px;text-align:center;"><a href="${href}" style="display:inline-block;border:16px solid #641dff;border-left-width:22px;border-right-width:22px;border-radius:8px;background:#641dff;color:#ffffff;font-size:16px;font-weight:bold;line-height:22px;text-decoration:none;mso-padding-alt:0;">${escape(template.action)}</a></td></tr></table>
+<p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">${escape(strings.linkNote)}<br><a href="${href}" style="color:#641dff;text-decoration:underline;word-break:break-all;overflow-wrap:anywhere;">${href}</a></p>` : '';
   const code = template.code ? `<div style="margin:26px 0;padding:20px 12px;background:#e8ffb9;border:1px solid #d8edb0;border-radius:8px;text-align:center;font-family:Consolas,'Courier New',monospace;font-size:30px;line-height:40px;letter-spacing:5px;color:#1b1b1b;">{{ .Token }}</div><p style="margin:0 0 24px;color:#5f655a;font-size:13px;line-height:21px;">${escape(strings.codeNote)}</p>` : '';
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="#ffffff" style="width:100%;max-width:600px;background:#ffffff;border:1px solid #e7e8e3;border-radius:16px;overflow:hidden;">
 <tr><td bgcolor="#e8ffb9" class="email-pad" style="padding:30px 36px;background:#e8ffb9;border-radius:16px 16px 0 0;">
@@ -266,8 +272,9 @@ for (const template of templates) {
 outputs.set('supabase/auth-email-branding.json', `${JSON.stringify(payload, null, 2)}\n`);
 outputs.set('supabase/templates/subjects.json', `${JSON.stringify(Object.fromEntries(templates.map(t => [t.key, { dashboard: t.label, subject: payload[`mailer_subjects_${t.key}`] }])), null, 2)}\n`);
 const previewCard = (template, locale) => card(template, locale)
-  .replaceAll('href="{{ .ConfirmationURL }}"', `href="#preview-note-${locale}"`)
-  .replaceAll('{{ .ConfirmationURL }}', 'https://example.supabase.co/auth/v1/verify?…')
+  .replace(/href="\{\{ \.SiteURL \}\}[^"]*"/g, `href="#preview-note-${locale}"`)
+  .replaceAll('{{ .SiteURL }}', 'https://hannespix.github.io/vave.log')
+  .replaceAll('{{ .TokenHash }}', '…')
   .replaceAll('{{ .Token }}', '123456');
 const languageLinks = Object.entries(languages).map(([locale, strings]) => `<a href="#language-${locale}" lang="${strings.htmlLang}">${strings.label}</a>`).join('');
 outputs.set('docs/email-preview.html', `<!doctype html>

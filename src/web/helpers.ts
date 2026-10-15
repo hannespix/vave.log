@@ -141,3 +141,30 @@ export function downloadCsv(content: string, filename: string) { downloadText(fi
 export function appPath(relative = '') { return import.meta.env.BASE_URL + relative.replace(/^\//, ''); }
 export function appHref(relative: string, appUrl: string) { return new URL(relative.replace(/^\//, ''), appUrl.replace(/\/*$/, '/')).href; }
 export function safeRedirect(url: string) { const parsed = new URL(url); if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Die Weiterleitungsadresse wird nicht unterstützt.'); window.location.assign(parsed.href); }
+
+export const AUTH_LINK_TYPES = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'] as const;
+export type AuthLinkType = typeof AUTH_LINK_TYPES[number];
+export interface AuthLink { tokenHash: string; type: AuthLinkType | ''; reset: boolean; errorCode: string; errorDescription: string }
+/** Liest Auth-Parameter aus der Adresse: Token-Hash-Links der E-Mail-Vorlagen (`?token_hash=…&type=…`), `?reset=1` und Supabase-Fehlerrückleitungen (`error_code`/`error_description` in Query oder Hash). */
+export function parseAuthLink(search: string, hash: string): AuthLink {
+  const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+  const pick = (key: string) => query.get(key) ?? fragment.get(key) ?? '';
+  const type = pick('type');
+  return {
+    tokenHash: pick('token_hash').slice(0, 200),
+    type: (AUTH_LINK_TYPES as readonly string[]).includes(type) ? type as AuthLinkType : '',
+    reset: query.get('reset') === '1',
+    errorCode: pick('error_code').slice(0, 80),
+    errorDescription: pick('error_description').slice(0, 300),
+  };
+}
+/** Adresse ohne Auth-Parameter – was nach dem Verarbeiten eines Links in der Leiste stehen bleibt. */
+export function stripAuthLink(search: string, hash: string): string {
+  const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  for (const key of ['token_hash', 'type', 'error', 'error_code', 'error_description', 'code']) query.delete(key);
+  const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+  const keepHash = fragment.has('w') && !fragment.has('error') && !fragment.has('access_token');
+  const rest = query.toString();
+  return `${appPath()}${rest ? `?${rest}` : ''}${keepHash ? hash : ''}`;
+}

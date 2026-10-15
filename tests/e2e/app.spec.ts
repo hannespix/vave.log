@@ -350,6 +350,36 @@ test('a running timer stays visible everywhere, minimizes and ticks in the tab t
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
+test('an expired email link explains itself and offers a fresh confirmation link',async({page})=>{
+ await setup(page,false);
+ let resend:Record<string,unknown>|null=null;
+ await page.route('https://test.supabase.co/auth/v1/resend*',r=>{resend=r.request().postDataJSON();return r.fulfill({json:{}})});
+ await page.goto('/?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+ await expect(page.getByText(/The link has expired or was already used/)).toBeVisible();
+ expect(page.url()).not.toContain('error_code');
+ await page.getByRole('button',{name:'Request a new confirmation link',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Confirm once more.'})).toBeVisible();
+ await expect(page.getByLabel('Password',{exact:true})).toHaveCount(0);
+ await page.getByLabel('Email address',{exact:true}).fill('neu@example.test');
+ await page.getByRole('button',{name:'Send new link',exact:true}).click();
+ await expect(page.getByText(/a new confirmation link is on its way/)).toBeVisible();
+ expect(resend).toMatchObject({type:'signup',email:'neu@example.test'});
+});
+
+test('a token-hash link from the confirmation email signs the person in on any device',async({page})=>{
+ await setup(page,false);
+ let verify:Record<string,unknown>|null=null;
+ await page.route('https://test.supabase.co/auth/v1/verify',r=>{
+  verify=r.request().postDataJSON();
+  const payload=btoa(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'}));
+  return r.fulfill({json:{access_token:`eyJhbGciOiJIUzI1NiJ9.${payload}.test`,token_type:'bearer',expires_in:3600,expires_at:2100000000,refresh_token:'test-refresh-token',user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}}});
+ });
+ await page.goto('/?token_hash=pkce_abc123&type=signup');
+ await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
+ expect(verify).toMatchObject({token_hash:'pkce_abc123',type:'signup'});
+ expect(page.url()).not.toContain('token_hash');
+});
+
 test('help explains the tool: landing, search, article, context help and the global search all reach it',async({page})=>{
  await setup(page,true);await page.goto('/');
  await goArea(page,'Help');
