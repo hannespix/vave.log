@@ -18,6 +18,7 @@ import { Overview } from "./overview";
 import { Clients, Company } from "./clients-company";
 import { Planning } from "./planning";
 import { Invoices } from "./invoices";
+import { Offers } from "./offers";
 import "./finance.css";
 export interface FinanceAreaProps {
   client: SupabaseClient;
@@ -112,7 +113,7 @@ function AuthorizedFinance({
     const request = ++generation.current;
     setLoading(true);
     try {
-      const [clients, profile, rates, plans, expenses, invoices, overview] =
+      const [clients, profile, rates, plans, expenses, invoices, offers, overview] =
         await Promise.all([
           service.listClients(workspace.id),
           service.getProfile(workspace.id),
@@ -120,6 +121,7 @@ function AuthorizedFinance({
           service.listProjectPlans(workspace.id),
           service.listExpenses(workspace.id, range.from, range.to),
           service.listInvoices(workspace.id),
+          service.listOffers(workspace.id),
           service.overview(workspace.id, range.from, range.to),
         ]);
       if (mounted.current && request === generation.current) {
@@ -130,6 +132,7 @@ function AuthorizedFinance({
           plans,
           expenses,
           invoices,
+          offers,
           overview,
         });
         setError(null);
@@ -199,7 +202,7 @@ function AuthorizedFinance({
       </div>
       <div className="finance-tabs" role="tablist" aria-label={t("title")}>
         {(
-          ["overview", "clients", "planning", "invoices", "company"] as const
+          ["overview", "clients", "planning", "offers", "invoices", "company"] as const
         ).map((id) => (
           <button
             key={id}
@@ -213,6 +216,7 @@ function AuthorizedFinance({
                 "overview",
                 "clients",
                 "planning",
+                "offers",
                 "invoices",
                 "company",
               ] as const;
@@ -324,6 +328,7 @@ function AuthorizedFinance({
             {tab === "clients" && <Clients />}
             {tab === "planning" && <Planning />}
             {tab === "invoices" && <Invoices />}
+            {tab === "offers" && <Offers />}
             {tab === "company" && <Company />}
           </div>
         </FinanceContext.Provider>

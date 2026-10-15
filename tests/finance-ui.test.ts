@@ -301,7 +301,7 @@ function overviewContext(invoices: Invoice[], locale: FinanceContextValue["local
     workspace: { id: "w", name: "Demo", timezone: "UTC", currency: "EUR", created_by: "u", created_at: "" },
     members: [], projects: [], role: "owner", locale,
     data: {
-      clients: [], profile: null, rates: [], plans: [], expenses: [], invoices,
+      clients: [], profile: null, rates: [], plans: [], expenses: [], invoices, offers: [],
       overview: { workspace_id: "w", currency: "EUR", from: "2026-10-01", to: "2026-10-31", projects: [] },
     },
     busy: false, isDemo: true, errorMessage: null,

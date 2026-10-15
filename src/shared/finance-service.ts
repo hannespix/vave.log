@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { z } from 'zod';
-import type { BillingProfile,Expense,ExpenseInput,FinanceClient,FinanceClientInput,FinanceOverview,Invoice,InvoiceDraftInput,ProjectPlan,ProjectPlanInput,StaffRate,StaffRateInput,TimeInvoiceInput } from './finance-types.js';
+import type { BillingProfile,Expense,ExpenseInput,FinanceClient,FinanceClientInput,FinanceOverview,Invoice,InvoiceDraftInput,Offer,OfferInput,ProjectPlan,ProjectPlanInput,StaffRate,StaffRateInput,TimeInvoiceInput } from './finance-types.js';
 import type { Project } from './types.js';
-import { billingProfileSchema,clientSchema,expenseSchema,financeRangeSchema,financeUuid,invoiceDraftSchema,paymentSchema,projectPlanSchema,staffRateSchema,timeInvoiceSchema } from './finance-validation.js';
+import { billingProfileSchema,clientSchema,expenseSchema,financeRangeSchema,financeUuid,invoiceDraftSchema,offerCodeSchema,offerSchema,paymentSchema,projectPlanSchema,staffRateSchema,timeInvoiceSchema } from './finance-validation.js';
 import { projectFinancials } from './finance-math.js';
 import { readTimeEntryPages,type TimeEntryPageError } from './time-entry-pages.js';
 export type FinanceErrorCode='validation'|'forbidden'|'not_found'|'conflict'|'missing_configuration'|'result_limit'|'database'|TimeEntryPageError;
@@ -39,6 +39,12 @@ export function createFinanceService(client:SupabaseClient){
   draftFromTime:(input:TimeInvoiceInput)=>rpc<Invoice>('finance_draft_from_time',{p_input:parse(timeInvoiceSchema,input)}),
   issueInvoice:(workspace_id:string,invoice_id:string)=>rpc<Invoice>('finance_issue_invoice',scoped(workspace_id,invoice_id)),
   cancelInvoice:(workspace_id:string,invoice_id:string,reason:string)=>{if(typeof reason!=='string'||reason.trim().length<3||reason.length>2000)throw new FinanceError('validation');return rpc<Invoice>('finance_cancel_invoice',{...scoped(workspace_id,invoice_id),p_reason:reason.trim()})},
+  listOffers:(workspace_id:string)=>rpc<Offer[]>('finance_list_offers',{p_workspace_id:id(workspace_id)}),
+  saveOffer:(input:OfferInput)=>rpc<Offer>('finance_save_offer',{p_input:parse(offerSchema,input)}),
+  sendOffer:(workspace_id:string,offer_id:string)=>rpc<Offer>('finance_send_offer',scoped(workspace_id,offer_id)),
+  decideOffer:(workspace_id:string,offer_id:string,accepted:boolean)=>rpc<Offer>('finance_decide_offer',{...scoped(workspace_id,offer_id),p_accepted:accepted}),
+  offerToProject:(input:{workspace_id:string;offer_id:string;code:string})=>{const v=parse(offerCodeSchema,input);return rpc<Offer>('finance_offer_project',{p_workspace_id:v.workspace_id,p_id:v.offer_id,p_code:v.code})},
+  deleteOffer:async(workspace_id:string,offer_id:string)=>{await optional(client.rpc('finance_delete_offer',scoped(workspace_id,offer_id)))},
   recordPayment:(input:{workspace_id:string;invoice_id:string;paid_on:string;amount_minor:number;note:string})=>{const v=parse(paymentSchema,input);return rpc<Invoice>('finance_record_payment',{p_workspace_id:v.workspace_id,p_id:v.invoice_id,p_paid_on:v.paid_on,p_amount_minor:v.amount_minor,p_note:v.note})},
   deletePayment:(workspace_id:string,payment_id:string)=>rpc<Invoice>('finance_delete_payment',scoped(workspace_id,payment_id)),
   setInvoicePaid:(workspace_id:string,invoice_id:string,paid:boolean)=>{if(typeof paid!=='boolean')throw new FinanceError('validation');return rpc<Invoice>('finance_set_paid',{...scoped(workspace_id,invoice_id),p_paid:paid})},

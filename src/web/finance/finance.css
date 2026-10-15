@@ -643,3 +643,10 @@
 .finance-payment-form .button {
   margin-bottom: 2px;
 }
+.finance-offer-list { list-style: none; margin: 0; padding: 0; }
+.finance-offer-item { padding: 18px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
+.finance-offer-item:first-child { border-top: 0; }
+.finance-offer-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.finance-offer-row small { display: block; margin-top: 6px; }
+.finance-inline-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.finance-inline-form .field { margin: 0; }

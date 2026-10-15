@@ -22,3 +22,8 @@ export interface ProjectFinancials { project_id:string; billing_mode:BillingMode
 /** period_* = Istwerte nur im gewählten Zeitraum; alle anderen Ist-/Prognosewerte gelten für das gesamte Projekt. */
 export interface OverviewProject extends ProjectFinancials { period_cost_minor:number|null; period_minutes:number }
 export interface FinanceOverview { workspace_id:string; currency:string; from:string; to:string; projects:OverviewProject[] }
+export type OfferStatus = 'draft'|'sent'|'accepted'|'declined';
+export interface OfferLineInput { description:string; quantity:number; unit_price_minor:number; tax_basis_points:number; zero_tax_reason:string }
+export interface OfferLine extends OfferLineInput { net_minor:number; tax_minor:number; total_minor:number }
+export interface OfferInput { id?:string; workspace_id:string; client_id:string; title:string; language:InvoiceLanguage; valid_until:string|null; notes:string; lines:OfferLineInput[] }
+export interface Offer extends Omit<OfferInput,'id'|'lines'> { id:string; created_at:string; status:OfferStatus; number:string|null; currency:string; project_id:string|null; lines:OfferLine[]; net_minor:number; tax_minor:number; total_minor:number; issuer_snapshot:BillingProfile|null; customer_snapshot:FinanceClient|null; sent_at:string|null; decided_at:string|null; client_name?:string }
