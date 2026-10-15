@@ -156,3 +156,16 @@ describe('finance offers',()=>{
   await expect(attempt('select public.finance_save_offer($1::jsonb)',[JSON.stringify(offer())])).rejects.toThrow(/FINANCE_FORBIDDEN/);
   await login(manager)});
 });
+describe('client details',()=>{
+ it('stores contacts, notes and a unique customer number, and rejects malformed contacts',async()=>{
+  const contacts=[{name:'Anna Berg',role:'Marketing',email:'anna@kunde.test',phone:'+49 30 1234'},{name:'Ben Kaya'}];
+  const saved=await one<{contacts:unknown;notes:string;customer_number:string}>("update public.finance_clients set customer_number='K-1001',industry='Kultur',phone='030 555',website='kunde.test',notes='Rechnungen nur als PDF',contacts=$2::jsonb where id=$1 returning contacts,notes,customer_number",[c,JSON.stringify(contacts)]);
+  expect(saved).toEqual({contacts,notes:'Rechnungen nur als PDF',customer_number:'K-1001'});
+  await expect(attempt("insert into public.finance_clients(workspace_id,name,customer_number)values($1,'Zweiter','K-1001')",[w])).rejects.toThrow(/duplicate key|unique/);
+  expect(await rows("insert into public.finance_clients(workspace_id,name)values($1,'Ohne Nummer'),($1,'Auch ohne') returning id",[w])).toHaveLength(2);
+  for(const bad of [[{role:'ohne Name'}],[{name:'A',extra:'x'}],[{name:'A',email:'kein-mail'}],[{name:'A',phone:5}],['text'],{name:'A'},Array.from({length:21},(_,i)=>({name:`P${i}`}))])
+   await expect(attempt("update public.finance_clients set contacts=$2::jsonb where id=$1",[c,JSON.stringify(bad)]),JSON.stringify(bad).slice(0,40)).rejects.toThrow(/check constraint|violates/);
+  await login(member);
+  expect(await rows("update public.finance_clients set notes='x' where id=$1 returning id",[c])).toEqual([]);
+ });
+});

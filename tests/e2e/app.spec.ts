@@ -225,6 +225,37 @@ test('a bank statement proposes matches, books only confirmed payments and recog
  expect(payments).toHaveLength(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+test('client cards show contacts, remarks and key figures, and the editor manages several contact persons',async({page})=>{
+ await setup(page,true,'manager');const clients:Record<string,unknown>[]=[];let saved:Record<string,unknown>|undefined;
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
+ await page.route('https://test.supabase.co/rest/v1/finance_clients*',r=>{if(r.request().method()==='POST'){saved=r.request().postDataJSON();const row:Record<string,unknown>={...saved,created_at:''};const i=clients.findIndex(c=>c.id===row.id);if(i>=0)clients[i]=row;else clients.push(row);return r.fulfill({json:row});}return r.fulfill({json:clients,headers:{'content-range':`0-${Math.max(0,clients.length-1)}/${clients.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:clients.length?[{id:'a0000000-0000-4000-8000-000000000009',workspace_id:ws,client_id:clients[0].id,project_id:null,language:'de',issue_date:'2026-10-01',due_date:'2026-10-15',service_from:'2026-09-01',service_to:'2026-09-30',payment_instructions:'',notes:'',created_at:'',status:'issued',number:'RE-2026-0001',currency:'EUR',lines:[],net_minor:100000,tax_minor:19000,total_minor:119000,issuer_snapshot:null,customer_snapshot:null,issued_at:'',cancellation_of:null,cancellation_reason:'',paid:false,cancellation_id:null,paid_minor:19000,payments:[]}]:[]}));
+ await page.goto('/');await goArea(page,'Finance');await page.getByRole('tab',{name:'Clients',exact:true}).click();
+ await page.getByRole('button',{name:'New client',exact:true}).click();
+ const dialog=page.getByRole('dialog');
+ await dialog.getByLabel('Name',{exact:true}).first().fill('Müller & Söhne GmbH');
+ await dialog.getByLabel('Customer number',{exact:true}).fill('K-1001');await dialog.getByLabel('Industry',{exact:true}).fill('Culture');
+ await dialog.getByLabel('Email (invoices)',{exact:true}).fill('invoices@mueller.test');await dialog.getByLabel('Website',{exact:true}).fill('mueller.test');
+ await dialog.getByRole('button',{name:'Add contact person',exact:true}).click();
+ let rows=dialog.locator('.finance-contact-row');
+ await rows.nth(0).getByLabel('Name',{exact:true}).fill('Anna Berg');await rows.nth(0).getByLabel('Role',{exact:true}).fill('Marketing');await rows.nth(0).getByLabel('Email',{exact:true}).fill('anna@mueller.test');
+ await dialog.getByRole('button',{name:'Add contact person',exact:true}).click();
+ await rows.nth(1).getByLabel('Name',{exact:true}).fill('Ben Kaya');await rows.nth(1).getByLabel('Phone',{exact:true}).fill('+49 30 1234');
+ await rows.nth(1).getByRole('button',{name:'Make main contact',exact:true}).click();
+ await expect(rows.nth(0).getByLabel('Name',{exact:true})).toHaveValue('Ben Kaya');
+ await dialog.getByRole('button',{name:'Add contact person',exact:true}).click();
+ await dialog.getByLabel('Remarks',{exact:true}).fill('Invoices only as PDF.\nCall before the 10th.');
+ await dialog.getByRole('button',{name:'Save changes',exact:true}).click();await expect(dialog).not.toBeVisible();
+ expect(saved).toMatchObject({name:'Müller & Söhne GmbH',customer_number:'K-1001',industry:'Culture',website:'mueller.test',contact_email:'invoices@mueller.test',notes:'Invoices only as PDF.\nCall before the 10th.',contacts:[{name:'Ben Kaya',phone:'+49 30 1234'},{name:'Anna Berg',role:'Marketing',email:'anna@mueller.test'}]});
+ const card=page.locator('article.finance-client').filter({hasText:'Müller & Söhne GmbH'});
+ await expect(card).toContainText('Customer number K-1001 · Culture');await expect(card).toContainText('Ben Kaya');await expect(card).toContainText('+1 more: Anna Berg');
+ await expect(card).toContainText('Invoices only as PDF.');await expect(card.locator('.finance-client-facts')).toContainText('€1,190.00');await expect(card.locator('.finance-client-open')).toContainText('€1,000.00');
+ await expect(card.getByRole('link',{name:'mueller.test',exact:true})).toHaveAttribute('href','https://mueller.test/');
+ await card.getByRole('button',{name:'Edit: Müller & Söhne GmbH',exact:true}).click();
+ rows=page.getByRole('dialog').locator('.finance-contact-row');await expect(rows).toHaveCount(2);
+ await page.getByRole('dialog').getByRole('button',{name:'Back',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
 test('older demo expands once into team, approvals and usable marked invoices',async({page})=>{
  const entries=await setup(page,true);let upgraded=0;let issued=0;
  const person='55555555-5555-4555-8555-555555555555',customer='66666666-6666-4666-8666-666666666666',draftId='77777777-7777-4777-8777-777777777777';

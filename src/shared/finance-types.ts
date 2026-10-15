@@ -2,7 +2,8 @@
 export type InvoiceLanguage = 'en'|'de'|'zh';
 export type WorkerKind = 'employee'|'freelancer';
 export type BillingMode = 'hourly'|'fixed'|'internal';
-export interface FinanceClientInput { id?:string; workspace_id:string; name:string; billing_address:string; contact_email:string; tax_id:string; language:InvoiceLanguage; country?:string }
+export interface ClientContact { name:string; role?:string; email?:string; phone?:string }
+export interface FinanceClientInput { id?:string; workspace_id:string; name:string; billing_address:string; contact_email:string; tax_id:string; language:InvoiceLanguage; country?:string; customer_number?:string; industry?:string; phone?:string; website?:string; notes?:string; contacts?:ClientContact[] }
 export interface FinanceClient extends FinanceClientInput { id:string; created_at:string }
 export interface BillingProfile { workspace_id:string; legal_name:string; billing_address:string; tax_id:string; payment_details:string; invoice_prefix:string; footer:string; logo_data?:string; payment_terms_days?:number; country?:string }
 export interface StaffRateInput { id?:string; workspace_id:string; user_id:string; kind:WorkerKind; effective_from:string; cost_rate_minor:number|null; bill_rate_minor:number|null }

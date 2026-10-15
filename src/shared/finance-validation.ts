@@ -6,7 +6,9 @@ const language=z.enum(['en','de','zh']);
 const kind=z.enum(['employee','freelancer']);
 const text=(max:number)=>z.string().max(max);
 export const financeRangeSchema=z.strictObject({from:financeDate,to:financeDate}).refine(v=>v.to>=v.from,'Invalid date range');
-export const clientSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,name:z.string().trim().min(1).max(160),billing_address:text(2000),contact_email:z.union([z.literal(''),z.email().max(320)]),tax_id:text(120),language,country:z.string().regex(/^[A-Z]{2}$/).optional()});
+const optionalEmail=z.union([z.literal(''),z.email().max(320)]);
+export const clientContactSchema=z.strictObject({name:z.string().trim().min(1).max(160),role:text(120).optional(),email:optionalEmail.optional(),phone:text(60).optional()});
+export const clientSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,name:z.string().trim().min(1).max(160),billing_address:text(2000),contact_email:optionalEmail,tax_id:text(120),language,country:z.string().regex(/^[A-Z]{2}$/).optional(),customer_number:text(40).optional(),industry:text(80).optional(),phone:text(60).optional(),website:text(300).optional(),notes:text(4000).optional(),contacts:z.array(clientContactSchema).max(20).optional()});
 // logo_data/payment_terms_days optional: ein Client vor der jeweiligen Migration lässt den Schlüssel weg, damit der Upsert auf der alten Tabelle weiter funktioniert.
 export const billingProfileSchema=z.strictObject({workspace_id:financeUuid,legal_name:text(160),billing_address:text(2000),tax_id:text(120),payment_details:text(2000),invoice_prefix:z.string().regex(/^[A-Z0-9][A-Z0-9-]{0,15}$/),footer:text(4000),logo_data:z.union([z.literal(''),z.string().max(300000).regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/)]).optional(),payment_terms_days:z.number().int().min(0).max(365).optional(),country:z.string().regex(/^[A-Z]{2}$/).optional()});
 export const staffRateSchema=z.strictObject({id:financeUuid.optional(),workspace_id:financeUuid,user_id:financeUuid,kind,effective_from:financeDate,cost_rate_minor:money.nullable(),bill_rate_minor:money.nullable()});
