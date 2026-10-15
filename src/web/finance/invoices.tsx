@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Plus, ArrowDownToLine, Printer, Search, Trash2 } from "lucide-react";
+import { Plus, ArrowDownToLine, Landmark, Printer, Search, Trash2 } from "lucide-react";
 import type {
   Invoice,
   InvoiceLanguage,
@@ -37,6 +37,8 @@ import { addDays, dateInZone, downloadText } from "../helpers";
 import { einvoiceXml } from "./e-invoice";
 import { DATEV_DEFAULT_REVENUE, datevCsv, type DatevOptions } from "./datev";
 import { invoiceMatchesQuery, isOverdue } from "./invoice-summary";
+import { BankReconcileDialog } from "./bank-reconcile";
+import { openAmount } from "./bank-import";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
   const { data, t, locale, workspace, isDemo, invoiceId } = useFinance(),
@@ -45,6 +47,7 @@ export function Invoices() {
     [status, setStatus] = useState<InvoiceStatusFilter>("all"),
     [query, setQuery] = useState(""),
     [datev, setDatev] = useState(false),
+    [bank, setBank] = useState(false),
     [selected, setSelected] = useState(invoiceId),
     [received, setReceived] = useState(invoiceId);
   // Ziel aus der globalen Suche oder einem Deep-Link übernehmen, auch wenn die
@@ -69,6 +72,14 @@ export function Invoices() {
         title="invoices"
         action={
           <div className="button-row">
+            <button
+              className="button secondary small"
+              disabled={!data.invoices.some((i) => openAmount(i) > 0)}
+              onClick={() => setBank(true)}
+            >
+              <Landmark size={16} />
+              {t("bankImport")}
+            </button>
             <button
               className="button secondary small"
               disabled={!data.invoices.some((i) => i.status !== "draft")}
@@ -196,6 +207,7 @@ export function Invoices() {
         )}
       </Section>
       {datev && <DatevDialog onClose={() => setDatev(false)} />}
+      {bank && <BankReconcileDialog onClose={() => setBank(false)} />}
       {invoice && (
         <InvoiceDetail
           invoice={invoice}

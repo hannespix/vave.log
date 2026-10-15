@@ -195,6 +195,36 @@ test('manager saves a real draft shape and must review before issuing',async({pa
  await dialog.getByRole('button',{name:'Issue invoice',exact:true}).click();await expect(dialog.getByRole('alert')).toBeVisible();expect(issued).toBe(1);await expect(dialog).toBeVisible();
 });
 
+test('a bank statement proposes matches, books only confirmed payments and recognises them on reload',async({page},testInfo)=>{
+ await setup(page,true,'manager');const payments:Record<string,unknown>[]=[];
+ const inv=(id:string,number:string,total:number,name:string)=>({id,workspace_id:ws,client_id:null,project_id:null,language:'en',issue_date:'2026-10-01',due_date:'2026-10-15',service_from:'2026-09-01',service_to:'2026-09-30',payment_instructions:'',notes:'',created_at:'2026-10-01T09:00:00Z',status:'issued',number,currency:'EUR',lines:[],net_minor:total,tax_minor:0,total_minor:total,issuer_snapshot:null,customer_snapshot:{id:'c',workspace_id:ws,name,billing_address:'',contact_email:'',tax_id:'',language:'en',created_at:''},issued_at:'2026-10-01T09:00:00Z',cancellation_of:null,cancellation_reason:'',paid:false,cancellation_id:null,paid_minor:0,payments:[] as Record<string,unknown>[]});
+ const invoices=[inv('a0000000-0000-4000-8000-000000000001','RE-2026-0007',119000,'Müller & Söhne GmbH'),inv('a0000000-0000-4000-8000-000000000002','RE-2026-0008',50000,'Atelier Nord')];
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:invoices}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_record_payment',r=>{const b=r.request().postDataJSON();payments.push(b);const i=invoices.find(x=>x.id===b.p_id)!;i.payments.push({id:'p'+payments.length,workspace_id:ws,invoice_id:i.id,paid_on:b.p_paid_on,amount_minor:b.p_amount_minor,note:b.p_note,created_at:''});i.paid_minor+=b.p_amount_minor;i.paid=i.paid_minor>=i.total_minor;return r.fulfill({json:i})});
+ const csv='"Buchungstag";"Beguenstigter/Zahlungspflichtiger";"Verwendungszweck";"Betrag";"Waehrung"\n"14.10.26";"Müller & Söhne GmbH";"Rechnung RE-2026-0007";"1.190,00";"EUR"\n"14.10.26";"Unbekannt";"Spende";"500,00";"EUR"\n"13.10.26";"Stadtwerke";"Strom";"-82,10";"EUR"\n';
+ await page.goto('/');await goArea(page,'Finance');await page.getByRole('tab',{name:'Invoices',exact:true}).click();
+ await page.getByRole('button',{name:'Match bank statement',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Match bank statement'});
+ await dialog.locator('input[type=file]').setInputFiles({name:'umsaetze.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});
+ await expect(dialog.locator('.bank-summary')).toContainText('2 incoming payments · 1 matched · 1 debits ignored');
+ const rows=dialog.locator('.bank-row');
+ await expect(rows.nth(0)).toContainText('Müller & Söhne GmbH');await expect(rows.nth(0)).toContainText('Certain');await expect(rows.nth(0)).toContainText('invoice number · amount · client name');
+ await expect(rows.nth(0).getByRole('checkbox')).toBeChecked();await expect(rows.nth(1).getByRole('checkbox')).toBeDisabled();
+ await expect(rows.nth(0).getByLabel('Amount to book',{exact:true})).toHaveValue('1190.00');
+ if(!testInfo.project.name.includes('mobile'))await page.screenshot({path:testInfo.outputPath('bank.png')});
+ await dialog.getByRole('button',{name:'Book payments (1)',exact:true}).click();
+ await expect(dialog.getByText('Payments booked: 1. The invoices are updated.',{exact:true})).toBeVisible();
+ expect(payments).toHaveLength(1);expect(payments[0]).toMatchObject({p_workspace_id:ws,p_id:invoices[0].id,p_paid_on:'2026-10-14',p_amount_minor:119000});expect(String(payments[0].p_note)).toMatch(/^Bank statement · Müller & Söhne GmbH · Rechnung RE-2026-0007 · ref:[0-9a-z]{12}$/);
+ await dialog.locator('input[type=file]').setInputFiles({name:'umsaetze.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});
+ await expect(dialog.locator('.bank-summary')).toContainText('2 incoming payments · 0 matched · 1 already booked');
+ await expect(rows.nth(0)).toContainText('Already booked');
+ await expect(dialog.getByRole('button',{name:'Book payments (0)',exact:true})).toBeDisabled();
+ await dialog.locator('input[type=file]').setInputFiles({name:'bild.csv',mimeType:'text/csv',buffer:Buffer.from('a;b\n1;2','utf8')});
+ await expect(dialog.getByText(/neither a CAMT statement nor a bank CSV/)).toBeVisible();
+ expect(payments).toHaveLength(1);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
 test('older demo expands once into team, approvals and usable marked invoices',async({page})=>{
  const entries=await setup(page,true);let upgraded=0;let issued=0;
  const person='55555555-5555-4555-8555-555555555555',customer='66666666-6666-4666-8666-666666666666',draftId='77777777-7777-4777-8777-777777777777';
