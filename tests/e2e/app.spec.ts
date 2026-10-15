@@ -280,7 +280,7 @@ async function connectedSetup(page:Page,role:'owner'|'member'='owner'){
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
  const insight={project:projects[0],as_of:'2026-10-13',progress_date:'2026-10-13',total_minutes:2400,first_work_date:'2026-09-16',last_work_date:'2026-10-12',recent_daily:[{work_date:'2026-09-16',minutes:800},{work_date:'2026-10-05',minutes:800},{work_date:'2026-10-12',minutes:800}],tasks:{total:4,done:1,doing:1,overdue:1,estimated:4,estimated_minutes:6000,done_estimated_minutes:2400,missing_estimates:0,missing_due_dates:0,unassigned:0}};
- return {projects,createdTasks,savedProjects,insight,setRole:(role:'owner'|'member')=>{currentRole=role;}};
+ return {projects,tasks,createdTasks,savedProjects,insight,setRole:(role:'owner'|'member')=>{currentRole=role;}};
 }
 
 test('project links preserve task filters, editor defaults and browser history',async({page})=>{
@@ -490,6 +490,34 @@ test('the review queue surfaces old submissions and approvals can be revoked',as
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 
+test('task cards drag between columns like a kanban board, with escape and a plain click still opening the editor',async({page,isMobile})=>{
+ const state=await connectedSetup(page);const saved:Record<string,unknown>[]=[];
+ await page.route('https://test.supabase.co/rest/v1/tasks*',async r=>{if(r.request().method()!=='POST')return r.fallback();const body=r.request().postDataJSON();saved.push(body);Object.assign(state.tasks.find(x=>x.id===body.id)!,body);await new Promise(done=>setTimeout(done,150));return r.fulfill({json:{...body,created_at:'',created_by:user}});});
+ await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
+ const card=page.locator('[data-task-card="10000000-0000-4000-8000-000000000001"]');const doing=page.locator('section[data-drop-status="doing"]');
+ await expect(card).toBeVisible();
+ const drag=async(target:import('@playwright/test').Locator,finish:'drop'|'escape')=>{
+  await card.evaluate(el=>el.scrollIntoView({block:'center'}));
+  const from=(await card.boundingBox())!,to=(await target.boundingBox())!;
+  await page.mouse.move(from.x+8,from.y+8);await page.mouse.down();
+  // Touch: erst nach kurzem Halten wird gezogen, damit Wischen weiter scrollt.
+  if(isMobile)await page.waitForTimeout(320);
+  await page.mouse.move(from.x+28,from.y+20,{steps:4});
+  await expect(page.locator('.task-card-ghost')).toBeVisible();await expect(card).toHaveClass(/task-card-placeholder/);
+  await page.mouse.move(to.x+to.width/2,to.y+40,{steps:12});
+  await expect(target).toHaveClass(/drop-target/);await expect(target.locator('.task-drop-slot')).toBeVisible();
+  if(finish==='escape'){await page.keyboard.press('Escape');await page.mouse.up();}else await page.mouse.up();
+ };
+ await drag(doing,'escape');
+ await expect(page.locator('.task-card-ghost')).toHaveCount(0);await expect(page.locator('section[data-drop-status="todo"]').getByText('Brand sketch',{exact:true})).toBeVisible();expect(saved).toHaveLength(0);
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await drag(doing,'drop');
+ await expect(doing.getByText('Brand sketch',{exact:true})).toBeVisible();
+ await expect(page.locator('.task-card-ghost')).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect.poll(()=>saved.length).toBe(1);expect(saved[0]).toMatchObject({id:'10000000-0000-4000-8000-000000000001',status:'doing',title:'Brand sketch'});
+ await expect(page.getByText('Task status updated.',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Brand sketch',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
 test('task quick and advanced filters explain empty results and reset cleanly',async({page})=>{
  await connectedSetup(page);await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
  await page.getByRole('button',{name:'Overdue',exact:true}).click();await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByText('Museum prototype',{exact:true})).toHaveCount(0);

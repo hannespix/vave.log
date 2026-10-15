@@ -129,7 +129,7 @@ export const HELP_BODIES: Record<string, HelpBody> = {
   'work-tasks': {
     steps: [
       ['“New task”: title, project, assignee, due date, estimate in minutes, milestone flag and repetition.', '„Neue Aufgabe“: Titel, Projekt, Zuständige, Termin, Schätzung in Minuten, Meilenstein-Markierung und Wiederholung.', '“新建任务”：标题、项目、负责人、截止日期、分钟估算、里程碑标记和重复设置。'],
-      ['Move tasks between To do, Doing and Done with the status field on the card.', 'Verschiebe Aufgaben zwischen Offen, In Arbeit und Erledigt über das Statusfeld auf der Karte.', '通过卡片上的状态字段在待办、进行中和已完成之间移动任务。'],
+      ['Drag a card into another column to change its status – on a phone, hold the card briefly, then drag. Esc cancels. With the keyboard, use the status field on the card.', 'Ziehe eine Karte in eine andere Spalte, um ihren Status zu ändern – am Handy die Karte kurz halten, dann ziehen. Esc bricht ab. Mit der Tastatur geht es über das Statusfeld auf der Karte.', '将卡片拖到另一列即可更改状态——在手机上先短按卡片再拖动。按 Esc 取消。使用键盘时，请用卡片上的状态字段。'],
       ['Filters: mine, overdue, status, assignee, due today or this week, and a text search – the URL keeps them, so you can share a view.', 'Filter: meine, überfällig, Status, Zuständige, fällig heute oder diese Woche und Textsuche – die Adresse merkt sie sich, du kannst eine Ansicht teilen.', '筛选：我的、逾期、状态、负责人、今天或本周到期以及文本搜索——网址会记住它们，可分享视图。'],
       ['Milestones are highlighted on the board and in the project insight.', 'Meilensteine sind auf dem Board und im Projekt-Einblick hervorgehoben.', '里程碑在看板和项目洞察中高亮显示。'],
     ],

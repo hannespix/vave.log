@@ -243,6 +243,7 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Über Gesamtbudget": {"en": "Over total budget", "de": "Über Gesamtbudget", "zh": "超出总预算"},
   "MAKE IT HAPPEN ↗": {"en": "MAKE IT HAPPEN ↗", "de": "MAKE IT HAPPEN ↗", "zh": "即刻行动 ↗"},
   "Aufgabenstatus aktualisiert.": {"en": "Task status updated.", "de": "Aufgabenstatus aktualisiert.", "zh": "任务状态已更新。"},
+  "Karten lassen sich in eine andere Spalte ziehen. Mit der Tastatur ändert das Statusfeld der Karte den Status.": {"en": "Cards can be dragged to another column. With the keyboard, use the status field on the card.", "de": "Karten lassen sich in eine andere Spalte ziehen. Mit der Tastatur ändert das Statusfeld der Karte den Status.", "zh": "卡片可以拖到其他列。使用键盘时，请通过卡片上的状态字段更改状态。"},
   "Ohne Termin": {"en": "No due date", "de": "Ohne Termin", "zh": "无截止日期"},
   "Hier landen eure Erfolge.": {"en": "Your completed work goes here.", "de": "Hier landen eure Erfolge.", "zh": "完成的任务将显示在这里。"},
   "Bereit für euren nächsten Flow.": {"en": "Ready for your next flow.", "de": "Bereit für euren nächsten Flow.", "zh": "准备好迎接下一项工作。"},
