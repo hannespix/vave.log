@@ -244,7 +244,18 @@ export const HELP_BODIES: Record<string, HelpBody> = {
       ['“Mark paid” settles the rest in one step.', '„Als bezahlt markieren“ begleicht den Rest in einem Schritt.', '“标记为已付款”一步结清余额。'],
       ['An invoice is overdue when its due date has passed and it is not paid. The chips above the list filter open, overdue, paid and drafts; the search finds number, client and amount.', 'Eine Rechnung ist überfällig, wenn ihre Fälligkeit vorbei und sie nicht bezahlt ist. Die Chips über der Liste filtern offen, überfällig, bezahlt und Entwürfe; die Suche findet Nummer, Kunde und Betrag.', '到期日已过且未付款的发票为逾期。列表上方的标签可筛选未结、逾期、已付和草稿；搜索可按编号、客户和金额查找。'],
     ],
-    related: ['fin-invoice-manual', 'ref-search'],
+    related: ['fin-bank', 'fin-invoice-manual', 'ref-search'],
+  },
+  'fin-bank': {
+    steps: [
+      ['In online banking, export the transactions as CAMT.053 (XML) or CSV. Sparkasse, Volksbank, Deutsche Bank, Commerzbank, ING, DKB, N26 and most other banks offer one of the two.', 'Exportiere im Onlinebanking die Umsätze als CAMT.053 (XML) oder CSV. Sparkasse, Volksbank, Deutsche Bank, Commerzbank, ING, DKB, N26 und die meisten anderen Banken bieten eines von beiden an.', '在网银中将交易导出为 CAMT.053 (XML) 或 CSV。Sparkasse、Volksbank、德意志银行、德国商业银行、ING、DKB、N26 等大多数银行都支持其中一种。'],
+      ['Finance → Invoices → “Match bank statement”, choose the file. vave.log reads only booked incoming payments; debits and pending items are ignored.', 'Finance → Rechnungen → „Kontoauszug abgleichen“, Datei wählen. vave.log liest nur gebuchte Zahlungseingänge; Abbuchungen und vorgemerkte Umsätze bleiben außen vor.', '财务 → 发票 → “核对银行对账单”，选择文件。vave.log 只读取已入账的收款；支出和待处理交易会被忽略。'],
+      ['Each payment gets a proposal with a reason: invoice number in the reference, amount equal to the open amount, client name. “Certain” proposals are ticked, everything else you decide yourself – choose another invoice or adjust the amount for a partial payment.', 'Jeder Eingang bekommt einen Vorschlag mit Begründung: Rechnungsnummer im Verwendungszweck, Betrag gleich offenem Betrag, Kundenname. „Sichere“ Vorschläge sind angehakt, alles andere entscheidest du – andere Rechnung wählen oder den Betrag für eine Teilzahlung anpassen.', '每笔收款都会附带理由的建议：用途中的发票号、金额等于未付金额、客户名称。“确定”的建议会被勾选，其余由你决定——选择其他发票或调整部分付款金额。'],
+      ['“Book payments” records each ticked payment on its invoice with the booking date. Fully paid invoices switch to paid automatically.', '„Zahlungen buchen“ erfasst jeden angehakten Eingang mit dem Buchungsdatum an seiner Rechnung. Voll bezahlte Rechnungen wechseln automatisch auf bezahlt.', '“入账付款”会将每笔已勾选的收款按记账日期记录到对应发票。全额付清的发票会自动变为已付款。'],
+    ],
+    tip: ['Load the same statement twice without worry: every booked payment carries the bank reference in its note, and vave.log shows it as “Already booked”.', 'Denselben Auszug zweimal laden ist kein Problem: Jede gebuchte Zahlung trägt die Bankreferenz in der Notiz, vave.log zeigt sie als „Schon gebucht“.', '同一份对账单加载两次也没关系：每笔已入账的付款在备注中带有银行参考号，vave.log 会显示为“已入账”。'],
+    why: ['The statement is read in your browser and not stored – only the payments you confirm reach the database. A payment more than the open amount books only the open rest, so an invoice never shows more paid than invoiced.', 'Der Auszug wird im Browser gelesen und nicht gespeichert – in die Datenbank gelangen nur die Zahlungen, die du bestätigst. Ein Eingang über dem offenen Betrag bucht nur den offenen Rest, damit eine Rechnung nie mehr bezahlt zeigt als berechnet.', '对账单在浏览器中读取，不会被保存——只有你确认的付款才会写入数据库。超过未付金额的收款只入账未付部分，因此发票的已付金额永远不会超过开票金额。'],
+    related: ['fin-payments', 'fin-export'],
   },
   'fin-cancel': {
     steps: [
