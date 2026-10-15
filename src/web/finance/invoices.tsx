@@ -39,13 +39,17 @@ import { DATEV_DEFAULT_REVENUE, datevCsv, type DatevOptions } from "./datev";
 import { invoiceMatchesQuery, isOverdue } from "./invoice-summary";
 type InvoiceStatusFilter = "all" | "open" | "overdue" | "paid" | "draft";
 export function Invoices() {
-  const { data, t, locale, workspace, isDemo } = useFinance(),
+  const { data, t, locale, workspace, isDemo, invoiceId } = useFinance(),
     { projectId, setProjectId, available } = useFinanceProject(),
     [editor, setEditor] = useState<Invoice | "new" | "time" | null>(null),
     [status, setStatus] = useState<InvoiceStatusFilter>("all"),
     [query, setQuery] = useState(""),
     [datev, setDatev] = useState(false),
-    [selected, setSelected] = useState("");
+    [selected, setSelected] = useState(invoiceId),
+    [received, setReceived] = useState(invoiceId);
+  // Ziel aus der globalen Suche oder einem Deep-Link übernehmen, auch wenn die
+  // Liste schon offen ist; der Statusfilter darf das Ziel nicht verstecken.
+  if (received !== invoiceId) { setReceived(invoiceId); setSelected(invoiceId); if (invoiceId) setStatus("all"); }
   const today = dateInZone(workspace.timezone);
   const clientName = (i: Invoice) =>
     i.customer_snapshot?.name ||

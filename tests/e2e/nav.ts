@@ -1,5 +1,5 @@
 import type {Page} from '@playwright/test';
-/** Opens a main-navigation area. On phones the secondary areas (Reports, Team, Finance, Settings) live behind the "More" sheet, so the helper goes through that sheet there. The mobile check reads the always-rendered "More" button, not the target item — Team/Finance only appear once the workspace data has loaded, and the click below auto-waits for that. */
+/** Opens a main-navigation area. On phones the secondary areas (Reports, Team, Finance, Settings, Help) live behind the "More" sheet, so the helper goes through that sheet there. The mobile check reads the always-rendered "More" button, not the target item — Team/Finance only appear once the workspace data has loaded, and the click below auto-waits for that. */
 export async function goArea(page:Page,name:string){
  const nav=page.getByRole('navigation').first();
  await nav.waitFor();

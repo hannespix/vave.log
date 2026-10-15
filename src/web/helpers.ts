@@ -1,13 +1,27 @@
 import { hasTranslation, localeTag, translate, type Locale } from '../shared/i18n';
 import { getLocale } from './i18n';
 import type { Membership, Project, TimeEntry } from '../shared/types';
+import type { Invoice } from '../shared/finance-types';
 
 export const roleNames = { owner: 'Inhaber:in', manager: 'Leitung', member: 'Mitglied', disabled: 'Deaktiviert' };
 export const statusNames = { draft: 'Entwurf', submitted: 'Eingereicht', approved: 'Freigegeben', active: 'Aktiv', paused: 'Pausiert', archived: 'Archiviert', todo: 'Offen', doing: 'In Arbeit', done: 'Erledigt' };
 export function minutesLabel(minutes: number, locale: Locale = getLocale()) { const n = Math.max(0, Math.round(minutes)); return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')} ${locale === 'zh' ? '小时' : 'h'}`; }
 /** Diakritika-tolerante Suchnormalisierung (ä→a, ß→ss), geteilt von SelectMenu und Listen-Suchen. */
 export function fold(text: string) { return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('ß', 'ss').toLowerCase(); }
-export type PaletteEntry = { id: string; kind: 'area'|'project'|'task'|'person'; title: string; subtitle?: string; keywords: string };
+export type PaletteEntry = { id: string; kind: 'area'|'project'|'task'|'person'|'invoice'|'help'; title: string; subtitle?: string; keywords: string };
+/** Rechnung als Suchtreffer: Nummer (oder Entwurf) und Kunde im Titel, Status · Betrag · Datum darunter; Projekt nur als Suchbegriff. */
+export function invoiceSearchEntry(invoice: Invoice, project: Project | undefined, locale: Locale = getLocale()): PaletteEntry {
+  const client = invoice.customer_snapshot?.name ?? '';
+  const status = translate(invoice.status === 'cancellation' ? 'Storno' : invoice.status === 'draft' ? 'Entwurf' : invoice.paid ? 'Bezahlt' : 'Unbezahlt', locale);
+  const format = new Intl.NumberFormat(localeTag(locale), { style: 'currency', currency: invoice.currency });
+  const amount = format.format(invoice.total_minor / 10 ** (format.resolvedOptions().maximumFractionDigits ?? 2));
+  return {
+    id: `invoice:${invoice.id}`, kind: 'invoice',
+    title: [invoice.number ?? translate('Entwurf', locale), client].filter(Boolean).join(' · '),
+    subtitle: [status, amount, invoice.issue_date ? shortDate(invoice.issue_date, locale) : ''].filter(Boolean).join(' · '),
+    keywords: `${invoice.number ?? ''} ${client} ${project?.code ?? ''} ${project?.name ?? ''} ${status} ${amount} ${translate('Rechnung', locale)} invoice`,
+  };
+}
 /** Globale Suche: jeder Begriff muss treffen (UND, Reihenfolge egal); Präfix schlägt Wortanfang schlägt Teiltreffer. Ohne Eingabe nur die Bereiche. */
 export function searchPalette<T extends PaletteEntry>(items: T[], query: string, limit = 12): T[] {
   const tokens = fold(query.trim()).split(/\s+/).filter(Boolean);

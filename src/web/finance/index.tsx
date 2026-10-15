@@ -62,17 +62,20 @@ function AuthorizedFinance({
     }),
     [tab, setTab] = useState<FinanceTab>(navigation?.tab ?? "overview"),
     [projectId, setProjectId] = useState(navigation?.projectId ?? ""),
+    [invoiceId, setInvoiceId] = useState(navigation?.invoiceId ?? ""),
     [receivedNavigation, setReceivedNavigation] = useState(navigation);
   // Apply browser/back context before children render, including open editors.
   // Only user events notify the workspace, so synchronization cannot push history.
   if (navigation && (
     receivedNavigation?.revision !== navigation.revision ||
     receivedNavigation?.projectId !== navigation.projectId ||
-    receivedNavigation?.tab !== navigation.tab
+    receivedNavigation?.tab !== navigation.tab ||
+    receivedNavigation?.invoiceId !== navigation.invoiceId
   )) {
     setReceivedNavigation(navigation);
     setTab(navigation.tab);
     setProjectId(navigation.projectId);
+    setInvoiceId(navigation.invoiceId);
   }
   function changeTab(next: FinanceTab) {
     setTab(next);
@@ -312,6 +315,7 @@ function AuthorizedFinance({
             errorMessage: error == null ? null : financeError(error, locale),
             range,
             projectId,
+            invoiceId,
             setProjectId: changeProject,
             navigate: onNavigate ? navigate : undefined,
             t,
