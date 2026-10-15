@@ -25,6 +25,29 @@ export function searchPalette<T extends PaletteEntry>(items: T[], query: string,
   }
   return scored.sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title, 'de')).slice(0, limit).map(s => s.item);
 }
+export type MemberSort = 'name' | 'name_desc' | 'role' | 'capacity';
+export type MemberRoleFilter = 'all' | 'active' | Membership['role'];
+const roleRank: Record<Membership['role'], number> = { owner: 0, manager: 1, member: 2, disabled: 3 };
+/** Team-Liste: Suche über Name, E-Mail, Rolle und Demo-Angaben (jeder Begriff muss treffen), Rollenfilter, Sortierung. Gleichstände nach Name. */
+export function filterMembers(members: Membership[], opts: { query: string; role: MemberRoleFilter; sort: MemberSort }, locale: Locale = getLocale()): Membership[] {
+  const tokens = fold(opts.query.trim()).split(/\s+/).filter(Boolean);
+  const nameOf = (m: Membership) => m.display_name || m.email || '';
+  const byName = (a: Membership, b: Membership) => nameOf(a).localeCompare(nameOf(b), localeTag(locale), { sensitivity: 'base' });
+  const list = members.filter(m => {
+    if (opts.role === 'active' ? m.role === 'disabled' : opts.role !== 'all' && m.role !== opts.role) return false;
+    if (tokens.length === 0) return true;
+    const hay = fold([m.display_name, m.is_demo ? '' : m.email, translate(roleNames[m.role], locale), m.demo_title, m.demo_studio].filter(Boolean).join(' '));
+    return tokens.every(token => hay.includes(token));
+  });
+  const compare: Record<MemberSort, (a: Membership, b: Membership) => number> = {
+    name: byName,
+    name_desc: (a, b) => byName(b, a),
+    role: (a, b) => roleRank[a.role] - roleRank[b.role] || byName(a, b),
+    // Gepflegte Kapazität zuerst (absteigend), nicht gepflegte ans Ende.
+    capacity: (a, b) => (b.weekly_capacity_minutes ?? -1) - (a.weekly_capacity_minutes ?? -1) || byName(a, b),
+  };
+  return list.sort(compare[opts.sort]);
+}
 export function dateInZone(timezone: string, date = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date); }
 export function addDays(iso: string, days: number) { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
 /** Werktage Mo–Fr im inklusiven Bereich (Feiertage zählen als Werktag — die pflegt das Team als Abwesenheit der Art „Feiertag"). */
