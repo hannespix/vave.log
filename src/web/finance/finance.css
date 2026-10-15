@@ -760,3 +760,193 @@
     grid-template-columns: minmax(0, 1fr) 100px;
   }
 }
+/* Kundenkarten mit Ansprechpartnern, Kennzahlen und Bemerkungen */
+.finance-client-search {
+  max-width: 420px;
+  margin-bottom: 18px;
+}
+.finance-client {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.finance-client > header.finance-client-head {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.finance-client-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--lime);
+  color: #2b3a12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+.finance-client .finance-client-head h3 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.finance-client p.finance-client-sub {
+  margin: 3px 0 0;
+  min-height: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.finance-client-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.finance-client-facts > div {
+  background: #fafbf7;
+  padding: 9px 11px;
+  min-width: 0;
+}
+.finance-client-facts dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+.finance-client-facts dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.finance-client-facts dd.finance-client-open {
+  color: #8a4a22;
+}
+.finance-client-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.finance-client-body h4 {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+.finance-client-body p {
+  min-height: 0;
+  margin: 0;
+}
+.finance-client-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+.finance-client-contact > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+.finance-client-contact > span {
+  color: var(--muted);
+}
+.finance-client-contact > small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.finance-client p.finance-client-notes {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  min-height: 0;
+  padding: 10px 12px;
+  background: #fbf8ec;
+  border: 1px solid #efe6c5;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.finance-client-notes > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.finance-client-notes > svg {
+  color: #8a7a3a;
+  margin-top: 2px;
+}
+.finance-client .finance-client-meta {
+  margin-top: auto;
+}
+.finance-fieldset {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 0;
+  padding: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.finance-fieldset > legend {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 8px 0 0;
+}
+.finance-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.finance-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.finance-contact-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.finance-contact-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px 14px;
+}
+.finance-contact-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.align-start {
+  align-self: flex-start;
+}
+@media (max-width: 950px) {
+  .finance-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .finance-client-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .finance-client-body,
+  .finance-grid-3,
+  .finance-grid-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
