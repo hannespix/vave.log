@@ -582,3 +582,42 @@ test('role downgrade closes analysis and ignores an in-flight aggregate response
  await page.route('https://test.supabase.co/rest/v1/rpc/project_insight',async r=>{started=true;await new Promise<void>(resolve=>{release=resolve});await r.fulfill({json:state.insight});});
  await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await page.getByRole('button',{name:'Project outlook: Brand Experience',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await expect.poll(()=>started).toBe(true);state.setRole('member');await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await expect(page.getByRole('dialog')).toHaveCount(0);release?.();await expect(page.getByText('40 hr',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:/Project outlook:/})).toHaveCount(0);
 });
+
+test('timers start straight from project cards, task cards and the time dialog, switching only after confirmation',async({page})=>{
+ await connectedSetup(page);let timer:Record<string,unknown>|null=null;const calls:{fn:string;body:Record<string,unknown>}[]=[];
+ await page.route('https://test.supabase.co/rest/v1/running_timers*',r=>r.fulfill({json:timer}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/start_timer',r=>{const body=r.request().postDataJSON();calls.push({fn:'start',body});timer={id:'45454545-4545-4545-8545-454545454545',workspace_id:ws,project_id:body.p_project_id,user_id:user,started_at:calls.length===1?'2026-10-13T09:00:00Z':'2026-10-13T08:55:00Z',note:body.p_note,billable:body.p_billable,task_id:body.p_task_id};return r.fulfill({json:timer});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/stop_timer',r=>{calls.push({fn:'stop',body:r.request().postDataJSON()});timer=null;return r.fulfill({json:[]});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/discard_timer',r=>{calls.push({fn:'discard',body:r.request().postDataJSON()});timer=null;return r.fulfill({json:null});});
+ await page.goto('/');const nav=page.getByRole('navigation',{name:'Main navigation'});
+ await nav.getByRole('button',{name:'Projects',exact:true}).click();
+ await page.getByRole('button',{name:'Start timer for Brand Experience',exact:true}).click();
+ await expect(page.getByText('Timer running for VAV-001 · Brand Experience.',{exact:true})).toBeVisible();
+ expect(calls).toEqual([{fn:'start',body:{p_workspace_id:ws,p_project_id:project,p_note:'',p_billable:true,p_task_id:null}}]);
+ await expect(page.locator('.project-card',{hasText:'Brand Experience'}).getByText('Timer running',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Start timer for Brand Experience',exact:true})).toHaveCount(0);
+
+ // Aufgabe: läuft schon ein Timer, wird erst nach Rückfrage gewechselt.
+ await nav.getByRole('button',{name:'Tasks',exact:true}).click();
+ await page.getByRole('button',{name:'Start timer for Museum prototype',exact:true}).click();
+ let dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Switch timer?'})).toBeVisible();
+ await expect(dialog).toContainText('The running timer for VAV-001 · Brand Experience is shorter than one minute and will be discarded.');
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();expect(calls).toHaveLength(1);
+ await page.getByRole('button',{name:'Start timer for Museum prototype',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Switch and start',exact:true}).click();
+ await expect(page.getByText('Timer running for VAV-002 · Museum Experience · Museum prototype.',{exact:true})).toBeVisible();
+ expect(calls.slice(1)).toEqual([{fn:'discard',body:{p_timer_id:'45454545-4545-4545-8545-454545454545'}},{fn:'start',body:{p_workspace_id:ws,p_project_id:secondProject,p_note:'',p_billable:true,p_task_id:'10000000-0000-4000-8000-000000000002'}}]);
+ await expect(page.getByRole('button',{name:'Start timer for Museum prototype',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Museum prototype',exact:true}).click();dialog=page.getByRole('dialog');
+ await expect(dialog.getByText('Timer running',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+
+ // Zeit-Dialog: dieselben Angaben, aber live mitstoppen.
+ await nav.getByRole('button',{name:'Projects',exact:true}).click();
+ await page.locator('.project-card',{hasText:'Brand Experience'}).getByRole('button',{name:'Add time',exact:true}).click();
+ dialog=page.getByRole('dialog');await dialog.getByLabel('Description',{exact:true}).fill('Pitch deck');await dialog.getByLabel('Billable',{exact:true}).uncheck();
+ await dialog.getByRole('button',{name:'Start a timer instead',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'Switch and start',exact:true}).click();
+ await expect(page.getByText('Timer running for VAV-001 · Brand Experience.',{exact:true})).toBeVisible();await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(calls.slice(3)).toEqual([{fn:'stop',body:{p_timer_id:'45454545-4545-4545-8545-454545454545'}},{fn:'start',body:{p_workspace_id:ws,p_project_id:project,p_note:'Pitch deck',p_billable:false,p_task_id:null}}]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
