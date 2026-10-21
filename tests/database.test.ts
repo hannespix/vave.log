@@ -367,6 +367,18 @@ describe('database entries and workflow', () => {
     await login(manager);
     expect((await first<{absence_approval:boolean}>('select * from public.set_absence_approval($1,true)',[workspace])).absence_approval).toBe(true);
   });
+  it('stores work schedules with the management, keeps weekly capacity as the sum and validates the model', async () => {
+    await login(member);
+    await expect(attempt("select * from public.set_work_schedule($1,$2,'[480,480,480,480,0,0,0]'::jsonb,'2026-10-05',120)",[workspace,member])).rejects.toThrow(/Berechtigung/);
+    await login(manager);
+    const row=await first<{work_schedule:number[];weekly_capacity_minutes:number;balance_start_on:string|Date;balance_start_minutes:number}>("select * from public.set_work_schedule($1,$2,'[480,480,480,480,0,0,0]'::jsonb,'2026-10-05',120)",[workspace,member]);
+    expect(row.work_schedule).toEqual([480,480,480,480,0,0,0]);expect(row.weekly_capacity_minutes).toBe(1920);expect(new Date(row.balance_start_on).toISOString().slice(0,10)).toBe('2026-10-05');expect(row.balance_start_minutes).toBe(120);
+    await expect(attempt("select * from public.set_work_schedule($1,$2,'[480,480,480]'::jsonb,null,0)",[workspace,member])).rejects.toThrow(/sieben/);
+    await expect(attempt("select * from public.set_work_schedule($1,$2,'[1441,0,0,0,0,0,0]'::jsonb,null,0)",[workspace,member])).rejects.toThrow();
+    await expect(attempt("select * from public.set_work_schedule($1,$2,'[1440,1440,1440,1440,1440,0,0]'::jsonb,null,0)",[workspace,member])).rejects.toThrow(/100 Stunden/);
+    const cleared=await first<{work_schedule:null;weekly_capacity_minutes:number}>("select * from public.set_work_schedule($1,$2,null,null,null)",[workspace,member]);
+    expect(cleared.work_schedule).toBeNull();expect(cleared.weekly_capacity_minutes).toBe(1920);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

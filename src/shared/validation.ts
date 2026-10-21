@@ -17,4 +17,5 @@ export const timerSchema = z.strictObject({workspace_id:uuid,project_id:uuid,not
 export const dateRangeSchema = z.strictObject({from:date,to:date}).refine(({from,to})=>from<=to && (Date.parse(to)-Date.parse(from))/86400000<=365,'Zeitraum: maximal 366 Tage, Beginn vor Ende.');
 export const inviteSchema = z.strictObject({workspace_id:uuid,email:z.email().max(254).transform(s=>s.toLowerCase()),role:z.enum(['manager','member'])});
 export const locationSchema = z.string().trim().regex(/^[A-Z]{2}(-[A-Z0-9]{1,3})?$/,'Standort in der Form LAND oder LAND-REGION, z. B. DE-BW.').nullable();
+export const workScheduleSchema = z.strictObject({workspace_id:uuid,user_id:uuid,schedule:z.array(z.number().int().min(0).max(1440)).length(7).nullable(),balance_start_on:date.nullable(),balance_start_minutes:z.number().int().min(-600000).max(600000)}).refine(v=>!v.schedule||v.schedule.reduce((a,b)=>a+b,0)<=6000,'Die Wochenkapazität liegt zwischen 0 und 100 Stunden.');
 export const roleSchema = z.strictObject({workspace_id:uuid,user_id:uuid,role:z.enum(['owner','manager','member','disabled'])});
