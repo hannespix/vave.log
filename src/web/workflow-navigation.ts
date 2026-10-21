@@ -1,7 +1,7 @@
 import type { Project, Task } from '../shared/types';
 import { addDays } from './helpers';
 
-export type WorkflowView = 'overview'|'projects'|'tasks'|'time'|'absences'|'reports'|'team'|'finance'|'settings'|'help';
+export type WorkflowView = 'overview'|'projects'|'tasks'|'time'|'absences'|'planning'|'reports'|'team'|'finance'|'settings'|'help';
 export type FinanceTab = 'overview'|'clients'|'planning'|'invoices'|'offers'|'company';
 export type TaskFilters = {query:string;quick:'all'|'mine'|'overdue';status:'all'|Task['status'];assignee:string;due:'all'|'today'|'week'|'none'};
 export type WorkflowRoute = {workspaceId:string;view:WorkflowView;projectId:string;financeTab:FinanceTab;taskFilters:TaskFilters;timeScope:'own'|'team';entryStatus:'all'|'draft'|'submitted'|'approved';personId:string;invoiceId:string;helpTopic:string};
@@ -25,7 +25,7 @@ export function parseWorkflowHash(hash:string,workspaceId:string):WorkflowRoute 
  if(!hash.startsWith('#w='))return initial;
  const p=new URLSearchParams(hash.slice(1));
  if(p.get('w')!==workspaceId)return initial;
- return {...initial,view:choice(p.get('view'),['overview','projects','tasks','time','absences','reports','team','finance','settings','help'],'overview'),projectId:(p.get('project')||'').slice(0,80),financeTab:choice(p.get('tab'),['overview','clients','planning','invoices','offers','company'],'overview'),timeScope:choice(p.get('scope'),['own','team'],'own'),entryStatus:choice(p.get('entry'),['all','draft','submitted','approved'],'all'),personId:(p.get('person')||'').slice(0,80),invoiceId:(p.get('inv')||'').slice(0,80),helpTopic:(p.get('topic')||'').slice(0,80),taskFilters:{query:(p.get('q')||'').slice(0,240),quick:choice(p.get('quick'),['all','mine','overdue'],'all'),status:choice(p.get('status'),['all','todo','doing','done'],'all'),assignee:(p.get('assignee')||'').slice(0,80),due:choice(p.get('due'),['all','today','week','none'],'all')}};
+ return {...initial,view:choice(p.get('view'),['overview','projects','tasks','time','absences','planning','reports','team','finance','settings','help'],'overview'),projectId:(p.get('project')||'').slice(0,80),financeTab:choice(p.get('tab'),['overview','clients','planning','invoices','offers','company'],'overview'),timeScope:choice(p.get('scope'),['own','team'],'own'),entryStatus:choice(p.get('entry'),['all','draft','submitted','approved'],'all'),personId:(p.get('person')||'').slice(0,80),invoiceId:(p.get('inv')||'').slice(0,80),helpTopic:(p.get('topic')||'').slice(0,80),taskFilters:{query:(p.get('q')||'').slice(0,240),quick:choice(p.get('quick'),['all','mine','overdue'],'all'),status:choice(p.get('status'),['all','todo','doing','done'],'all'),assignee:(p.get('assignee')||'').slice(0,80),due:choice(p.get('due'),['all','today','week','none'],'all')}};
 }
 export function workflowHash(route:WorkflowRoute):string {
  const p=new URLSearchParams({w:route.workspaceId,view:route.view});

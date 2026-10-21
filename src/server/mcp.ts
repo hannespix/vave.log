@@ -11,6 +11,7 @@ import {registerWorkspaceAdminTools} from './workspace-admin-mcp.js';
 import type {WorkspaceAdminService} from '../shared/workspace-admin-service.js';
 import {toolError} from './messages.js';
 import {holidaysFor,isLocation} from '../shared/holidays.js';
+import {capacityPlan} from '../shared/capacity.js';
 import {absenceSchema,uuid,date,locationSchema,projectSchema,workScheduleSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
 
 /** Tool callbacks use exactly the same user-scoped service as the GUI. */
@@ -28,6 +29,7 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('list_members','List team names, email addresses and roles within an accessible workspace.',{workspace_id:uuid},true,a=>service.getMemberships(a.workspace_id));
  tool('invite_member','Owner only: invite a verified email address as manager or member. Does not send mail; access is accepted on next sign-in. Confirm email and role first.',inviteSchema.shape,false,a=>service.inviteMember(a),false,true);
  tool('set_member_role','Owner only: change an existing team role. Confirm exact user and role first.',roleSchema.shape,false,a=>service.setMemberRole(a),true,true);
+ tool('get_capacity_plan','Short-term capacity per person and week (1–26 weeks from the current week): available minutes from work schedules minus holidays and approved absences, planned minutes = remaining effort of assigned open tasks spread until their due dates, counts of unestimated tasks, plus an unassigned row. Uses the signed-in person’s visibility of booked time.',{workspace_id:uuid,weeks:z.number().int().min(1).max(26).optional()},true,async a=>{const [members,tasks,effort,today]=await Promise.all([service.getMemberships(a.workspace_id),service.listTasks(a.workspace_id),service.listTaskEffort(a.workspace_id),Promise.resolve(new Date().toISOString().slice(0,10))]);const weeks=a.weeks??6;const to=new Date(Date.now()+weeks*7*86400000).toISOString().slice(0,10);const absences=await service.listAbsences(a.workspace_id,today,to);return capacityPlan({members,tasks,effort:new Map(effort.map(e=>[e.task_id,e.minutes])),absences,today,weeks});});
  tool('set_work_schedule','Owner/manager: set a person’s work schedule as seven daily minute values Monday…Sunday (null removes it; weekly capacity becomes the sum), plus the flextime balance start date and start minutes. Confirm first.',workScheduleSchema.shape,false,a=>service.setWorkSchedule(a),false,true);
  tool('set_member_location','Set a person’s holiday location (ISO 3166-2 such as DE-BW, AT-9, CH-ZH; null = workspace default). Owners/managers for anyone, every person for themselves. Confirm first.',{workspace_id:uuid,user_id:uuid,location:locationSchema},false,a=>service.setMemberLocation(a),false,true);
  tool('set_workspace_location','Owner/manager: set the workspace default holiday location (ISO 3166-2, null = none). Confirm first.',{workspace_id:uuid,location:locationSchema},false,a=>service.setWorkspaceLocation(a),false,true);

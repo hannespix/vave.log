@@ -75,7 +75,7 @@ test('every main area meets WCAG 2.2 AA',async({page})=>{
  test.setTimeout(90000);
  await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
  const issues=await audit(page,'overview');
- for(const name of ['Projects','Tasks','Time','Absences','Reports','Team','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();issues.push(...await audit(page,name));}
+ for(const name of ['Projects','Tasks','Time','Absences','Planning','Reports','Team','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();issues.push(...await audit(page,name));}
  expect(issues).toEqual([]);
 });
 test('every finance tab meets WCAG 2.2 AA',async({page})=>{
@@ -140,6 +140,6 @@ test('content reflows at 320 px (400 % zoom) without horizontal scrolling',async
  const overflow:string[]=[];
  const check=async(name:string)=>{await page.waitForTimeout(200);const w=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);if(w>0)overflow.push(`${name}: ${w}px`);};
  await check('overview');
- for(const name of ['Projects','Tasks','Time','Absences','Reports','Team','Finance','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();await check(name);}
+ for(const name of ['Projects','Tasks','Time','Absences','Planning','Reports','Team','Finance','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();await check(name);}
  expect(overflow).toEqual([]);
 });

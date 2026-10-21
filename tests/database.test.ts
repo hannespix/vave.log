@@ -379,6 +379,19 @@ describe('database entries and workflow', () => {
     const cleared=await first<{work_schedule:null;weekly_capacity_minutes:number}>("select * from public.set_work_schedule($1,$2,null,null,null)",[workspace,member]);
     expect(cleared.work_schedule).toBeNull();expect(cleared.weekly_capacity_minutes).toBe(1920);
   });
+  it('sums booked minutes per task through the invoker-rights view', async () => {
+    await login(manager);
+    const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Effort') returning id",[workspace,project])).id;
+    await login(member);
+    await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable,task_id) values($1,$2,'2026-10-13',90,'a',true,$3),($1,$2,'2026-10-14',30,'b',true,$3)",[workspace,project,task]);
+    await login(manager);
+    await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable,task_id) values($1,$2,'2026-10-14',60,'c',true,$3)",[workspace,project,task]);
+    expect(await rows('select task_id,minutes,entries from public.task_effort where workspace_id=$1 and task_id=$2',[workspace,task])).toEqual([{task_id:task,minutes:180,entries:3}]);
+    await login(member);
+    expect(await rows('select minutes from public.task_effort where task_id=$1',[task])).toEqual([{minutes:120}]); // nur eigene Zeiten
+    await login(outsider);
+    expect(await rows('select minutes from public.task_effort where task_id=$1',[task])).toEqual([]);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

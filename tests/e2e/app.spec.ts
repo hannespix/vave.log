@@ -702,3 +702,31 @@ test('work schedule dialog saves the model and the time account shows target, ac
  await expect(account.locator('.account-day')).toHaveCount(7);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('planning cockpit shows load per person and week and reassigns a task from the cell',async({page})=>{
+ await connectedSetup(page);const saved:Record<string,unknown>[]=[];
+ const tasks=[{id:'10000000-0000-4000-8000-000000000001',workspace_id:ws,project_id:project,title:'Brand sketch',status:'todo',assignee_id:user,due_date:'2026-10-16',estimated_minutes:600,created_by:user,created_at:''},{id:'10000000-0000-4000-8000-000000000002',workspace_id:ws,project_id:secondProject,title:'Museum prototype',status:'doing',assignee_id:null,due_date:'2026-10-13',estimated_minutes:480,created_by:user,created_at:''},{id:'10000000-0000-4000-8000-000000000003',workspace_id:ws,project_id:project,title:'Open end',status:'todo',assignee_id:user,due_date:null,estimated_minutes:null,created_by:user,created_at:''}];
+ await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);Object.assign(tasks.find(x=>x.id===body.id)!,body);return r.fulfill({json:body});}return r.fulfill({json:tasks,headers:{'content-range':`0-${tasks.length-1}/${tasks.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[{task_id:'10000000-0000-4000-8000-000000000001',minutes:120,entries:1,last_work_date:'2026-10-12'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Planning');
+ await expect(page.getByRole('heading',{level:1,name:'Who has room, where it gets tight.'})).toBeVisible();
+ // Woche 12.–18.10.: Brand sketch Rest 480 (600 − 120) bis Fr 16.10. → 8 h von 40 h; „Open end“ ohne Schätzung zählt als +1?.
+ const own=page.getByRole('button',{name:/^Studio Owner, 10\/12 – 10\/18/});
+ await expect(own).toContainText('8 / 40 h');await expect(own).toContainText('20 %');await expect(own).toContainText('+1?');
+ const unassigned=page.getByRole('button',{name:/^Unassigned, 10\/12 – 10\/18/});
+ await expect(unassigned).toContainText('8:00 h');
+ await unassigned.click();
+ const detail=page.locator('.planning-detail');await expect(detail).toContainText('Museum prototype');await expect(detail).toContainText('8:00 h this week');
+ await pickOption(detail.getByLabel('Assignee for Museum prototype',{exact:true}),'Studio Owner');
+ await detail.getByRole('button',{name:'Save change',exact:true}).click();
+ await expect(page.getByText('Task rescheduled.',{exact:true})).toBeVisible();
+ expect(saved).toEqual([expect.objectContaining({id:'10000000-0000-4000-8000-000000000002',assignee_id:user,due_date:'2026-10-13',estimated_minutes:480,status:'doing'})]);
+ await expect(page.getByRole('button',{name:/^Studio Owner, 10\/12 – 10\/18/})).toContainText('16 / 40 h');
+ await expect(page.getByRole('button',{name:/^Unassigned, 10\/12 – 10\/18/})).toContainText('–');
+ // Übersicht: Meine Woche.
+ await page.goto(`/#w=${ws}&view=overview`);await expect(page.getByText('MY WEEK',{exact:true})).toBeVisible();
+ const week=page.locator('.my-week-grid');await expect(week).toContainText('40:00 h');await expect(week).toContainText('16:00 h');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
