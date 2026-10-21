@@ -188,6 +188,16 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['team-capacity', 'team-vacation', 'team-utilization'],
   },
+  'plan-capacity': {
+    steps: [
+      ['Planning shows a heatmap of people × weeks (4 to 12 weeks ahead). Each cell compares planned effort with available hours: green under 80 %, yellow 80–100 %, red over 100 %, striped when the person is away.', 'Planung zeigt eine Heatmap Personen × Wochen (4 bis 12 Wochen voraus). Jede Zelle vergleicht geplanten Aufwand mit verfügbaren Stunden: grün unter 80 %, gelb 80–100 %, rot über 100 %, gestreift bei Abwesenheit.', '“规划”以人员 × 周（未来 4 至 12 周）的热力图显示。每个单元格比较计划工时与可用工时：绿色低于 80%，黄色 80–100%，红色超过 100%，条纹表示缺勤。'],
+      ['Planned = remaining effort of assigned open tasks (estimate minus booked time), spread evenly over workdays until the due date. Overdue or undated tasks land in the current week. “+n?” counts tasks without an estimate.', 'Geplant = Restaufwand der zugewiesenen offenen Aufgaben (Schätzung minus gebuchte Zeit), gleichmäßig über die Werktage bis zum Termin verteilt. Überfällige oder terminlose Aufgaben landen in der laufenden Woche. „+n?“ zählt Aufgaben ohne Schätzung.', '计划 = 已分配未完成任务的剩余工作量（估算减已记录工时），均匀分摊到截止日前的工作日。逾期或无截止日的任务计入本周。“+n?”为无估算的任务数。'],
+      ['Available = work schedule minus public holidays and approved absences. The “Unassigned” row shows free work nobody owns yet.', 'Verfügbar = Arbeitszeitmodell minus Feiertage und genehmigte Abwesenheiten. Die Zeile „Nicht zugewiesen“ zeigt freie Arbeit, die noch niemand hat.', '可用 = 工时模型减去法定假日和已批准的缺勤。“未分配”行显示尚无人负责的工作。'],
+      ['Click a cell to list its tasks and re-steer right there: assign another person, move the due date or change the estimate, then save. The heatmap updates immediately.', 'Klicke eine Zelle, um ihre Aufgaben zu sehen und direkt nachzusteuern: andere Person zuweisen, Termin schieben oder Schätzung ändern, dann speichern. Die Heatmap aktualisiert sich sofort.', '点击单元格查看其任务并直接调整：改派他人、移动截止日或修改估算，然后保存。热力图会立即更新。'],
+      ['Members see “My week” on the overview: target, planned and booked hours for the current week.', 'Mitglieder sehen auf der Übersicht „Meine Woche“: Soll, geplant und gebucht für die laufende Woche.', '成员可在概览中看到“我的一周”：本周的目标、计划和已记录工时。'],
+    ],
+    related: ['team-capacity', 'time-account', 'work-tasks'],
+  },
   'team-vacation': {
     steps: [
       ['Absences: the month calendar shows every person per day – vacation purple, requested hatched, sick, other, public holidays grey, weekends striped. Use the arrows to move months, “Today” to come back.', 'Abwesenheiten: Der Monatskalender zeigt jede Person je Tag – Urlaub violett, beantragt schraffiert, krank, sonstiges, Feiertage grau, Wochenenden gestreift. Mit den Pfeilen wechselst du den Monat, „Heute“ führt zurück.', '缺勤：月历按天显示每个人——休假为紫色、申请中为斜纹、病假、其他、法定假日为灰色、周末为条纹。用箭头切换月份，“今天”返回当月。'],
