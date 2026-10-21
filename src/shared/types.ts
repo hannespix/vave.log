@@ -1,6 +1,6 @@
 export type Role = 'owner' | 'manager' | 'member' | 'disabled';
-export interface Workspace { id: string; name: string; timezone: string; currency: string; created_by: string; created_at: string }
-export interface Membership { is_demo?:boolean; demo_title?:string; demo_studio?:string; demo_origin?:'public'|'fictional'|null; workspace_id: string; user_id: string; role: Role; display_name: string; email: string; created_at: string; weekly_capacity_minutes?: number | null }
+export interface Workspace { id: string; name: string; timezone: string; currency: string; created_by: string; created_at: string; default_location?: string | null }
+export interface Membership { is_demo?:boolean; demo_title?:string; demo_studio?:string; demo_origin?:'public'|'fictional'|null; workspace_id: string; user_id: string; role: Role; display_name: string; email: string; created_at: string; weekly_capacity_minutes?: number | null; location?: string | null }
 export interface AbsenceInput { id?:string; workspace_id:string; user_id:string; starts_on:string; ends_on:string; kind:'vacation'|'sick'|'holiday'|'other'; note:string }
 export interface Absence extends AbsenceInput { id:string; created_at:string }
 export interface Invitation { id: string; workspace_id: string; email: string; role: 'manager' | 'member'; invited_by: string; created_at: string; expires_at: string }

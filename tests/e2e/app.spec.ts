@@ -621,3 +621,27 @@ test('timers start straight from project cards, task cards and the time dialog, 
  expect(calls.slice(3)).toEqual([{fn:'stop',body:{p_timer_id:'45454545-4545-4545-8545-454545454545'}},{fn:'start',body:{p_workspace_id:ws,p_project_id:project,p_note:'Pitch deck',p_billable:false,p_task_id:null}}]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('holiday locations are set per person and as workspace default, and the utilization report counts public holidays',async({page})=>{
+ await connectedSetup(page);const calls:{fn:string;body:Record<string,unknown>}[]=[];let location:string|null=null,defaultLocation:string|null=null;
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/set_member_location',r=>{const body=r.request().postDataJSON();calls.push({fn:'member',body});location=body.p_location;return r.fulfill({json:{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',location}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/set_workspace_location',r=>{const body=r.request().postDataJSON();calls.push({fn:'workspace',body});defaultLocation=body.p_location;return r.fulfill({json:{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-01T10:00:00Z',default_location:defaultLocation}});});
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Team');
+ const cell=page.getByLabel('Location of Studio Owner',{exact:true});await expect(cell).toContainText('Default: no location');
+ await pickOption(cell,/^Baden-Württemberg/,'Baden');
+ await expect(page.getByText('Location saved.',{exact:true})).toBeVisible();
+ expect(calls).toEqual([{fn:'member',body:{p_workspace_id:ws,p_user_id:user,p_location:'DE-BW'}}]);
+ await expect(page.getByLabel('Location of Studio Owner',{exact:true})).toContainText('Baden-Württemberg');
+ await goArea(page,'Settings');
+ await pickOption(page.getByLabel('Default location (public holidays)',{exact:true}),/^Bayern/,'Bay');
+ await expect(page.getByText('Location saved.',{exact:true}).first()).toBeVisible();
+ expect(calls[1]).toEqual({fn:'workspace',body:{p_workspace_id:ws,p_location:'DE-BY'}});
+ // Mai 2026: Tag der Arbeit (Fr 1.5.), Christi Himmelfahrt (Do 14.5.), Pfingstmontag (25.5.), Fronleichnam (Do 4.6.) liegt außerhalb.
+ await page.goto(`/#w=${ws}&view=reports`);await page.getByRole('button',{name:/10\/12 – 10\/18/}).click();await page.getByLabel('From',{exact:true}).fill('2026-05-01');await page.getByLabel('To',{exact:true}).fill('2026-05-31');await page.getByRole('button',{name:'Apply',exact:true}).click();
+ await expect(page.getByRole('columnheader',{name:'Public holidays'})).toBeVisible();
+ const row=page.locator('table').filter({hasText:'Public holidays'}).locator('tbody tr').first();
+ await expect(row).toContainText('Studio Owner');
+ await expect(row.locator('td').nth(3)).toHaveText('3');
+});

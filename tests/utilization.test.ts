@@ -33,8 +33,8 @@ describe('team utilization', () => {
       { user_id: 'b', starts_on: '2026-10-01', ends_on: '2027-01-31' }, // klemmt auf den Zeitraum
     ];
     const report = utilization(members, [entry('a', 300), entry('a', 60, false), entry('b', 120)], absences, range);
-    expect(report.get('a')).toEqual({ capacityMinutes: 2400, absenceWorkdays: 4, expectedMinutes: 2880, actualMinutes: 360, billableMinutes: 300 });
-    expect(report.get('b')).toEqual({ capacityMinutes: null, absenceWorkdays: 10, expectedMinutes: null, actualMinutes: 120, billableMinutes: 120 });
+    expect(report.get('a')).toEqual({ capacityMinutes: 2400, absenceWorkdays: 4, holidayWorkdays: 0, expectedMinutes: 2880, actualMinutes: 360, billableMinutes: 300 });
+    expect(report.get('b')).toEqual({ capacityMinutes: null, absenceWorkdays: 10, holidayWorkdays: 0, expectedMinutes: null, actualMinutes: 120, billableMinutes: 120 });
     expect(report.has('c')).toBe(false);
   });
   it('never reports a negative target when absences exceed the range', () => {
@@ -43,5 +43,18 @@ describe('team utilization', () => {
     ], range);
     expect(report.get('a')!.expectedMinutes).toBe(0);
     expect(report.get('a')!.absenceWorkdays).toBe(10);
+  });
+  it('subtracts public holidays of the person’s location, falling back to the workspace default, without double-counting absences', () => {
+    // 2026-05-11 (Mo) bis 2026-05-29 (Fr): 15 Werktage; Christi Himmelfahrt 14.5. überall, Fronleichnam 4.6. außerhalb.
+    const week = { from: '2026-05-11', to: '2026-05-29' };
+    const report = utilization([
+      member('a', { weekly_capacity_minutes: 2400, location: 'DE-BW' }),
+      member('b', { weekly_capacity_minutes: 2400 }), // Workspace-Standard DE-HH
+      member('c', { weekly_capacity_minutes: 2400, location: 'DE-BW' }),
+    ], [], [{ user_id: 'c', starts_on: '2026-05-14', ends_on: '2026-05-15' }], week, 'DE-HH');
+    expect(report.get('a')).toMatchObject({ holidayWorkdays: 2, absenceWorkdays: 0, expectedMinutes: 13 * 480 }); // Himmelfahrt + Pfingstmontag 25.5.
+    expect(report.get('b')).toMatchObject({ holidayWorkdays: 2, expectedMinutes: 13 * 480 });
+    expect(report.get('c')).toMatchObject({ holidayWorkdays: 1, absenceWorkdays: 2, expectedMinutes: 12 * 480 }); // Himmelfahrt liegt schon in der Abwesenheit
+    expect(utilization([member('d', { weekly_capacity_minutes: 2400 })], [], [], week).get('d')).toMatchObject({ holidayWorkdays: 0, expectedMinutes: 15 * 480 });
   });
 });

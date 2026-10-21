@@ -321,6 +321,21 @@ describe('database entries and workflow', () => {
     await login(outsider);
     expect(await rows('select * from public.absences where workspace_id=$1',[workspace])).toHaveLength(0);
   });
+  it('stores holiday locations: managers for anyone, members only for themselves, owners/managers for the workspace default', async () => {
+    await login(member);
+    expect((await first<{location:string}>("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,member])).location).toBe('DE-BW');
+    await expect(attempt("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,manager])).rejects.toThrow(/Berechtigung/);
+    await expect(attempt("select * from public.set_member_location($1,$2,'de-bw')",[workspace,member])).rejects.toThrow(/LAND-REGION/);
+    await expect(attempt("select * from public.set_workspace_location($1,'DE-BW')",[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(manager);
+    expect((await first<{location:string}>("select * from public.set_member_location($1,$2,'AT-9')",[workspace,member])).location).toBe('AT-9');
+    expect((await first<{location:string|null}>("select * from public.set_member_location($1,$2,'')",[workspace,member])).location).toBeNull();
+    expect((await first<{default_location:string}>("select * from public.set_workspace_location($1,'CH-ZH')",[workspace])).default_location).toBe('CH-ZH');
+    expect((await first<{default_location:string|null}>("select * from public.set_workspace_location($1,null)",[workspace])).default_location).toBeNull();
+    await login(outsider);
+    await expect(attempt("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,member])).rejects.toThrow(/Berechtigung/);
+    await expect(attempt("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,outsider])).rejects.toThrow(/Berechtigung/);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

@@ -1,5 +1,6 @@
 import { hasTranslation, localeTag, translate, type Locale } from '../shared/i18n';
 import { getLocale } from './i18n';
+import { holidaysBetween } from '../shared/holidays';
 import type { Membership, Project, TimeEntry } from '../shared/types';
 import type { Invoice } from '../shared/finance-types';
 
@@ -70,9 +71,9 @@ export function countWorkdays(from: string, to: string) {
   for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) count++; }
   return count;
 }
-export interface MemberUtilization { capacityMinutes: number | null; absenceWorkdays: number; expectedMinutes: number | null; actualMinutes: number; billableMinutes: number }
-/** Soll je Person = Kapazität/5 je Werktag im Zeitraum, abzüglich Abwesenheits-Werktagen (tagesgenau dedupliziert — überlappende Einträge zählen einfach). Kapazität null heißt Soll unbekannt, nie 0. */
-export function utilization(members: Membership[], entries: TimeEntry[], absences: { user_id: string; starts_on: string; ends_on: string }[], range: { from: string; to: string }) {
+export interface MemberUtilization { capacityMinutes: number | null; absenceWorkdays: number; holidayWorkdays: number; expectedMinutes: number | null; actualMinutes: number; billableMinutes: number }
+/** Soll je Person = Kapazität/5 je Werktag im Zeitraum, abzüglich Abwesenheits-Werktagen (tagesgenau dedupliziert — überlappende Einträge zählen einfach) und gesetzlicher Feiertage am Standort der Person (sonst Workspace-Standard). Ein Feiertag, der schon als Abwesenheit eingetragen ist, zählt nur einmal. Kapazität null heißt Soll unbekannt, nie 0. */
+export function utilization(members: Membership[], entries: TimeEntry[], absences: { user_id: string; starts_on: string; ends_on: string }[], range: { from: string; to: string }, defaultLocation: string | null = null) {
   const workdays = countWorkdays(range.from, range.to);
   const result = new Map<string, MemberUtilization>();
   for (const member of members) {
@@ -83,12 +84,15 @@ export function utilization(members: Membership[], entries: TimeEntry[], absence
       const from = absence.starts_on < range.from ? range.from : absence.starts_on, to = absence.ends_on > range.to ? range.to : absence.ends_on;
       for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) days.add(day); }
     }
+    let holidays = 0;
+    for (const day of holidaysBetween(member.location ?? defaultLocation, range.from, range.to).keys()) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5 && !days.has(day)) holidays++; }
     const capacity = member.weekly_capacity_minutes ?? null;
     const own = entries.filter(entry => entry.user_id === member.user_id);
     result.set(member.user_id, {
       capacityMinutes: capacity,
       absenceWorkdays: days.size,
-      expectedMinutes: capacity == null ? null : Math.round(Math.max(0, workdays - days.size) * capacity / 5),
+      holidayWorkdays: holidays,
+      expectedMinutes: capacity == null ? null : Math.round(Math.max(0, workdays - days.size - holidays) * capacity / 5),
       actualMinutes: own.reduce((total, entry) => total + entry.minutes, 0),
       billableMinutes: own.filter(entry => entry.billable).reduce((total, entry) => total + entry.minutes, 0),
     });

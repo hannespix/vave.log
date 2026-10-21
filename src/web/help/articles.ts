@@ -174,7 +174,8 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     steps: [
       ['Capacity: in the Team list, enter hours per week per person. Leave it empty if a person is not planned.', 'Kapazität: Trage in der Team-Liste je Person die Stunden pro Woche ein. Lass es leer, wenn eine Person nicht verplant wird.', '产能：在团队列表中为每人填写每周工时。不参与排期的人留空。'],
       ['Absences: “Add absence” with person, from, to and kind – vacation, sick, public holiday or other.', 'Abwesenheiten: „Abwesenheit eintragen“ mit Person, von, bis und Art – Urlaub, krank, Feiertag oder sonstiges.', '缺勤：“添加缺勤”，填写人员、起止日期和类型——休假、病假、法定假日或其他。'],
-      ['Both feed the utilization report: available hours = capacity × workdays minus absences.', 'Beides speist die Auslastung: verfügbare Stunden = Kapazität × Arbeitstage minus Abwesenheiten.', '两者共同构成利用率：可用工时 = 产能 × 工作日 − 缺勤。'],
+      ['Location: choose a region per person (Germany, Austria, Switzerland with states or cantons) – or set a workspace default under Settings. Public holidays of that location are computed automatically; nobody needs to enter them.', 'Standort: Wähle je Person eine Region (Deutschland, Österreich, Schweiz mit Bundesländern bzw. Kantonen) – oder setze unter Einstellungen einen Workspace-Standard. Die gesetzlichen Feiertage dieses Standorts werden automatisch gerechnet; niemand muss sie eintragen.', '地点：为每人选择地区（德国、奥地利、瑞士及其州/邦），或在“设置”中设定工作区默认值。该地区的法定假日会自动计算，无需手动录入。'],
+      ['All three feed the utilization report: available hours = capacity × workdays minus absences minus public holidays.', 'Alle drei speisen die Auslastung: verfügbare Stunden = Kapazität × Arbeitstage minus Abwesenheiten minus Feiertage.', '三者共同构成利用率：可用工时 = 产能 × 工作日 − 缺勤 − 法定假日。'],
     ],
     related: ['team-utilization'],
   },
