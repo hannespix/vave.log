@@ -188,6 +188,15 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['team-capacity', 'team-vacation', 'team-utilization'],
   },
+  'plan-health': {
+    steps: [
+      ['The overview starts with the situation board: every active project gets a traffic light – red “burning”, yellow “wobbling”, green “running”. Red projects come first.', 'Die Übersicht beginnt mit dem Lagebild: Jedes aktive Projekt bekommt eine Ampel – rot „brennt“, gelb „wackelt“, grün „läuft“. Rote Projekte stehen zuerst.', '概览以态势板开始：每个进行中的项目都有一个红绿灯——红色“吃紧”、黄色“不稳”、绿色“正常”。红色项目排在最前。'],
+      ['Every card lists the reasons: project deadline missed, deadline near with little progress, overdue milestones or tasks, time budget used up faster than progress, no booked time for two weeks, tasks due soon without an owner, many tasks without estimates, assignees over 100 % this week. Points add up: from 3 yellow, from 6 red.', 'Jede Karte nennt die Gründe: Projekttermin überschritten, Termin nahe bei wenig Fortschritt, überfällige Meilensteine oder Aufgaben, Zeitbudget schneller verbraucht als Fortschritt, zwei Wochen keine gebuchte Zeit, bald fällige Aufgaben ohne Zuständige, viele Aufgaben ohne Schätzung, Zuständige diese Woche über 100 %. Punkte summieren sich: ab 3 gelb, ab 6 rot.', '每张卡片列出原因：项目截止日已过、临近截止但进度不足、里程碑或任务逾期、时间预算消耗快于进度、两周无记录工时、即将到期但无人负责的任务、大量无估算任务、负责人本周超过 100%。分数累加：3 分起黄色，6 分起红色。'],
+      ['Act right there: open the overdue tasks, jump to the capacity cockpit to reassign, or read the forecast. “All projects” also shows the green ones.', 'Direkt handeln: überfällige Aufgaben öffnen, ins Kapazitäts-Cockpit zum Umplanen springen oder die Prognose lesen. „Alle Projekte“ zeigt auch die grünen.', '就地处理：打开逾期任务、跳转到产能看板重新分配，或查看预测。“全部项目”也会显示绿色项目。'],
+      ['Members see only projects with their own tasks and no budget signals.', 'Mitglieder sehen nur Projekte mit eigenen Aufgaben und keine Budgetsignale.', '成员只能看到含有自己任务的项目，且不显示预算信号。'],
+    ],
+    related: ['plan-capacity', 'work-project', 'work-tasks'],
+  },
   'plan-capacity': {
     steps: [
       ['Planning shows a heatmap of people × weeks (4 to 12 weeks ahead). Each cell compares planned effort with available hours: green under 80 %, yellow 80–100 %, red over 100 %, striped when the person is away.', 'Planung zeigt eine Heatmap Personen × Wochen (4 bis 12 Wochen voraus). Jede Zelle vergleicht geplanten Aufwand mit verfügbaren Stunden: grün unter 80 %, gelb 80–100 %, rot über 100 %, gestreift bei Abwesenheit.', '“规划”以人员 × 周（未来 4 至 12 周）的热力图显示。每个单元格比较计划工时与可用工时：绿色低于 80%，黄色 80–100%，红色超过 100%，条纹表示缺勤。'],
