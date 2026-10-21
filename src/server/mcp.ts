@@ -11,7 +11,7 @@ import {registerWorkspaceAdminTools} from './workspace-admin-mcp.js';
 import type {WorkspaceAdminService} from '../shared/workspace-admin-service.js';
 import {toolError} from './messages.js';
 import {holidaysFor,isLocation} from '../shared/holidays.js';
-import {uuid,date,locationSchema,projectSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
+import {absenceSchema,uuid,date,locationSchema,projectSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
 
 /** Tool callbacks use exactly the same user-scoped service as the GUI. */
 export function createMcpServer(service:Service,options:{finance?:FinanceService;demo?:DemoService;workspaceAdmin?:WorkspaceAdminService;locale?:Locale}={}){
@@ -31,6 +31,10 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('set_member_location','Set a person’s holiday location (ISO 3166-2 such as DE-BW, AT-9, CH-ZH; null = workspace default). Owners/managers for anyone, every person for themselves. Confirm first.',{workspace_id:uuid,user_id:uuid,location:locationSchema},false,a=>service.setMemberLocation(a),false,true);
  tool('set_workspace_location','Owner/manager: set the workspace default holiday location (ISO 3166-2, null = none). Confirm first.',{workspace_id:uuid,location:locationSchema},false,a=>service.setWorkspaceLocation(a),false,true);
  tool('list_holidays','Public holidays computed locally for a location (DE/AT/CH with regions) and year. Not a database read.',{location:z.string().max(8),year:z.number().int().min(2000).max(2100)},true,async a=>isLocation(a.location)?holidaysFor(a.location,a.year):[]);
+ tool('list_absences','Absences (vacation, sick, holiday, other) of the whole team in an inclusive date range of at most 366 days, with status requested/approved/declined and half_day.',{workspace_id:uuid,from:date,to:date},true,a=>service.listAbsences(a.workspace_id,a.from,a.to));
+ tool('request_absence','Create or update an absence. Members only for themselves: vacation and other become a request for the management, sick applies immediately. Owners/managers may enter for anyone. half_day am/pm only for a single day. Confirm person, kind and dates first.',absenceSchema.shape,false,a=>service.saveAbsence(a));
+ tool('decide_absence','Owner/manager: approve (approve=true) or decline a requested absence; the person is notified. Confirm first.',{id:uuid,approve:z.boolean()},false,a=>service.decideAbsence(a),false,true);
+ tool('delete_absence','Delete an absence: own requested or sick entries, or any as owner/manager. Confirm first.',{id:uuid},false,a=>service.deleteAbsence(a.id),true,true);
  tool('accept_invitations','Accept pending invitations for your verified email.',{},false,()=>service.acceptInvitations(),false,true);
  tool('list_projects','List projects in a workspace. Project budget is in minutes.',{workspace_id:uuid},true,a=>service.listProjects(a.workspace_id));
  tool('get_project_insight','Owner/manager only: read all recorded team effort through today in the workspace timezone, recent 28-day totals, project planning, automatic task progress, milestone status and data gaps. Progress weights completed tasks by estimated minutes when every task is estimated; otherwise it explicitly uses unweighted done/total task counts. Includes the same constant-pace forecast scenario and blockers as the GUI. Time consumption and legacy manual percentages are not completion. Excludes future entries and running timers.',{workspace_id:uuid,project_id:uuid},true,async a=>{const insight=await service.getProjectInsight(a.workspace_id,a.project_id);return {...insight,forecast:forecastProject(insight)}});

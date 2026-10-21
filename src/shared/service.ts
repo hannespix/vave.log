@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { absenceSchema,dateRangeSchema,entrySchema,inviteSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification } from './types.js';
+import { absenceSchema,dateRangeSchema,entrySchema,inviteSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,uuid,vacationBalanceSchema,workspaceSchema } from './validation.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -42,6 +42,11 @@ export function createService(client:SupabaseClient){
   listAbsences:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to});return rows<Absence>(client.from('absences').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).lte('starts_on',v.to).gte('ends_on',v.from).order('starts_on').order('id').limit(1001))},
   saveAbsence:(input:AbsenceInput&{id?:string})=>one<Absence>(client.from('absences').upsert(parse(absenceSchema,input)).select().single()),
   deleteAbsence:async(id:string)=>{await one(client.from('absences').delete().eq('id',parse(uuid,id)).select('id').single())},
+  decideAbsence:(input:{id:string;approve:boolean})=>{const v=parse(z.strictObject({id:uuid,approve:z.boolean()}),input);return one<Absence>(client.from('absences').update({status:v.approve?'approved':'declined'}).eq('id',v.id).select().single())},
+  listVacationBalances:(workspaceId:string,year:number)=>rows<VacationBalance>(client.from('vacation_balances').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('year',parse(z.number().int().min(2000).max(2100),year)).order('user_id').limit(1001)),
+  saveVacationBalance:(input:VacationBalance)=>one<VacationBalance>(client.from('vacation_balances').upsert(parse(vacationBalanceSchema,input)).select().single()),
+  setVacationEntitlement:(input:{workspace_id:string;user_id:string;days:number|null})=>{const v=parse(z.strictObject({workspace_id:uuid,user_id:uuid,days:z.number().min(0).max(100).multipleOf(0.5).nullable()}),input);return rpc<Membership>('set_vacation_entitlement',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_days:v.days})},
+  setAbsenceApproval:(input:{workspace_id:string;required:boolean})=>{const v=parse(z.strictObject({workspace_id:uuid,required:z.boolean()}),input);return rpc<Workspace>('set_absence_approval',{p_workspace_id:v.workspace_id,p_required:v.required})},
   listProjects:(workspaceId:string)=>rows<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   getProjectInsight:(workspaceId:string,projectId:string)=>rpc<ProjectInsight>('project_insight',{p_workspace_id:parse(uuid,workspaceId),p_project_id:parse(uuid,projectId)}),
   saveProject:(input:ProjectInput&{id?:string})=>one<Project>(client.from('projects').upsert(parse(projectSchema,input)).select().single()),
