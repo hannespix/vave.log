@@ -404,6 +404,24 @@ describe('database entries and workflow', () => {
     await login(outsider);
     expect(await rows('select minutes from public.project_effort where project_id=$1',[project])).toEqual([]);
   });
+  it('tracks the task lifecycle in the trigger and lets only the management rate', async () => {
+    await login(manager);
+    const t=await first<{id:string;started_at:string|null;done_at:string|null;reopened_count:number;tags:string[]}>("insert into public.tasks(workspace_id,project_id,title,tags) values($1,$2,'Lifecycle','{motion,3d}') returning *",[workspace,project]);
+    expect(t.started_at).toBeNull();expect(t.done_at).toBeNull();expect(t.tags).toEqual(['motion','3d']);
+    await expect(attempt("insert into public.tasks(workspace_id,project_id,title,tags) values($1,$2,'Bad','{Motion}')",[workspace,project])).rejects.toThrow();
+    const doing=await first<{started_at:string|null;done_at:string|null}>("update public.tasks set status='doing' where id=$1 returning *",[t.id]);
+    expect(doing.started_at).not.toBeNull();expect(doing.done_at).toBeNull();
+    const done=await first<{done_at:string|null;reopened_count:number}>("update public.tasks set status='done', rating=4 where id=$1 returning *",[t.id]);
+    expect(done.done_at).not.toBeNull();expect(done.reopened_count).toBe(0);
+    const reopened=await first<{done_at:string|null;reopened_count:number;rating:number}>("update public.tasks set status='doing' where id=$1 returning *",[t.id]);
+    expect(reopened.done_at).toBeNull();expect(reopened.reopened_count).toBe(1);expect(reopened.rating).toBe(4);
+    // Zeitstempel und Zähler lassen sich nicht vom Client setzen.
+    expect((await first<{reopened_count:number}>("update public.tasks set reopened_count=99, done_at=now() where id=$1 returning *",[t.id])).reopened_count).toBe(1);
+    await login(member);
+    await expect(attempt("update public.tasks set rating=1 where id=$1",[t.id])).rejects.toThrow(/Leitung/);
+    expect((await first<{status:string;rating:number}>("update public.tasks set status='done' where id=$1 returning *",[t.id])).rating).toBe(4);
+    await expect(attempt("update public.tasks set rating=6 where id=$1",[t.id])).rejects.toThrow();
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

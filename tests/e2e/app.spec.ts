@@ -783,3 +783,30 @@ test('situation board flags burning projects with reasons and links into tasks a
  await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Overdue',exact:true})).toHaveAttribute('aria-pressed','true');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('tags, ratings and strength profiles: recommendation in the task dialog, profile dialog in the team',async({page})=>{
+ const state=await connectedSetup(page);const saved:Record<string,unknown>[]=[];
+ const other='20000000-0000-4000-8000-000000000002';
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',weekly_capacity_minutes:2400}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ // Mara hat drei erledigte Motion-Aufgaben, pünktlich, bewertet.
+ for(let i=0;i<3;i++)state.tasks.push({id:`10000000-0000-4000-8000-00000000002${i}`,workspace_id:ws,project_id:project,title:`Motion ${i}`,status:'done',assignee_id:other,due_date:'2026-10-10',estimated_minutes:600,tags:['motion'],rating:5,started_at:'2026-10-01T08:00:00Z',done_at:'2026-10-08T10:00:00Z',reopened_count:0,created_by:user,created_at:''} as typeof state.tasks[number]);
+ await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[0,1,2].map(i=>({task_id:`10000000-0000-4000-8000-00000000002${i}`,minutes:540,entries:2,last_work_date:'2026-10-08'})),headers:{'content-range':'0-2/3','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);state.tasks.push({...body,created_by:user,created_at:''});return r.fulfill({json:body});}return r.fallback();});
+ await page.goto(`/#w=${ws}&view=tasks`);
+ await page.getByRole('button',{name:'New task',exact:true}).click();
+ const dialog=page.getByRole('dialog');await dialog.getByLabel('Task',{exact:true}).fill('Motion reel');
+ await dialog.getByLabel('Tags',{exact:true}).fill('Motion, 3D');
+ const rec=dialog.locator('.recommend');await expect(rec).toContainText('Mara Lenz');await expect(rec).toContainText('3× motion');await expect(rec).toContainText('Speed 0.90×');await expect(rec).toContainText('100 % on time');await expect(rec).toContainText('Rating 5.0');
+ await rec.getByRole('button',{name:'Assign',exact:true}).first().click();
+ await expect(dialog.getByLabel('Assigned to',{exact:true})).toHaveAttribute('data-value',other);
+ await dialog.getByRole('radio',{name:'4',exact:true}).check();
+ await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();
+ expect(saved[0]).toMatchObject({title:'Motion reel',assignee_id:other,tags:['motion','3d'],rating:4});
+ await expect(page.locator('.task-card').filter({hasText:'Motion reel'}).locator('.task-tag')).toHaveText(['motion','3d']);
+ await goArea(page,'Team');
+ await page.getByRole('button',{name:'Strengths of Mara Lenz',exact:true}).click();
+ const profile=page.getByRole('dialog');await expect(profile.getByRole('heading',{name:'Strengths: Mara Lenz'})).toBeVisible();
+ const row=profile.locator('tbody tr').filter({hasText:'motion'});await expect(row).toContainText('0.9×');await expect(row).toContainText('100 %');await expect(row).toContainText('5 / 5');
+ await expect(row.locator('td').last()).not.toContainText('from 3 done');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
