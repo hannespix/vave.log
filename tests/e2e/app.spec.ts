@@ -215,6 +215,8 @@ test('a bank statement proposes matches, books only confirmed payments and recog
  if(!testInfo.project.name.includes('mobile'))await page.screenshot({path:testInfo.outputPath('bank.png')});
  await dialog.getByRole('button',{name:'Book payments (1)',exact:true}).click();
  await expect(dialog.getByText('Payments booked: 1. The invoices are updated.',{exact:true})).toBeVisible();
+ // Erst wenn die Rechnungsliste neu geladen ist (Dialog nicht mehr beschäftigt), erkennt der zweite Import die Buchung.
+ await expect(dialog.getByRole('button',{name:'Close',exact:true})).toBeEnabled();
  expect(payments).toHaveLength(1);expect(payments[0]).toMatchObject({p_workspace_id:ws,p_id:invoices[0].id,p_paid_on:'2026-10-14',p_amount_minor:119000});expect(String(payments[0].p_note)).toMatch(/^Bank statement · Müller & Söhne GmbH · Rechnung RE-2026-0007 · ref:[0-9a-z]{12}$/);
  await dialog.locator('input[type=file]').setInputFiles({name:'umsaetze.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});
  await expect(dialog.locator('.bank-summary')).toContainText('2 incoming payments · 0 matched · 1 already booked');
@@ -755,5 +757,29 @@ test('long-term outlook stacks project demand against team supply and applies a 
  await page.getByRole('button',{name:'Add',exact:true}).click();
  const pitch=table.locator('tbody tr').filter({hasText:'Pitch'});await expect(pitch).toContainText('Scenario');await expect(pitch.locator('td').last()).toHaveText('100 h');
  await page.getByRole('button',{name:'Reset scenario',exact:true}).click();await expect(table.locator('tbody tr').filter({hasText:'Pitch'})).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('situation board flags burning projects with reasons and links into tasks and planning',async({page})=>{
+ const state=await connectedSetup(page);
+ state.projects[0].due_date='2026-10-01'; // Brand Experience überfällig
+ state.tasks[0].due_date='2026-10-05'; // Brand sketch überfällig
+ state.tasks.push({id:'10000000-0000-4000-8000-000000000009',workspace_id:ws,project_id:project,title:'Launch',status:'todo',assignee_id:user,due_date:'2026-10-02',created_by:user,created_at:'',is_milestone:true} as typeof state.tasks[number]);
+ await page.route('https://test.supabase.co/rest/v1/project_effort*',r=>r.fulfill({json:[{project_id:project,minutes:7000,entries:3,first_work_date:'2026-09-01',last_work_date:'2026-09-20'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');
+ const board=page.locator('.health-board');await expect(board.getByRole('heading',{name:'Where it burns.'})).toBeVisible();
+ await expect(board).toContainText('1 burning');await expect(board).toContainText('1 running');
+ const card=board.locator('.health-card').filter({hasText:'Brand Experience'});await expect(card).toHaveClass(/health-red/);
+ await expect(card).toContainText('Project deadline Thu, Oct 1 missed');
+ await expect(card).toContainText('1 milestones overdue, e.g. “Launch”');
+ await expect(card).toContainText('1 tasks overdue, e.g. “Brand sketch”');
+ await expect(card).toContainText('Time budget 117 % used');
+ await expect(card).toContainText('No booked time since Sun, Sep 20');
+ await expect(board.locator('.health-card').filter({hasText:'Museum Experience'})).toHaveCount(0);
+ await board.getByRole('button',{name:'All 2 projects',exact:true}).click();
+ await expect(board.locator('.health-card').filter({hasText:'Museum Experience'})).toHaveClass(/health-green/);
+ await card.getByRole('button',{name:'Overdue tasks',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Brand sketch',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Overdue',exact:true})).toHaveAttribute('aria-pressed','true');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
