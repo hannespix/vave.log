@@ -13,5 +13,9 @@ export type TaskInput = Omit<Task,'id'|'created_at'|'created_by'|'started_at'|'d
 export interface TimeEntry { id:string; workspace_id:string; project_id:string; user_id:string; work_date:string; minutes:number; note:string; billable:boolean; status:'draft'|'submitted'|'approved'; timer_id:string|null; task_id?:string|null; created_at:string }
 export type EntryInput = Omit<TimeEntry,'id'|'created_at'|'user_id'|'status'|'timer_id'>;
 export interface RunningTimer { id:string; workspace_id:string; project_id:string; user_id:string; started_at:string; note:string; billable:boolean; task_id?:string|null }
+export type SuggestionSource = 'chatgpt'|'claude'|'calendar'|'fireflies'|'box'|'other';
+export interface SuggestionEvidence { title:string; url?:string|null; snippet?:string|null }
+export interface TimeSuggestionInput { workspace_id:string; source?:SuggestionSource; external_id?:string|null; project_id:string|null; task_id?:string|null; work_date:string; minutes:number; note:string; billable?:boolean; confidence?:number|null; evidence?:SuggestionEvidence[] }
+export interface TimeSuggestion extends TimeSuggestionInput { id:string; user_id:string; source:SuggestionSource; status:'pending'|'accepted'|'dismissed'; entry_id:string|null; created_at:string; decided_at:string|null; evidence:SuggestionEvidence[] }
 export interface AppNotification { id:string; workspace_id:string; user_id:string; kind:'entries_approved'|'entries_returned'|'absence_requested'|'absence_approved'|'absence_declined'; entry_count:number; created_at:string; read_at:string|null }
 export interface TimerInput { workspace_id:string; project_id:string; note:string; billable:boolean; task_id?:string|null }
