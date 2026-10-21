@@ -675,3 +675,30 @@ test('absences: calendar, request with preview, approval and the yearly account'
  await expect(page.locator('.absence-grid tbody tr').first().locator('td.cal-vacation')).toHaveCount(2); // 30. und 31.10. im Oktoberraster (Sa 31. ist Wochenende, bleibt markiert)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('work schedule dialog saves the model and the time account shows target, actual and flextime balance',async({page})=>{
+ await connectedSetup(page);const calls:Record<string,unknown>[]=[];
+ let membership:Record<string,unknown>={workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'};
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[membership],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/set_work_schedule',r=>{const body=r.request().postDataJSON();calls.push(body);membership={...membership,work_schedule:body.p_schedule,weekly_capacity_minutes:(body.p_schedule as number[]).reduce((a,b)=>a+b,0),balance_start_on:body.p_balance_start_on,balance_start_minutes:body.p_balance_start_minutes};return r.fulfill({json:membership});});
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/time_entries*',r=>{const from=new URL(r.request().url()).searchParams.get('work_date')??'';const rows=[{id:'20000000-0000-4000-8000-000000000011',workspace_id:ws,project_id:project,user_id:user,work_date:'2026-10-12',minutes:540,note:'Mo',billable:true,status:'draft',timer_id:null,created_at:''},{id:'20000000-0000-4000-8000-000000000012',workspace_id:ws,project_id:project,user_id:user,work_date:'2026-10-06',minutes:300,note:'Vorwoche',billable:true,status:'approved',timer_id:null,created_at:''}].filter(e=>!from.startsWith('gte.')||e.work_date>=from.slice(4));return r.fulfill({json:rows,headers:{'content-range':`0-${rows.length-1}/${rows.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.goto('/');await goArea(page,'Team');
+ await page.getByRole('button',{name:'Work schedule of Studio Owner',exact:true}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Work schedule: Studio Owner'})).toBeVisible();
+ await expect(dialog).toContainText('40:00 h per week');
+ await dialog.getByLabel('Fri',{exact:true}).fill('0');await expect(dialog).toContainText('32:00 h per week');
+ await dialog.getByLabel('Time account from (start date)',{exact:true}).fill('2026-10-05');await dialog.getByLabel('Opening balance on the start date (hours)',{exact:true}).fill('2');
+ await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByText('Work schedule saved.',{exact:true})).toBeVisible();
+ expect(calls).toEqual([{p_workspace_id:ws,p_user_id:user,p_schedule:[480,480,480,480,0,0,0],p_balance_start_on:'2026-10-05',p_balance_start_minutes:120}]);
+ await expect(page.getByRole('button',{name:'Work schedule of Studio Owner',exact:true})).toHaveText('Schedule');
+ // Zeiten: Woche 12.–18.10. Soll 4×8 h = 32 h, Ist 9 h; Saldo seit 5.10. bis heute (13.10.): 2 h + (14 h Ist − 48 h Soll) = −32 h.
+ await page.goto(`/#w=${ws}&view=time`);
+ await expect(page.getByText('YOUR TIME ACCOUNT',{exact:true})).toBeVisible();
+ const account=page.locator('.time-account');
+ await expect(account).toContainText('Target in period');await expect(account.locator('.metric').nth(0)).toContainText('32:00 h');
+ await expect(account.locator('.metric').nth(1)).toContainText('9:00 h');await expect(account.locator('.metric').nth(1)).toContainText('Difference: −23:00 h');
+ await expect(account.locator('.metric').nth(2)).toContainText('−32:00 h');await expect(account.locator('.metric').nth(2)).toContainText('since Mon, Oct 5');
+ await expect(account.locator('.account-day')).toHaveCount(7);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});

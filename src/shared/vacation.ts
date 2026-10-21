@@ -9,22 +9,23 @@ export const isWorkday = (day: string) => { const dow = weekday(day); return dow
 export const absenceStatus = (a: AbsenceLike) => a.status ?? 'approved';
 
 /** Zählt die Arbeitstage einer Abwesenheit im Fenster [from, to] (beides optional), ohne Wochenenden und Feiertage. */
-export function absenceWorkdays(a: AbsenceLike, location: string | null | undefined, from?: string, to?: string): number {
+export function absenceWorkdays(a: AbsenceLike, location: string | null | undefined, from?: string, to?: string, schedule?: number[] | null): number {
   const start = from && a.starts_on < from ? from : a.starts_on, end = to && a.ends_on > to ? to : a.ends_on;
   if (start > end) return 0;
   const holidays = holidaysBetween(location, start, end);
+  const works = (day: string) => schedule && schedule.length === 7 ? schedule[(weekday(day) + 6) % 7] > 0 : isWorkday(day);
   let days = 0;
-  for (let day = start; day <= end; day = shiftDate(day, 1)) if (isWorkday(day) && !holidays.has(day)) days++;
+  for (let day = start; day <= end; day = shiftDate(day, 1)) if (works(day) && !holidays.has(day)) days++;
   return a.half_day && days > 0 ? 0.5 : days;
 }
 
 /** Urlaubskonto einer Person für ein Jahr: Anspruch + Übertrag + Korrektur − genommen (genehmigt) − beantragt. */
-export function vacationSummary(input: { entitlement: number | null | undefined; carriedOver?: number; adjustment?: number; absences: AbsenceLike[]; userId: string; year: number; location: string | null | undefined }): VacationSummary {
+export function vacationSummary(input: { entitlement: number | null | undefined; carriedOver?: number; adjustment?: number; absences: AbsenceLike[]; userId: string; year: number; location: string | null | undefined; schedule?: number[] | null }): VacationSummary {
   const from = `${input.year}-01-01`, to = `${input.year}-12-31`;
   let taken = 0, requested = 0;
   for (const a of input.absences) {
     if (a.user_id !== input.userId || a.kind !== 'vacation' || absenceStatus(a) === 'declined') continue;
-    const days = absenceWorkdays(a, input.location, from, to);
+    const days = absenceWorkdays(a, input.location, from, to, input.schedule);
     if (absenceStatus(a) === 'approved') taken += days; else requested += days;
   }
   const carriedOver = input.carriedOver ?? 0, adjustment = input.adjustment ?? 0;

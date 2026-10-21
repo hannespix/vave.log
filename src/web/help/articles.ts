@@ -179,6 +179,15 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['team-utilization'],
   },
+  'time-account': {
+    steps: [
+      ['Management sets a work schedule per person under Team → “Schedule …”: hours per weekday (Mon–Sun), e.g. 8/8/8/8/0 for a four-day week. The weekly capacity becomes the sum.', 'Die Leitung legt je Person unter Team → „Modell …“ ein Arbeitszeitmodell fest: Stunden je Wochentag (Mo–So), zum Beispiel 8/8/8/8/0 für eine Vier-Tage-Woche. Die Wochenkapazität ergibt sich als Summe.', '管理层在“团队 → 模型…”中为每人设置工时模型：每个工作日（周一至周日）的小时数，例如四天工作制为 8/8/8/8/0。每周产能为其总和。'],
+      ['Daily target = schedule value, 0 on public holidays of the location and on approved full-day absences, half on half days. Vacation days are counted only on days with a target.', 'Tagessoll = Modellwert, 0 an Feiertagen des Standorts und an genehmigten ganztägigen Abwesenheiten, halb bei halben Tagen. Urlaubstage zählen nur an Tagen mit Soll.', '每日目标 = 模型值；所在地点的法定假日及已批准的全天缺勤为 0，半天缺勤减半。休假天数仅按有目标工时的日期计算。'],
+      ['Under Time you see your time account: target and actual in the selected period with a bar per day, and the flextime balance = actual − target since the start date plus the opening balance (set by management; without one from 1 January, at most one year back).', 'Unter Zeiten siehst du dein Zeitkonto: Soll und Ist im gewählten Zeitraum mit einem Balken je Tag sowie den Gleitzeitsaldo = Ist − Soll ab dem Stichtag plus Startsaldo (setzt die Leitung; ohne Stichtag ab dem 1. Januar, höchstens ein Jahr zurück).', '在“工时”中可查看工时账户：所选期间的目标与实际（每日一条柱），以及弹性工时余额 = 自起始日起的实际 − 目标 + 初始余额（由管理层设置；未设置时自 1 月 1 日起，最多回溯一年）。'],
+      ['Reports show the difference actual − target per person next to the utilization.', 'Die Auswertung zeigt je Person die Differenz Ist − Soll neben der Auslastung.', '报表在利用率旁显示每人的实际 − 目标差额。'],
+    ],
+    related: ['team-capacity', 'team-vacation', 'team-utilization'],
+  },
   'team-vacation': {
     steps: [
       ['Absences: the month calendar shows every person per day – vacation purple, requested hatched, sick, other, public holidays grey, weekends striped. Use the arrows to move months, “Today” to come back.', 'Abwesenheiten: Der Monatskalender zeigt jede Person je Tag – Urlaub violett, beantragt schraffiert, krank, sonstiges, Feiertage grau, Wochenenden gestreift. Mit den Pfeilen wechselst du den Monat, „Heute“ führt zurück.', '缺勤：月历按天显示每个人——休假为紫色、申请中为斜纹、病假、其他、法定假日为灰色、周末为条纹。用箭头切换月份，“今天”返回当月。'],

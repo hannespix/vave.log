@@ -1,6 +1,7 @@
 import { hasTranslation, localeTag, translate, type Locale } from '../shared/i18n';
 import { getLocale } from './i18n';
 import { holidaysBetween } from '../shared/holidays';
+import { effectiveSchedule, dayTarget } from '../shared/schedule';
 import type { Membership, Project, TimeEntry } from '../shared/types';
 import type { Invoice } from '../shared/finance-types';
 
@@ -72,27 +73,32 @@ export function countWorkdays(from: string, to: string) {
   return count;
 }
 export interface MemberUtilization { capacityMinutes: number | null; absenceWorkdays: number; holidayWorkdays: number; expectedMinutes: number | null; actualMinutes: number; billableMinutes: number }
-/** Soll je Person = Kapazität/5 je Werktag im Zeitraum, abzüglich Abwesenheits-Werktagen (tagesgenau dedupliziert — überlappende Einträge zählen einfach) und gesetzlicher Feiertage am Standort der Person (sonst Workspace-Standard). Ein Feiertag, der schon als Abwesenheit eingetragen ist, zählt nur einmal. Kapazität null heißt Soll unbekannt, nie 0. */
-export function utilization(members: Membership[], entries: TimeEntry[], absences: { user_id: string; starts_on: string; ends_on: string }[], range: { from: string; to: string }, defaultLocation: string | null = null) {
-  const workdays = countWorkdays(range.from, range.to);
+/** Soll je Person = Summe der Tagessolls aus dem Arbeitszeitmodell (ohne Modell: Kapazität/5 auf Mo–Fr), 0 an eingetragenen Abwesenheiten (tagesgenau dedupliziert, halbe Tage halb) und an gesetzlichen Feiertagen des Standorts (sonst Workspace-Standard). Kapazität null heißt Soll unbekannt, nie 0. */
+export function utilization(members: Membership[], entries: TimeEntry[], absences: { user_id: string; starts_on: string; ends_on: string; half_day?: '' | 'am' | 'pm' }[], range: { from: string; to: string }, defaultLocation: string | null = null) {
   const result = new Map<string, MemberUtilization>();
   for (const member of members) {
     if (member.role === 'disabled') continue;
-    const days = new Set<string>();
+    const schedule = effectiveSchedule(member);
+    const absent = new Map<string, '' | 'am' | 'pm'>();
     for (const absence of absences) {
       if (absence.user_id !== member.user_id) continue;
       const from = absence.starts_on < range.from ? range.from : absence.starts_on, to = absence.ends_on > range.to ? range.to : absence.ends_on;
-      for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) days.add(day); }
+      for (let day = from; day <= to; day = addDays(day, 1)) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5) absent.set(day, absent.get(day) === '' ? '' : (absence.half_day ?? '')); }
     }
-    let holidays = 0;
-    for (const day of holidaysBetween(member.location ?? defaultLocation, range.from, range.to).keys()) { const dow = new Date(`${day}T12:00:00Z`).getUTCDay(); if (dow >= 1 && dow <= 5 && !days.has(day)) holidays++; }
-    const capacity = member.weekly_capacity_minutes ?? null;
+    const holidays = holidaysBetween(member.location ?? defaultLocation, range.from, range.to);
+    let holidayWorkdays = 0, expected = 0;
+    for (let day = range.from; day <= range.to; day = addDays(day, 1)) {
+      const dow = new Date(`${day}T12:00:00Z`).getUTCDay();
+      if (holidays.has(day) && dow >= 1 && dow <= 5 && !absent.has(day)) holidayWorkdays++;
+      const half = absent.get(day);
+      expected += dayTarget(schedule, day, holidays.get(day), absent.has(day) ? { user_id: member.user_id, starts_on: day, ends_on: day, kind: 'other', status: 'approved', half_day: half } : null) ?? 0;
+    }
     const own = entries.filter(entry => entry.user_id === member.user_id);
     result.set(member.user_id, {
-      capacityMinutes: capacity,
-      absenceWorkdays: days.size,
-      holidayWorkdays: holidays,
-      expectedMinutes: capacity == null ? null : Math.round(Math.max(0, workdays - days.size - holidays) * capacity / 5),
+      capacityMinutes: member.weekly_capacity_minutes ?? null,
+      absenceWorkdays: absent.size,
+      holidayWorkdays,
+      expectedMinutes: schedule ? expected : null,
       actualMinutes: own.reduce((total, entry) => total + entry.minutes, 0),
       billableMinutes: own.filter(entry => entry.billable).reduce((total, entry) => total + entry.minutes, 0),
     });

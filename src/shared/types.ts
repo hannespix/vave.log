@@ -1,6 +1,6 @@
 export type Role = 'owner' | 'manager' | 'member' | 'disabled';
 export interface Workspace { id: string; name: string; timezone: string; currency: string; created_by: string; created_at: string; default_location?: string | null; absence_approval?: boolean }
-export interface Membership { is_demo?:boolean; demo_title?:string; demo_studio?:string; demo_origin?:'public'|'fictional'|null; workspace_id: string; user_id: string; role: Role; display_name: string; email: string; created_at: string; weekly_capacity_minutes?: number | null; location?: string | null; vacation_days_per_year?: number | null }
+export interface Membership { is_demo?:boolean; demo_title?:string; demo_studio?:string; demo_origin?:'public'|'fictional'|null; workspace_id: string; user_id: string; role: Role; display_name: string; email: string; created_at: string; weekly_capacity_minutes?: number | null; location?: string | null; vacation_days_per_year?: number | null; work_schedule?: number[] | null; balance_start_on?: string | null; balance_start_minutes?: number | null }
 export type AbsenceStatus = 'requested'|'approved'|'declined';
 export interface AbsenceInput { id?:string; workspace_id:string; user_id:string; starts_on:string; ends_on:string; kind:'vacation'|'sick'|'holiday'|'other'; note:string; half_day?:''|'am'|'pm'; status?:AbsenceStatus }
 export interface Absence extends AbsenceInput { id:string; created_at:string; status?:AbsenceStatus; half_day?:''|'am'|'pm'; decided_by?:string|null; decided_at?:string|null }
