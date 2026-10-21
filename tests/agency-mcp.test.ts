@@ -16,7 +16,7 @@ async function connect(finance:Partial<FinanceService>,locale='en',service:Parti
 describe('agency MCP wire contract',()=>{
  it('exposes complete demo enrichment with strict input and the same scoped service',async()=>{
   const upgrade=vi.fn(async()=>{});const c=await connect({},'en',{}, {upgrade});
-  try{const {tools}=await c.listTools();expect(tools).toHaveLength(58);
+  try{const {tools}=await c.listTools();expect(tools).toHaveLength(59);
    expect(tools.find(t=>t.name==='demo_upgrade_workspace')?.annotations).toMatchObject({readOnlyHint:false,idempotentHint:true});
    expect(tools.find(t=>t.name==='demo_create_workspace')?.description).toContain('non-login');
    const ok=await c.callTool({name:'demo_upgrade_workspace',arguments:{workspace_id:id}});expect(ok.isError).not.toBe(true);expect(upgrade).toHaveBeenCalledWith(id);
@@ -26,7 +26,7 @@ describe('agency MCP wire contract',()=>{
  it('exposes owner deletion with exact confirmation, destructive annotations and no extra fields',async()=>{
   const listOwned=vi.fn(async()=>[]),deleteWorkspace=vi.fn(async()=>{});
   const c=await connect({},'en',{}, {},{listOwned,deleteWorkspace});
-  try{const {tools}=await c.listTools();expect(tools).toHaveLength(60);
+  try{const {tools}=await c.listTools();expect(tools).toHaveLength(61);
    expect(tools.find(t=>t.name==='list_owned_workspaces')?.annotations?.readOnlyHint).toBe(true);
    expect(tools.find(t=>t.name==='delete_workspace')?.annotations).toMatchObject({readOnlyHint:false,destructiveHint:true,idempotentHint:false});
    await c.callTool({name:'list_owned_workspaces',arguments:{}});expect(listOwned).toHaveBeenCalledOnce();

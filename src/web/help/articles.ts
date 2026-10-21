@@ -188,6 +188,16 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['team-capacity', 'team-vacation', 'team-utilization'],
   },
+  'team-strengths': {
+    steps: [
+      ['Tag your work: tasks and projects take tags such as motion, 3d, konzept, pitch (comma separated). A task without tags inherits the project tags; without those the client counts as category.', 'Arbeit taggen: Aufgaben und Projekte bekommen Tags wie motion, 3d, konzept, pitch (durch Komma getrennt). Eine Aufgabe ohne Tags erbt die Projekt-Tags; ohne diese zählt der Kunde als Kategorie.', '为工作打标签：任务和项目可添加如 motion、3d、konzept、pitch 等标签（逗号分隔）。无标签的任务继承项目标签；都没有时按客户归类。'],
+      ['The profile per person and category (Team → “Strengths”, your own on the overview) shows: done tasks, hours, speed = booked ÷ estimate (1× = as planned), on-time share, cycle days from start to done, reopenings, and the management rating. Every figure carries its sample size; a fit score appears from three done tasks.', 'Das Profil je Person und Kategorie (Team → „Stärken“, das eigene auf der Übersicht) zeigt: erledigte Aufgaben, Stunden, Tempo = gebucht ÷ Schätzung (1× = wie geplant), Termintreue, Durchlauftage von Start bis Erledigung, Wiedereröffnungen und die Bewertung der Leitung. Jede Zahl trägt ihre Stichprobe; eine Passung erscheint ab drei erledigten Aufgaben.', '每人每类的画像（团队 → “优势”，本人在概览中可见）显示：已完成任务、工时、速度 = 已记录 ÷ 估算（1× 即按计划）、准时率、从开始到完成的周期天数、重新打开次数和管理层评分。每个数字都标注样本量；完成三项任务后显示匹配度。'],
+      ['Rating: when closing a task, management can rate 1–5 in the task dialog (optional). It is the only real quality measure; reopenings and lateness are indications.', 'Bewertung: Beim Abschluss kann die Leitung im Aufgaben-Dialog 1–5 vergeben (optional). Sie ist das einzige echte Qualitätsmaß; Wiedereröffnungen und Verspätung sind Indizien.', '评分：关闭任务时，管理层可在任务对话框中给出 1–5 分（可选）。这是唯一真正的质量指标；重新打开和延期只是线索。'],
+      ['Assignment tip: in the task dialog the management sees up to three recommendations – fit for the category plus free capacity this week – and assigns with one click.', 'Zuweisungstipp: Im Aufgaben-Dialog sieht die Leitung bis zu drei Empfehlungen – Passung für die Kategorie plus freie Kapazität diese Woche – und weist mit einem Klick zu.', '分配建议：在任务对话框中，管理层可看到最多三条推荐——该类别的匹配度加上本周空余产能——一键分配。'],
+      ['Limits, stated in the product: small samples, estimate quality drives “speed”, teamwork is invisible. Use the figures as a conversation basis, never as a ranking; co-determination duties lie with the operator.', 'Grenzen, die im Produkt stehen: kleine Stichproben, Schätzqualität prägt das „Tempo“, Teamarbeit ist unsichtbar. Die Zahlen sind Gesprächsgrundlage, nie Ranking; Mitbestimmungspflichten liegen beim Betreiber.', '产品中明示的局限：样本小、估算质量左右“速度”、团队协作不可见。数字仅作沟通基础，绝非排名；共同决定义务由运营方承担。'],
+    ],
+    related: ['plan-capacity', 'work-tasks'],
+  },
   'plan-health': {
     steps: [
       ['The overview starts with the situation board: every active project gets a traffic light – red “burning”, yellow “wobbling”, green “running”. Red projects come first.', 'Die Übersicht beginnt mit dem Lagebild: Jedes aktive Projekt bekommt eine Ampel – rot „brennt“, gelb „wackelt“, grün „läuft“. Rote Projekte stehen zuerst.', '概览以态势板开始：每个进行中的项目都有一个红绿灯——红色“吃紧”、黄色“不稳”、绿色“正常”。红色项目排在最前。'],
