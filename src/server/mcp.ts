@@ -10,7 +10,8 @@ import {registerDemoTools} from './demo-mcp.js';
 import {registerWorkspaceAdminTools} from './workspace-admin-mcp.js';
 import type {WorkspaceAdminService} from '../shared/workspace-admin-service.js';
 import {toolError} from './messages.js';
-import {uuid,date,projectSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
+import {holidaysFor,isLocation} from '../shared/holidays.js';
+import {uuid,date,locationSchema,projectSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
 
 /** Tool callbacks use exactly the same user-scoped service as the GUI. */
 export function createMcpServer(service:Service,options:{finance?:FinanceService;demo?:DemoService;workspaceAdmin?:WorkspaceAdminService;locale?:Locale}={}){
@@ -27,6 +28,9 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('list_members','List team names, email addresses and roles within an accessible workspace.',{workspace_id:uuid},true,a=>service.getMemberships(a.workspace_id));
  tool('invite_member','Owner only: invite a verified email address as manager or member. Does not send mail; access is accepted on next sign-in. Confirm email and role first.',inviteSchema.shape,false,a=>service.inviteMember(a),false,true);
  tool('set_member_role','Owner only: change an existing team role. Confirm exact user and role first.',roleSchema.shape,false,a=>service.setMemberRole(a),true,true);
+ tool('set_member_location','Set a person’s holiday location (ISO 3166-2 such as DE-BW, AT-9, CH-ZH; null = workspace default). Owners/managers for anyone, every person for themselves. Confirm first.',{workspace_id:uuid,user_id:uuid,location:locationSchema},false,a=>service.setMemberLocation(a),false,true);
+ tool('set_workspace_location','Owner/manager: set the workspace default holiday location (ISO 3166-2, null = none). Confirm first.',{workspace_id:uuid,location:locationSchema},false,a=>service.setWorkspaceLocation(a),false,true);
+ tool('list_holidays','Public holidays computed locally for a location (DE/AT/CH with regions) and year. Not a database read.',{location:z.string().max(8),year:z.number().int().min(2000).max(2100)},true,async a=>isLocation(a.location)?holidaysFor(a.location,a.year):[]);
  tool('accept_invitations','Accept pending invitations for your verified email.',{},false,()=>service.acceptInvitations(),false,true);
  tool('list_projects','List projects in a workspace. Project budget is in minutes.',{workspace_id:uuid},true,a=>service.listProjects(a.workspace_id));
  tool('get_project_insight','Owner/manager only: read all recorded team effort through today in the workspace timezone, recent 28-day totals, project planning, automatic task progress, milestone status and data gaps. Progress weights completed tasks by estimated minutes when every task is estimated; otherwise it explicitly uses unweighted done/total task counts. Includes the same constant-pace forecast scenario and blockers as the GUI. Time consumption and legacy manual percentages are not completion. Excludes future entries and running timers.',{workspace_id:uuid,project_id:uuid},true,async a=>{const insight=await service.getProjectInsight(a.workspace_id,a.project_id);return {...insight,forecast:forecastProject(insight)}});

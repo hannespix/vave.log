@@ -15,4 +15,5 @@ export const absenceSchema = z.strictObject({id:uuid.optional(),workspace_id:uui
 export const timerSchema = z.strictObject({workspace_id:uuid,project_id:uuid,note:text(2000),billable:z.boolean(),task_id:uuid.nullable().optional()});
 export const dateRangeSchema = z.strictObject({from:date,to:date}).refine(({from,to})=>from<=to && (Date.parse(to)-Date.parse(from))/86400000<=365,'Zeitraum: maximal 366 Tage, Beginn vor Ende.');
 export const inviteSchema = z.strictObject({workspace_id:uuid,email:z.email().max(254).transform(s=>s.toLowerCase()),role:z.enum(['manager','member'])});
+export const locationSchema = z.string().trim().regex(/^[A-Z]{2}(-[A-Z0-9]{1,3})?$/,'Standort in der Form LAND oder LAND-REGION, z. B. DE-BW.').nullable();
 export const roleSchema = z.strictObject({workspace_id:uuid,user_id:uuid,role:z.enum(['owner','manager','member','disabled'])});
