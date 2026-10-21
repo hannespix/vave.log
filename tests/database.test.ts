@@ -392,6 +392,18 @@ describe('database entries and workflow', () => {
     await login(outsider);
     expect(await rows('select minutes from public.task_effort where task_id=$1',[task])).toEqual([]);
   });
+  it('sums booked minutes per project through the invoker-rights view', async () => {
+    await login(member);
+    await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable) values($1,$2,'2026-10-13',90,'a',true),($1,$2,'2026-10-15',30,'b',true)",[workspace,project]);
+    await login(manager);
+    await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note,billable) values($1,$2,'2026-10-14',60,'c',true)",[workspace,project]);
+    const [row]=await rows<{minutes:number;entries:number;first_work_date:Date|string;last_work_date:Date|string}>('select minutes,entries,first_work_date,last_work_date from public.project_effort where workspace_id=$1 and project_id=$2',[workspace,project]);
+    expect(row.minutes).toBe(180);expect(row.entries).toBe(3);expect(new Date(row.first_work_date).toISOString().slice(0,10)).toBe('2026-10-13');expect(new Date(row.last_work_date).toISOString().slice(0,10)).toBe('2026-10-15');
+    await login(member);
+    expect((await rows<{minutes:number}>('select minutes from public.project_effort where project_id=$1',[project]))[0].minutes).toBe(120);
+    await login(outsider);
+    expect(await rows('select minutes from public.project_effort where project_id=$1',[project])).toEqual([]);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

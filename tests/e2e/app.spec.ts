@@ -730,3 +730,30 @@ test('planning cockpit shows load per person and week and reassigns a task from 
  const week=page.locator('.my-week-grid');await expect(week).toContainText('40:00 h');await expect(week).toContainText('16:00 h');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('long-term outlook stacks project demand against team supply and applies a scenario without saving',async({page})=>{
+ await connectedSetup(page);
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/finance_project_plans*',r=>r.fulfill({json:[{workspace_id:ws,project_id:project,client_id:null,billing_mode:'hourly',default_bill_rate_minor:null,fixed_fee_minor:0,planned_expenses_minor:0,lines:[{label:'Design',kind:'employee',user_id:user,planned_minutes:3000,cost_rate_minor:null,bill_rate_minor:null}],created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/project_effort*',r=>r.fulfill({json:[{project_id:project,minutes:600,entries:3,first_work_date:'2026-10-01',last_work_date:'2026-10-12'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Planning');
+ await page.getByRole('button',{name:'Long term',exact:true}).click();
+ await expect(page.getByText('DEMAND VS. SUPPLY',{exact:true})).toBeVisible();
+ // Brand Experience: Plan 3000 − 600 gebucht = 2400 Rest bis 1.12.2026 (Termin) → Oktober + November; Museum Experience: Budget 12000 ohne Termin über drei Monate.
+ const table=page.locator('table.outlook-table').first();
+ const brand=table.locator('tbody tr').filter({hasText:'Brand Experience'});await expect(brand.locator('td').last()).toHaveText('40 h');
+ const museum=table.locator('tbody tr').filter({hasText:'Museum Experience'});await expect(museum.locator('td').last()).toHaveText('200 h');
+ // Angebot Oktober: 22 Werktage × 8 h = 176 h (kein Feiertag an Werktagen in DE-BW).
+ await expect(table.locator('tr.outlook-total').nth(1).locator('td').nth(1)).toHaveText('176 h');
+ // Szenario: Person pausieren → Angebot 0, Lücke.
+ await page.getByLabel('Studio Owner',{exact:true}).check();
+ await expect(page.getByText('Scenario active',{exact:true})).toBeVisible();
+ await expect(table.locator('tr.outlook-total').nth(1).locator('td').nth(1)).toHaveText('0 h');
+ await page.getByLabel('Studio Owner',{exact:true}).uncheck();
+ await page.getByLabel('Name',{exact:true}).fill('Pitch');await page.getByLabel('Effort (hours)',{exact:true}).fill('100');
+ await page.getByRole('button',{name:'Add',exact:true}).click();
+ const pitch=table.locator('tbody tr').filter({hasText:'Pitch'});await expect(pitch).toContainText('Scenario');await expect(pitch.locator('td').last()).toHaveText('100 h');
+ await page.getByRole('button',{name:'Reset scenario',exact:true}).click();await expect(table.locator('tbody tr').filter({hasText:'Pitch'})).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
