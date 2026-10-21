@@ -15,7 +15,8 @@ import {capacityPlan} from '../shared/capacity.js';
 import {capacityOutlook} from '../shared/outlook.js';
 import {portfolioHealth} from '../shared/project-health.js';
 import {skillProfiles} from '../shared/skills.js';
-import {absenceSchema,uuid,date,locationSchema,projectSchema,workScheduleSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
+import {matchProject} from '../shared/suggestions.js';
+import {absenceSchema,suggestionSchema,uuid,date,locationSchema,projectSchema,workScheduleSchema,taskSchema,entrySchema,timerSchema,workspaceSchema,inviteSchema,roleSchema} from '../shared/validation.js';
 
 /** Tool callbacks use exactly the same user-scoped service as the GUI. */
 export function createMcpServer(service:Service,options:{finance?:FinanceService;demo?:DemoService;workspaceAdmin?:WorkspaceAdminService;locale?:Locale}={}){
@@ -56,6 +57,11 @@ export function createMcpServer(service:Service,options:{finance?:FinanceService
  tool('delete_time_entry','Delete one of your own draft time entries. Confirm first.',{id:uuid},false,a=>service.deleteEntry(a.id),true);
  tool('submit_time_entries','Submit your draft entries in the inclusive date range for team review. Confirm date range first.',{workspace_id:uuid,from:date,to:date},false,a=>service.submitEntries(a),false,true);
  tool('review_time_entry','Owner/manager: approve a submitted entry, or return it to draft (approve=false). Confirm first.',{id:uuid,approve:z.boolean()},false,a=>service.reviewEntry(a));
+ tool('match_project','Find the project (and an open task) a free-text label refers to: calendar title, folder name, meeting subject, customer name or project code. Diacritics-tolerant, returns up to 5 scored candidates (0–100) with reasons. Use before propose_time_entries instead of guessing IDs.',{workspace_id:uuid,query:z.string().min(1).max(300)},true,async a=>{const [projects,tasks]=await Promise.all([service.listProjects(a.workspace_id),service.listTasks(a.workspace_id)]);return matchProject(a.query,projects,tasks);});
+ tool('propose_time_entries','Send up to 50 SUGGESTIONS for the signed-in person’s own time tracking (from calendar, meeting notes, file activity). Nothing is booked: the person reviews each suggestion in vave.log and turns it into a draft. Provide project_id from match_project (null if unclear), minutes 1–1440 (round to 15), a short note, optional task_id, confidence 0–1, evidence [{title,url,snippet}] and a stable external_id per source item so repeated runs do not duplicate. At most 500 open suggestions per person.',{suggestions:z.array(suggestionSchema).min(1).max(50)},false,a=>service.proposeSuggestions(a.suggestions),false,true);
+ tool('list_time_suggestions','Your own open time suggestions (pending), newest day first.',{workspace_id:uuid},true,a=>service.listSuggestions(a.workspace_id));
+ tool('dismiss_time_suggestion','Dismiss one of your own open suggestions. Confirm first.',{id:uuid},false,a=>service.dismissSuggestion(a.id),true,true);
+ tool('accept_time_suggestion','Turn one of your own open suggestions into a draft time entry with the final project, task, minutes, note and billable flag. Confirm the values with the person first.',{id:uuid,project_id:uuid,task_id:uuid.nullable(),work_date:date,minutes:z.number().int().min(1).max(1440),note:z.string().max(2000),billable:z.boolean()},false,a=>service.acceptSuggestion(a),false,true);
  tool('get_running_timer','Read your active timer across workspaces.',{},true,()=>service.getTimer());
  tool('start_timer','Start your timer on an active project. Only one timer per person. Confirm project first.',timerSchema.shape,false,a=>service.startTimer(a));
  tool('stop_timer','Stop your timer and book elapsed whole minutes, split at workspace midnight. Retrying the same timer id returns the same entries. Below one minute or over 24 hours requires correction.',{id:uuid},false,a=>service.stopTimer(a.id),false,true);

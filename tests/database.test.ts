@@ -422,6 +422,25 @@ describe('database entries and workflow', () => {
     expect((await first<{status:string;rating:number}>("update public.tasks set status='done' where id=$1 returning *",[t.id])).rating).toBe(4);
     await expect(attempt("update public.tasks set rating=6 where id=$1",[t.id])).rejects.toThrow();
   });
+  it('keeps time suggestions private to their owner, deduplicates by external id and books drafts only on acceptance', async () => {
+    await login(member);
+    const s=await first<{id:string;status:string;user_id:string}>("insert into public.time_suggestions(workspace_id,source,external_id,project_id,work_date,minutes,note,confidence,evidence) values($1,'chatgpt','cal-1',$2,'2026-10-13',90,'Jour fixe',0.8,'[{\"title\":\"Kalender\"}]') returning *",[workspace,project]);
+    expect(s.status).toBe('pending');expect(s.user_id).toBe(member);
+    await expect(attempt("insert into public.time_suggestions(workspace_id,source,external_id,project_id,work_date,minutes,note) values($1,'chatgpt','cal-1',$2,'2026-10-13',90,'Doppelt')",[workspace,project])).rejects.toThrow();
+    await expect(attempt("insert into public.time_suggestions(workspace_id,user_id,project_id,work_date,minutes,note) values($1,$2,$3,'2026-10-13',30,'Fremd')",[workspace,manager,project])).rejects.toThrow();
+    await login(manager);
+    expect(await rows('select id from public.time_suggestions where workspace_id=$1',[workspace])).toEqual([]); // Leitung sieht fremde Vorschläge nicht
+    await expect(attempt("select * from public.accept_time_suggestion($1,$2,null,'2026-10-13',60,'x',true)",[s.id,project])).rejects.toThrow(/nicht gefunden/);
+    await login(member);
+    const entry=await first<{id:string;minutes:number;status:string;note:string;user_id:string}>("select * from public.accept_time_suggestion($1,$2,null,'2026-10-13',75,'Jour fixe Museum',true)",[s.id,project]);
+    expect(entry).toMatchObject({minutes:75,status:'draft',note:'Jour fixe Museum',user_id:member});
+    expect(await first<{status:string;entry_id:string;minutes:number}>('select status,entry_id,minutes from public.time_suggestions where id=$1',[s.id])).toEqual({status:'accepted',entry_id:entry.id,minutes:75});
+    await expect(attempt("select * from public.accept_time_suggestion($1,$2,null,'2026-10-13',60,'x',true)",[s.id,project])).rejects.toThrow(/schon entschieden/);
+    const d=await first<{id:string}>("insert into public.time_suggestions(workspace_id,project_id,work_date,minutes,note) values($1,$2,'2026-10-14',30,'Verwerfen') returning id",[workspace,project]);
+    expect((await first<{status:string}>("update public.time_suggestions set status='dismissed' where id=$1 returning status",[d.id])).status).toBe('dismissed');
+    await login(outsider);
+    expect(await rows('select id from public.time_suggestions where workspace_id=$1',[workspace])).toEqual([]);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

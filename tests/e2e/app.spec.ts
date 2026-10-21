@@ -810,3 +810,30 @@ test('tags, ratings and strength profiles: recommendation in the task dialog, pr
  await expect(row.locator('td').last()).not.toContainText('from 3 done');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('AI suggestions inbox: adjust, accept as draft, dismiss, accept the whole day',async({page})=>{
+ await connectedSetup(page);const accepted:Record<string,unknown>[]=[];let suggestions:Record<string,unknown>[]=[
+  {id:'50000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:user,source:'chatgpt',external_id:'cal-1',project_id:project,task_id:null,work_date:'2026-10-13',minutes:90,note:'Jour fixe Brand',billable:true,confidence:0.82,evidence:[{title:'Kalender: Jour fixe',url:'https://calendar.example.test/1'}],status:'pending',entry_id:null,created_at:'',decided_at:null},
+  {id:'50000000-0000-4000-8000-000000000002',workspace_id:ws,user_id:user,source:'fireflies',external_id:'ff-2',project_id:null,task_id:null,work_date:'2026-10-13',minutes:45,note:'Meeting ohne klares Projekt',billable:true,confidence:0.4,evidence:[],status:'pending',entry_id:null,created_at:'',decided_at:null},
+  {id:'50000000-0000-4000-8000-000000000003',workspace_id:ws,user_id:user,source:'box',external_id:'box-3',project_id:secondProject,task_id:null,work_date:'2026-10-12',minutes:120,note:'Renderings hochgeladen',billable:false,confidence:null,evidence:[],status:'pending',entry_id:null,created_at:'',decided_at:null}];
+ await page.route('https://test.supabase.co/rest/v1/time_suggestions*',r=>{if(r.request().method()==='PATCH'){const id=new URL(r.request().url()).searchParams.get('id')!.replace('eq.','');suggestions=suggestions.filter(s=>s.id!==id);return r.fulfill({json:{id,status:'dismissed'}});}const open=suggestions.filter(s=>s.status==='pending');return r.fulfill({json:open,headers:{'content-range':`0-${open.length-1}/${open.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/accept_time_suggestion',r=>{const body=r.request().postDataJSON();accepted.push(body);suggestions=suggestions.filter(s=>s.id!==body.p_id);return r.fulfill({json:{id:'60000000-0000-4000-8000-00000000000'+accepted.length,workspace_id:ws,project_id:body.p_project_id,user_id:user,work_date:body.p_work_date,minutes:body.p_minutes,note:body.p_note,billable:body.p_billable,status:'draft',timer_id:null,created_at:''}});});
+ await page.goto('/');
+ const inbox=page.locator('.suggestions-inbox');await expect(inbox.getByRole('heading',{name:'3 suggestions for your time tracking.'})).toBeVisible();
+ await expect(inbox.locator('.suggestion-day')).toHaveCount(1); // Übersicht: nur der neueste Tag
+ await inbox.getByRole('button',{name:'All under Time',exact:true}).click();
+ const full=page.locator('.suggestions-inbox');await expect(full.locator('.suggestion-day')).toHaveCount(2);
+ const first=full.locator('.suggestion').first(); // neuester Tag zuerst, darin der ChatGPT-Vorschlag
+ await expect(first).toContainText('ChatGPT');await expect(first).toContainText('Confidence 82 %');await expect(first.getByRole('link',{name:/Kalender: Jour fixe/})).toHaveAttribute('href','https://calendar.example.test/1');
+ await first.getByLabel('Minutes',{exact:true}).fill('75');await first.getByLabel('Description',{exact:true}).fill('Jour fixe Brand – Abstimmung');
+ await first.getByRole('button',{name:'Accept',exact:true}).click();await expect(page.getByText('Suggestion accepted as draft.',{exact:true})).toBeVisible();
+ expect(accepted[0]).toEqual({p_id:'50000000-0000-4000-8000-000000000001',p_project_id:project,p_task_id:null,p_work_date:'2026-10-13',p_minutes:75,p_note:'Jour fixe Brand – Abstimmung',p_billable:true});
+ const unclear=full.locator('.suggestion').filter({hasText:'Project unclear'});await expect(unclear).toContainText('Project unclear');await expect(unclear.getByRole('button',{name:'Accept',exact:true})).toBeDisabled();
+ await unclear.getByRole('button',{name:'Dismiss suggestion',exact:true}).click();await expect(page.getByText('Suggestion dismissed.',{exact:true})).toBeVisible();
+ await expect(full.locator('.suggestion')).toHaveCount(1);
+ await expect(full.locator('.suggestion').first().getByLabel('Billable',{exact:true})).not.toBeChecked();
+ await full.locator('.suggestion').first().getByRole('button',{name:'Accept',exact:true}).click();
+ await expect(page.getByText('Suggestion accepted as draft.',{exact:true})).toBeVisible();expect(accepted[1]).toMatchObject({p_project_id:secondProject,p_minutes:120,p_billable:false});
+ await expect(page.locator('.suggestions-inbox')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
