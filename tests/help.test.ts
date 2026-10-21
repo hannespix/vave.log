@@ -42,7 +42,7 @@ describe('help catalog', () => {
   });
   it('starts with the getting-started path and lists every area in the context map', () => {
     expect(HELP_TOPICS.slice(0, 5).every(topic => topic.category === 'start')).toBe(true);
-    expect(Object.keys(AREA_TOPIC).sort()).toEqual(['finance', 'help', 'overview', 'projects', 'reports', 'settings', 'tasks', 'team', 'time']);
+    expect(Object.keys(AREA_TOPIC).sort()).toEqual(['absences', 'finance', 'help', 'overview', 'projects', 'reports', 'settings', 'tasks', 'team', 'time']);
   });
 });
 

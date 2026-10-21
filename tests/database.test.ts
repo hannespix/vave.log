@@ -336,6 +336,37 @@ describe('database entries and workflow', () => {
     await expect(attempt("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,member])).rejects.toThrow(/Berechtigung/);
     await expect(attempt("select * from public.set_member_location($1,$2,'DE-BW')",[workspace,outsider])).rejects.toThrow(/Berechtigung/);
   });
+  it('runs vacation requests through approval, notifies, protects decided absences and keeps entitlements with the management', async () => {
+    await login(member);
+    const req=await first<{id:string;status:string;decided_by:string|null}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,note) values($1,'2027-02-01','2027-02-05','vacation','Ski') returning *",[workspace]);
+    expect(req.status).toBe('requested');expect(req.decided_by).toBeNull();
+    const sick=await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-02-08','2027-02-08','sick') returning *",[workspace]);
+    expect(sick.status).toBe('approved');
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-03-01','2027-03-02','vacation','am')",[workspace])).rejects.toThrow();
+    expect((await first<{half_day:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-03-01','2027-03-01','vacation','pm') returning *",[workspace])).half_day).toBe('pm');
+    // Ein Mitglied kann sich nicht selbst genehmigen – der Trigger setzt den Status zurück.
+    expect((await first<{status:string}>("update public.absences set status='approved' where id=$1 returning status",[req.id])).status).toBe('requested');
+    await login(manager);
+    expect((await first<{entry_count:number}>("select entry_count from public.notifications where user_id=$1 and kind='absence_requested' and read_at is null",[manager])).entry_count).toBe(2);
+    const decided=await first<{status:string;decided_by:string}>("update public.absences set status='approved' where id=$1 returning *",[req.id]);
+    expect(decided.status).toBe('approved');expect(decided.decided_by).toBe(manager);
+    await login(member);
+    expect(await rows("select kind from public.notifications where user_id=$1 and kind='absence_approved' and read_at is null",[member])).toHaveLength(1);
+    await expect(attempt("update public.absences set ends_on='2027-02-10' where id=$1",[req.id])).rejects.toThrow(/Leitung/);
+    expect(await rows('delete from public.absences where id=$1 returning id',[req.id])).toHaveLength(0); // genehmigt: nur die Leitung löscht
+    await expect(attempt('select * from public.set_vacation_entitlement($1,$2,30)',[workspace,member])).rejects.toThrow(/Berechtigung/);
+    await expect(attempt("insert into public.vacation_balances(workspace_id,user_id,year,carried_over) values($1,$2,2027,3)",[workspace,member])).rejects.toThrow();
+    await login(manager);
+    expect((await first<{vacation_days_per_year:string}>('select * from public.set_vacation_entitlement($1,$2,27.5)',[workspace,member])).vacation_days_per_year).toBe('27.5');
+    await expect(attempt('select * from public.set_vacation_entitlement($1,$2,101)',[workspace,member])).rejects.toThrow(/100 Tagen/);
+    expect((await first<{carried_over:string}>("insert into public.vacation_balances(workspace_id,user_id,year,carried_over,adjustment) values($1,$2,2027,3,-1) returning *",[workspace,member])).carried_over).toBe('3.0');
+    expect((await first<{absence_approval:boolean}>('select * from public.set_absence_approval($1,false)',[workspace])).absence_approval).toBe(false);
+    await login(member);
+    expect((await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-04-01','2027-04-02','vacation') returning *",[workspace])).status).toBe('approved');
+    expect(await rows('select * from public.vacation_balances where workspace_id=$1',[workspace])).toHaveLength(1);
+    await login(manager);
+    expect((await first<{absence_approval:boolean}>('select * from public.set_absence_approval($1,true)',[workspace])).absence_approval).toBe(true);
+  });
   it('books time on tasks of the same project, keeps approved time when the task is deleted, and timers carry the task', async () => {
     await login(manager);
     const task=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Design') returning id",[workspace,project])).id;

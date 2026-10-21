@@ -645,3 +645,33 @@ test('holiday locations are set per person and as workspace default, and the uti
  await expect(row).toContainText('Studio Owner');
  await expect(row.locator('td').nth(3)).toHaveText('3');
 });
+
+test('absences: calendar, request with preview, approval and the yearly account',async({page})=>{
+ await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';
+ let absences:Record<string,unknown>[]=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-19',ends_on:'2026-10-23',kind:'vacation',note:'Herbst',status:'requested',half_day:'',created_at:''}];
+ const posted:Record<string,unknown>[]=[],patched:Record<string,unknown>[]=[];
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-BW'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>{const m=r.request().method();if(m==='POST'){const body=r.request().postDataJSON();posted.push(body);const row={...body,id:'30000000-0000-4000-8000-00000000000'+(posted.length+1),status:'approved',created_at:''};absences.push(row);return r.fulfill({json:row});}if(m==='PATCH'){const body=r.request().postDataJSON();patched.push(body);const id=new URL(r.request().url()).searchParams.get('id')!.replace('eq.','');absences=absences.map(a=>a.id===id?{...a,...body}:a);return r.fulfill({json:absences.find(a=>a.id===id)});}return r.fulfill({json:absences,headers:{'content-range':`0-${absences.length-1}/${absences.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,year:2026,carried_over:3,adjustment:0,note:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Absences');
+ await expect(page.getByRole('heading',{level:1,name:'Who is in when.'})).toBeVisible();
+ await expect(page.getByText('October 2026',{exact:true})).toBeVisible();
+ // Offener Antrag von Mara mit Tagen und Rest, dann Genehmigung.
+ const request=page.locator('.absence-request');await expect(request).toContainText('Mara Lenz');await expect(request).toContainText('5 workdays');await expect(request).toContainText('Remaining afterwards: 23 days');
+ await request.getByRole('button',{name:'Approve',exact:true}).click();await expect(page.getByText('Request approved.',{exact:true})).toBeVisible();
+ expect(patched).toEqual([{status:'approved'}]);
+ await expect(page.locator('.absence-request')).toHaveCount(0);
+ await expect(page.locator('.absence-grid tbody tr').nth(1).locator('td.cal-vacation.cal-approved')).toHaveCount(5);
+ // Eigener Eintrag als Leitung: Vorschau zählt Feiertage des Standorts (Allerheiligen So 1.11. zählt nicht; 2.–6.11. = 5 Tage).
+ await page.getByRole('button',{name:'Add absence',exact:true}).click();
+ await page.getByLabel('From',{exact:true}).fill('2026-10-30');await page.getByLabel('To',{exact:true}).fill('2026-11-06');
+ await expect(page.locator('.absence-preview')).toContainText('Counts 6 workdays');await expect(page.locator('.absence-preview')).toContainText('Remaining afterwards: 27 days');
+ await page.getByLabel('Note',{exact:true}).fill('Herbstferien');
+ await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByText('Absence recorded.',{exact:true})).toBeVisible();
+ expect(posted[0]).toMatchObject({workspace_id:ws,user_id:user,starts_on:'2026-10-30',ends_on:'2026-11-06',kind:'vacation',note:'Herbstferien',half_day:''});
+ // Urlaubskonto: 30 + 3 Übertrag − 6 genommen = 27.
+ const account=page.locator('table').filter({hasText:'Carry-over'});const own=account.locator('tbody tr').filter({hasText:'Studio Owner'});
+ await expect(own.locator('td').last()).toHaveText('27');
+ await expect(page.locator('.absence-grid tbody tr').first().locator('td.cal-vacation')).toHaveCount(2); // 30. und 31.10. im Oktoberraster (Sa 31. ist Wochenende, bleibt markiert)
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});

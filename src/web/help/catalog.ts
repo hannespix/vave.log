@@ -47,6 +47,7 @@ export const HELP_TOPICS: HelpTopic[] = [
   { id: 'team-invite', category: 'team', area: 'team', roles: MANAGERS, title: ['Invite people', 'Personen einladen', '邀请成员'], summary: ['Invitation with role, optional sign-in link, and how the person gets in.', 'Einladung mit Rolle, optionalem Anmeldelink – und wie die Person hereinkommt.', '带角色的邀请、可选登录链接，以及对方如何加入。'] },
   { id: 'team-roles', category: 'team', area: 'team', roles: MANAGERS, title: ['Change roles and remove access', 'Rollen ändern und Zugriff entziehen', '更改角色与撤销访问'], summary: ['Promote, demote, disable – and what stays when someone leaves.', 'Hochstufen, herabstufen, deaktivieren – und was bleibt, wenn jemand geht.', '升级、降级、停用——以及有人离开后保留什么。'] },
   { id: 'team-capacity', category: 'team', area: 'team', roles: MANAGERS, title: ['Capacity and absences', 'Kapazität und Abwesenheiten', '产能与缺勤'], summary: ['Hours per week and absences feed the utilization report.', 'Stunden pro Woche und Abwesenheiten speisen die Auslastung.', '每周工时与缺勤构成利用率报表的基础。'] },
+  { id: 'team-vacation', category: 'team', area: 'absences', title: ['Plan vacation and absences', 'Urlaub und Abwesenheiten planen', '规划休假与缺勤'], summary: ['Request vacation, see the team calendar, approve requests and keep the yearly account.', 'Urlaub beantragen, Teamkalender sehen, Anträge entscheiden und das Urlaubskonto führen.', '申请休假、查看团队日历、审批申请并维护年度假期账户。'] },
   { id: 'team-utilization', category: 'team', area: 'reports', roles: MANAGERS, title: ['Read the utilization report', 'Auslastung lesen', '解读利用率'], summary: ['Available, planned and tracked hours per person for any period.', 'Verfügbare, geplante und erfasste Stunden je Person für jeden Zeitraum.', '任意时段内每人的可用、计划与实际工时。'] },
   { id: 'team-list', category: 'team', area: 'team', roles: MANAGERS, title: ['Search and sort the team list', 'Team-Liste durchsuchen und sortieren', '搜索与排序团队列表'], summary: ['Role filter, sorting and a search across name, email and role.', 'Rollenfilter, Sortierung und Suche über Name, E-Mail und Rolle.', '角色筛选、排序，以及按姓名、邮箱和角色搜索。'] },
   // Finance
@@ -71,7 +72,7 @@ export const HELP_TOPICS: HelpTopic[] = [
 ];
 
 /** Artikel, den die Kontext-Hilfe („?“ im Seitenkopf) je Bereich öffnet. */
-export const AREA_TOPIC: Record<WorkflowView, string> = { overview: 'start-overview', projects: 'work-project', tasks: 'work-tasks', time: 'time-manual', reports: 'team-utilization', team: 'team-invite', finance: 'fin-setup', settings: 'start-language', help: 'start-overview' };
+export const AREA_TOPIC: Record<WorkflowView, string> = { overview: 'start-overview', projects: 'work-project', tasks: 'work-tasks', time: 'time-manual', absences: 'team-vacation', reports: 'team-utilization', team: 'team-invite', finance: 'fin-setup', settings: 'start-language', help: 'start-overview' };
 
 /** Die meistgesuchten Themen als Chips unter dem Suchfeld (Figma-Muster). */
 export const HELP_CHIPS = ['start-first-time', 'time-submit', 'time-review', 'team-invite', 'fin-invoice-time', 'ref-shortcuts'];

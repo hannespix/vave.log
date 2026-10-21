@@ -179,6 +179,16 @@ export const HELP_BODIES: Record<string, HelpBody> = {
     ],
     related: ['team-utilization'],
   },
+  'team-vacation': {
+    steps: [
+      ['Absences: the month calendar shows every person per day – vacation purple, requested hatched, sick, other, public holidays grey, weekends striped. Use the arrows to move months, “Today” to come back.', 'Abwesenheiten: Der Monatskalender zeigt jede Person je Tag – Urlaub violett, beantragt schraffiert, krank, sonstiges, Feiertage grau, Wochenenden gestreift. Mit den Pfeilen wechselst du den Monat, „Heute“ führt zurück.', '缺勤：月历按天显示每个人——休假为紫色、申请中为斜纹、病假、其他、法定假日为灰色、周末为条纹。用箭头切换月份，“今天”返回当月。'],
+      ['“Request vacation”: kind, from, to, optionally half a day. The preview counts workdays without public holidays of your location and shows the remaining balance. Sick days apply immediately; vacation and other absences go to the management as a request.', '„Urlaub beantragen“: Art, von, bis, optional ein halber Tag. Die Vorschau zählt Arbeitstage ohne Feiertage deines Standorts und zeigt den Rest danach. Krankmeldungen gelten sofort; Urlaub und Sonstiges gehen als Antrag an die Leitung.', '“申请休假”：类型、起止日期，可选半天。预览会扣除你所在地点的法定假日计算工作日，并显示剩余天数。病假立即生效；休假和其他缺勤作为申请发送给管理层。'],
+      ['Management: open requests appear at the top with the days counted, the remaining balance and how many colleagues are away at the same time. Approve or decline – the person gets a notification. Management can also enter absences for anyone directly.', 'Leitung: Offene Anträge stehen oben mit gezählten Tagen, Rest und der Zahl gleichzeitig abwesender Kolleginnen und Kollegen. Genehmigen oder ablehnen – die Person wird benachrichtigt. Die Leitung trägt Abwesenheiten auch direkt für alle ein.', '管理层：待审批申请显示在顶部，附带天数、剩余额度以及同期缺勤的同事人数。批准或拒绝后，申请人会收到通知。管理层也可直接为任何人登记缺勤。'],
+      ['Yearly account: entitlement per person (Team or management inline), carry-over and adjustment per year, taken, requested, remaining. Half days count 0.5. Settings lets management switch approval off for small teams.', 'Urlaubskonto: Anspruch je Person (Leitung trägt ihn direkt in der Tabelle ein), Übertrag und Korrektur je Jahr, genommen, beantragt, Rest. Halbe Tage zählen 0,5. Unter Einstellungen kann die Leitung die Freigabepflicht für kleine Teams ausschalten.', '年度账户：每人的假期额度（管理层可直接在表中填写）、每年的结转和调整、已休、申请中、剩余。半天按 0.5 计。管理层可在“设置”中为小团队关闭审批。'],
+      ['“Calendar (ICS)” exports all approved absences of the year for Outlook, Google or Apple Calendar.', '„Kalender (ICS)“ exportiert alle genehmigten Abwesenheiten des Jahres für Outlook, Google oder Apple Kalender.', '“日历（ICS）”导出当年所有已批准的缺勤，可导入 Outlook、Google 或 Apple 日历。'],
+    ],
+    related: ['team-capacity', 'team-utilization'],
+  },
   'team-utilization': {
     steps: [
       ['Under Reports, choose the period. The utilization section lists every person with available, planned and tracked hours.', 'Wähle unter Auswertung den Zeitraum. Der Abschnitt Auslastung listet jede Person mit verfügbaren, geplanten und erfassten Stunden.', '在“报表”中选择时段。利用率部分列出每人的可用、计划和实际工时。'],
