@@ -150,6 +150,67 @@ describe('database authorization', () => {
   });
 });
 
+describe('database rights per account', () => {
+  const matrix = (over: Record<string,string> = {}) => JSON.stringify({ projects:'view', tasks:'edit', time_team:'none', absences_team:'none', planning:'none', strengths:'none', finance:'none', team:'none', settings:'none', ...over });
+  it('resolves templates: Projektplanung edits projects and sees team time but may not approve; Lesezugriff only reads', async () => {
+    await login(owner); await entry(30);
+    await db.query("select public.set_member_rights($1,$2,'projektplanung')",[workspace,member]);
+    await login(member);
+    expect(await rows("update public.projects set name='Geplant' where id=$1 returning name",[project])).toEqual([{name:'Geplant'}]);
+    const teamTime=await rows<{id:string}>('select id from public.time_entries');
+    expect(teamTime).toHaveLength(1);
+    await expect(attempt('select public.review_entry($1,true)',[teamTime[0]!.id])).rejects.toThrow(/Berechtigung/);
+    await expect(attempt('select public.finance_list_invoices($1)',[workspace])).rejects.toThrow(/FINANCE_FORBIDDEN/);
+    await login(owner); await db.query("select public.set_member_rights($1,$2,'lesen')",[workspace,member]);
+    await login(member);
+    expect(await rows("update public.projects set name='Nein' where id=$1 returning name",[project])).toEqual([]);
+    await expect(attempt("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Nein') returning id",[workspace,project])).rejects.toThrow();
+    expect((await first<{list:unknown[]}>('select public.finance_list_invoices($1) as list',[workspace])).list).toEqual([]);
+    await expect(attempt("insert into public.finance_clients(workspace_id,name) values($1,'Kunde') returning id",[workspace])).rejects.toThrow();
+    expect(await rows('select * from public.time_entries')).toHaveLength(1);
+  });
+  it('resolves templates: Personal decides absences and entitlements without finance or settings; Finanzen books but keeps out of the team', async () => {
+    await login(owner); await db.query("select public.set_member_rights($1,$2,'personal')",[workspace,member]);
+    await login(member);
+    expect((await first<{vacation_days_per_year:string}>('select * from public.set_vacation_entitlement($1,$2,28)',[workspace,manager])).vacation_days_per_year).toBe('28.0');
+    await expect(attempt('select public.finance_list_invoices($1)',[workspace])).rejects.toThrow(/FINANCE_FORBIDDEN/);
+    await expect(attempt('select public.set_absence_approval($1,false)',[workspace])).rejects.toThrow(/Berechtigung/);
+    await login(owner); await db.query("select public.set_member_rights($1,$2,'finanzen')",[workspace,member]);
+    await login(member);
+    expect(await rows("insert into public.finance_clients(workspace_id,name) values($1,'Kunde') returning name",[workspace])).toEqual([{name:'Kunde'}]);
+    await expect(attempt('select * from public.set_vacation_entitlement($1,$2,20)',[workspace,manager])).rejects.toThrow(/Berechtigung/);
+    await expect(attempt('select * from public.list_invitations($1)',[workspace])).rejects.toThrow(/Berechtigung/);
+  });
+  it('individual matrices: team right grants only what one has, never touches owners or oneself, invalid matrices are rejected, a role change resets', async () => {
+    await login(owner);
+    await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,manager,matrix({ team:'edit' })]);
+    await expect(attempt("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,member,'{"projects":"none"}'])).rejects.toThrow(/Matrix/);
+    await login(manager);
+    await expect(attempt("select public.set_member_rights($1,$2,'finanzen')",[workspace,member])).rejects.toThrow(/selbst hast/);
+    await expect(attempt("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,member,matrix({ finance:'view' })])).rejects.toThrow(/selbst hast/);
+    expect((await first<{rights_template:string}>("select * from public.set_member_rights($1,$2,'mitarbeit')",[workspace,member])).rights_template).toBe('mitarbeit');
+    await expect(attempt("select public.set_member_rights($1,$2,'mitarbeit')",[workspace,owner])).rejects.toThrow(/Owner/);
+    await expect(attempt("select public.set_member_rights($1,$2,'mitarbeit')",[workspace,manager])).rejects.toThrow(/eigenen Rechte/);
+    await db.query("select public.invite_member($1,'neu@example.org','member','mitarbeit')",[workspace]);
+    await expect(attempt("select public.invite_member($1,'neu2@example.org','member','finanzen')",[workspace])).rejects.toThrow(/selbst hast/);
+    await expect(attempt("select public.invite_member($1,'neu3@example.org','manager')",[workspace])).rejects.toThrow(/selbst hast/);
+    await login(owner); await db.query("select public.set_member_role($1,$2,'manager')",[workspace,manager]);
+    expect(await first('select rights_template,permissions from public.memberships where workspace_id=$1 and user_id=$2',[workspace,manager])).toEqual({rights_template:null,permissions:null});
+  });
+  it('carries the template through the invitation and keeps legacy roles unchanged', async () => {
+    await login(owner); await db.query("select public.invite_member($1,'outsider@example.org','member','lesen')",[workspace]);
+    await login(outsider); await db.exec('select public.accept_invitations()');
+    expect((await first<{rights_template:string}>('select rights_template from public.memberships where workspace_id=$1 and user_id=$2',[workspace,outsider])).rights_template).toBe('lesen');
+    expect(await rows("update public.projects set name='Nein' where id=$1 returning name",[project])).toEqual([]);
+    expect(await rows('select * from public.time_entries')).toEqual([]);
+    // Bisherige Rollen: manager = Leitung (alles außer Team verwalten), member = Mitarbeit.
+    await login(manager);
+    expect((await first<{r:Record<string,string>}>('select private.rights($1) as r',[workspace])).r).toMatchObject({ finance:'edit', time_team:'edit', team:'view', settings:'edit' });
+    await login(member);
+    expect((await first<{r:Record<string,string>}>('select private.rights($1) as r',[workspace])).r).toMatchObject({ projects:'view', tasks:'edit', finance:'none', team:'none' });
+  });
+});
+
 describe('database member offboarding', () => {
   it('denies disabled users all workspace reads, writes and authorized RPCs', async () => {
     const e=await entry();
