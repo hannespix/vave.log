@@ -154,13 +154,13 @@ export const HELP_BODIES: Record<string, HelpBody> = {
   },
   'team-invite': {
     steps: [
-      ['Under Team, click “Invite person” (owners only): email address and role – manager or member.', 'Klicke unter Team „Person einladen“ (nur Inhaber:in): E-Mail-Adresse und Rolle – Leitung oder Mitglied.', '在“团队”中点击“邀请成员”（仅所有者）：邮箱地址和角色——负责人或成员。'],
+      ['Under Team, click “Invite person” (needs the right “Team & rights: edit”): email address, role and a rights template – for example planning, HR or finance. Without a template the person gets the role default.', 'Klicke unter Team „Person einladen“ (braucht das Recht „Team & Rechte: Bearbeiten“): E-Mail-Adresse, Rolle und eine Rechte-Vorlage – etwa Projektplanung, Personal oder Finanzen. Ohne Vorlage bekommt die Person die Vorgabe der Rolle.', '在“团队”中点击“邀请成员”（需要“团队与权限：编辑”权限）：邮箱地址、角色和权限模板——例如项目规划、人事或财务。不选模板则使用角色默认权限。'],
       ['Optionally tick “Send a sign-in link by email right away”: the account is created and the person gets a link. Otherwise copy the invitation text and send it yourself.', 'Optional „Anmeldelink direkt per E-Mail senden“: Das Konto wird angelegt und die Person bekommt einen Link. Sonst kopiere den Einladungstext und schicke ihn selbst.', '可选勾选“立即通过邮件发送登录链接”：创建账号并向对方发送链接。否则复制邀请文本自行发送。'],
       ['The person registers with exactly that email address; the invitation is accepted on sign-in.', 'Die Person registriert sich mit genau dieser E-Mail-Adresse; die Einladung wird beim Anmelden angenommen.', '对方用该邮箱注册；登录时自动接受邀请。'],
       ['Invitations are valid for 14 days and listed under “Open invitations”, where owners can revoke them.', 'Einladungen gelten 14 Tage und stehen unter „Offene Einladungen“, wo Inhaber:innen sie widerrufen können.', '邀请有效期 14 天，列在“待处理邀请”下，所有者可撤销。'],
     ],
     tip: ['Already a member? The app tells you – change the role under Team instead.', 'Schon Mitglied? Die App sagt es dir – ändere stattdessen die Rolle unter Team.', '已是成员？应用会提示——请改在“团队”中更改角色。'],
-    related: ['team-roles', 'start-roles'],
+    related: ['team-rights', 'team-roles', 'start-roles'],
   },
   'team-roles': {
     steps: [
@@ -169,6 +169,17 @@ export const HELP_BODIES: Record<string, HelpBody> = {
       ['Changing your own role may change your own rights – the dialog warns you.', 'Änderst du deine eigene Rolle, können sich deine eigenen Rechte ändern – der Dialog warnt dich.', '更改自己的角色可能改变自己的权限——对话框会提醒你。'],
     ],
     related: ['ref-roles', 'team-invite'],
+  },
+  'team-rights': {
+    steps: [
+      ['In the Team list, click “Rights” next to a person (needs “Team & rights: edit”; not for owners, not for yourself).', 'Klicke in der Team-Liste bei einer Person auf „Rechte“ (braucht „Team & Rechte: Bearbeiten“; nicht bei Inhaber:innen, nicht bei dir selbst).', '在团队列表中点击某人旁的“权限”（需要“团队与权限：编辑”；不适用于所有者和自己）。'],
+      ['Pick a template: Administration, Management, Project planning, HR, Finance, Staff or Read-only. Each template fills the matrix below; you can see exactly what it grants.', 'Wähle eine Vorlage: Administration, Leitung, Projektplanung, Personal, Finanzen, Mitarbeit oder Lesezugriff. Jede Vorlage füllt die Matrix darunter; du siehst genau, was sie erlaubt.', '选择模板：管理、负责人、项目规划、人事、财务、员工或只读。每个模板都会填充下方矩阵，你可以清楚看到它授予的权限。'],
+      ['Or set the matrix yourself: per module “No access”, “View” or “Edit” – projects & clients, tasks, team hours, absences & HR, capacity & health, strengths, finance, team & rights, workspace settings. The template then shows “Individual”.', 'Oder stelle die Matrix selbst ein: je Modul „Kein Zugriff“, „Sehen“ oder „Bearbeiten“ – Projekte & Kunden, Aufgaben, Zeiten des Teams, Abwesenheiten & Personal, Kapazität & Lagebild, Stärkenprofile, Finanzen, Team & Rechte, Workspace-Einstellungen. Die Vorlage zeigt dann „Individuell“.', '或自行设置矩阵：每个模块选择“无权限”“查看”或“编辑”——项目与客户、任务、团队工时、缺勤与人事、产能与状况、优势档案、财务、团队与权限、工作区设置。模板随即显示“个性化”。'],
+      ['Rights apply at once: the navigation only shows what the person may see, and the database refuses everything else – even via the API.', 'Rechte gelten sofort: Die Navigation zeigt nur, was die Person sehen darf, und die Datenbank verweigert alles andere – auch über die API.', '权限立即生效：导航只显示对方可见的内容，数据库会拒绝其他一切操作——包括通过 API。'],
+    ],
+    tip: ['You can never grant more than you have yourself. Everyone always keeps their own hours, timer, absences, accounts and assigned tasks.', 'Mehr als deine eigenen Rechte kannst du nie vergeben. Eigene Zeiten, Timer, Abwesenheiten, Konten und zugewiesene Aufgaben behält jede Person immer.', '你永远无法授予超过自己拥有的权限。每个人始终保留自己的工时、计时器、缺勤、账户和分配的任务。'],
+    why: ['Team members do not see each other’s performance: team hours, strengths profiles and the health view stay with the templates that need them.', 'Mitarbeitende sehen die Leistung anderer nicht: Teamzeiten, Stärkenprofile und Lagebild bleiben den Vorlagen vorbehalten, die sie brauchen.', '团队成员看不到彼此的绩效：团队工时、优势档案和状况视图仅限需要它们的模板。'],
+    related: ['team-invite', 'team-roles', 'ref-roles'],
   },
   'team-capacity': {
     steps: [
@@ -394,7 +405,17 @@ export const HELP_BODIES: Record<string, HelpBody> = {
         [['rename, archive or delete the workspace', 'Workspace umbenennen, archivieren oder löschen', '重命名、归档或删除工作区'], ['✓', '✓', '✓'], ['–', '–', '–'], ['–', '–', '–']],
       ],
     },
-    related: ['start-roles', 'team-roles'],
+    list: [
+      { term: ['Administration', 'Administration', '管理'], def: ['everything, including team, rights and settings', 'alles – auch Team, Rechte und Einstellungen', '全部权限，包括团队、权限和设置'] },
+      { term: ['Management', 'Leitung', '负责人'], def: ['everything except managing the team (former manager)', 'alles außer Team verwalten (bisherige Leitung)', '除团队管理外的全部权限（原负责人）'] },
+      { term: ['Project planning', 'Projektplanung', '项目规划'], def: ['plan projects and tasks, see team and hours, no finance', 'Projekte und Aufgaben planen, Team und Zeiten sehen, keine Finanzen', '规划项目与任务，查看团队和工时，无财务'] },
+      { term: ['HR', 'Personal', '人事'], def: ['absences, team hours and strengths, invite people', 'Abwesenheiten, Zeiten und Stärken des Teams betreuen, Personen einladen', '处理缺勤、团队工时和优势，邀请成员'] },
+      { term: ['Finance', 'Finanzen', '财务'], def: ['invoices, offers, payments; view hours only', 'Rechnungen, Angebote, Zahlungen; Zeiten nur sehen', '发票、报价、付款；仅查看工时'] },
+      { term: ['Staff', 'Mitarbeit', '员工'], def: ['own hours and tasks, view projects (former member)', 'eigene Zeiten und Aufgaben, Projekte sehen (bisheriges Mitglied)', '自己的工时和任务，查看项目（原成员）'] },
+      { term: ['Read-only', 'Lesezugriff', '只读'], def: ['see everything, change nothing', 'alles sehen, nichts ändern', '查看全部，不可更改'] },
+      { term: ['Individual', 'Individuell', '个性化'], def: ['your own combination per module', 'eigene Zusammenstellung je Modul', '按模块自定义组合'] },
+    ],
+    related: ['start-roles', 'team-roles', 'team-rights'],
   },
   'ref-data': {
     steps: [

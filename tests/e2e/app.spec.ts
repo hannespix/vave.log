@@ -452,7 +452,7 @@ test('help explains the tool: landing, search, article, context help and the glo
  await search.fill('cancel invoice');
  await page.getByRole('button',{name:/Cancel an invoice \(GoBD\)/}).first().click();
  await expect(page.getByRole('heading',{name:'Cancel an invoice (GoBD)'})).toBeVisible();
- await expect(page.getByText('Owners and managers only',{exact:true})).toBeVisible();
+ await expect(page.getByText('Needs the right “Finance”',{exact:true})).toBeVisible();
  await expect(page.getByText(/cancellation invoice with its own number/)).toBeVisible();
  await page.locator('.help-crumbs').getByRole('button',{name:'Help',exact:true}).click();
  await expect(search).toBeVisible();
