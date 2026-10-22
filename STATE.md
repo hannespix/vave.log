@@ -374,6 +374,12 @@ Tests: `tests/pwa-worker.test.ts` (Precache best effort, cache-first, nur statis
 
 Noch offen (gemessen, nicht geändert): Beim Start fragt die App `task_effort` dreimal und `time_entries` zweimal ab (mehrere Bereiche laden unabhängig); eine gemeinsame Ladeschicht würde das auf je einen Aufruf bringen. Der Sprachkatalog (alle drei Sprachen, ~35 KB gzip) steckt weiter im Hauptbundle.
 
+## Mobil-Feinschliff: Kapazitäts-Cockpit und Hilfe-Suche (22.10.2026)
+
+- **Kapazitäts-Cockpit am Handy:** Das Raster hatte `table-layout: fixed` ohne Mindestbreite – sechs Wochen plus Personenspalte wurden auf 400 px gequetscht, Wochenköpfe („19.10. – 25.10.“) und Zellen („57 / 40 h“) überlappten, die Spalte „Person“ war abgeschnitten. Jetzt wie der Abwesenheitskalender: feste Spaltenbreiten über `--person-col`/`--week-col`/`--weeks` (Tabelle setzt `--weeks` je Horizont), `min-width: 100%`, horizontales Scrollen im `.table-scroll`, Personenspalte haftet links (`position: sticky`), Name mit Ellipse, Unterzeile bricht um. Desktop unverändert (210 px + 110 px je Woche, füllt die Breite).
+- **Hilfe-Suche:** Das Eingabefeld im Suchkasten zeigte beim Fokus einen zweiten Rahmen (globales `*:focus-visible`) innerhalb des Kastenrahmens; der innere Rahmen ist weg (`.help-search input:focus-visible{outline:none}`, wie Palette und Auswahlmenü).
+- e2e: „capacity grid keeps its week columns readable on a phone …“ (Köpfe überlappen nicht, Wochenlabel und Zellen nicht abgeschnitten, Personenzelle bleibt in ihrer Spalte, keine horizontale Seitenbreite) auf desktop und mobile; Hilfe-Test prüft den einfachen Fokusrahmen.
+
 ## M16-A: Rechte je Konto – Datenbank (22.10.2026)
 
 Statt drei Rollen bekommt jede Mitgliedschaft eine **Rechte-Matrix je Modul** (`none` · `view` · `edit`), vorbelegt durch eine Vorlage. Migration `20261022100000_rechte_je_konto.sql`:

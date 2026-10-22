@@ -449,6 +449,7 @@ test('help explains the tool: landing, search, article, context help and the glo
  await expect(page.getByRole('heading',{name:'Everything you need to know.'})).toBeVisible();
  await expect(page.getByRole('button',{name:/Your first hours in five minutes/}).first()).toBeVisible();
  const search=page.getByRole('searchbox',{name:'Search help',exact:true});
+ await search.focus();expect(await search.evaluate(el=>getComputedStyle(el).outlineStyle),'only the search box itself shows a focus ring, not the input inside it').toBe('none');
  await search.fill('cancel invoice');
  await page.getByRole('button',{name:/Cancel an invoice \(GoBD\)/}).first().click();
  await expect(page.getByRole('heading',{name:'Cancel an invoice (GoBD)'})).toBeVisible();
@@ -836,4 +837,17 @@ test('AI suggestions inbox: adjust, accept as draft, dismiss, accept the whole d
  await expect(page.getByText('Suggestion accepted as draft.',{exact:true})).toBeVisible();expect(accepted[1]).toMatchObject({p_project_id:secondProject,p_minutes:120,p_billable:false});
  await expect(page.locator('.suggestions-inbox')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+test('capacity grid keeps its week columns readable on a phone and scrolls sideways instead of overlapping',async({page},testInfo)=>{
+ await setup(page,true);await page.goto('/');await goArea(page,'Planning');
+ const grid=page.getByRole('region',{name:'Capacity per person and week'});await expect(grid).toBeVisible();
+ const heads=grid.locator('thead th');await expect(heads).toHaveCount(7);
+ const boxes=[];for(let i=0;i<7;i++){const b=await heads.nth(i).boundingBox();expect(b,`header ${i}`).not.toBeNull();boxes.push(b!);}
+ for(let i=1;i<7;i++)expect(boxes[i]!.x,`column ${i} starts after column ${i-1}`).toBeGreaterThanOrEqual(boxes[i-1]!.x+boxes[i-1]!.width-1);
+ for(let i=1;i<7;i++){const label=heads.nth(i).locator('strong');const w=await label.evaluate(el=>el.scrollWidth-el.clientWidth);expect(w,`week label ${i} is not clipped`).toBeLessThanOrEqual(0);}
+ expect(boxes[0]!.width).toBeGreaterThanOrEqual(120);
+ for(const th of await grid.locator('tbody th').all())expect(await th.evaluate(el=>el.scrollWidth-el.clientWidth),'person cell stays inside its column').toBeLessThanOrEqual(0);
+ const cell=grid.locator('.load-cell').first();const over=await cell.evaluate(el=>el.scrollWidth-el.clientWidth);expect(over).toBeLessThanOrEqual(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBe(0);
+ await grid.screenshot({path:testInfo.outputPath('planning.png')});
 });

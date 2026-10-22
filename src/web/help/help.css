@@ -5,7 +5,7 @@
 .help-hero .eyebrow{color:#5e793b;margin-bottom:8px}
 .help-hero h2{margin:0 0 14px;font-size:23px;letter-spacing:-.02em}
 .help-search{display:flex;align-items:center;gap:10px;background:white;border:1px solid var(--border);border-radius:10px;padding:2px 14px;color:#6c745f}
-.help-search:focus-within{box-shadow:0 0 0 2px var(--purple)}
+.help-search:focus-within{box-shadow:0 0 0 2px var(--purple)}.help-search input:focus-visible{outline:none}
 .help-search input{border:0;flex:1;min-width:0;font-size:13px;padding:12px 0;background:none}
 .help-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
 .help-chips>span{font-size:11px;color:#687657}
