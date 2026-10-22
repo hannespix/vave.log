@@ -26,14 +26,17 @@ export interface FinanceAreaProps {
   members: Membership[];
   projects: Project[];
   role: Role;
+  /** Rechtestufe des Moduls Finanzen (M16): none blendet aus, view zeigt nur an. */
+  access?: 'none' | 'view' | 'edit';
   isDemo?: boolean;
   navigation?: FinanceNavigation;
   onNavigate?: (target: FinanceNavigationTarget) => void;
 }
 /** The outer guard unmounts financial data immediately on a role downgrade. */
 export function FinanceArea(props: FinanceAreaProps) {
-  return props.role === "owner" || props.role === "manager" ? (
-    <AuthorizedFinance key={`${props.workspace.id}:${props.role}`} {...props} />
+  const access = props.access ?? (props.role === "owner" || props.role === "manager" ? "edit" : "none");
+  return access !== "none" ? (
+    <AuthorizedFinance key={`${props.workspace.id}:${props.role}:${access}`} {...props} access={access} />
   ) : null;
 }
 function AuthorizedFinance({
@@ -42,6 +45,7 @@ function AuthorizedFinance({
   members,
   projects,
   role,
+  access = "edit",
   isDemo = false,
   navigation,
   onNavigate,
@@ -203,6 +207,7 @@ function AuthorizedFinance({
         </div>
         <ArrowUpRight size={48} aria-hidden="true" />
       </div>
+      {access === "view" && <Notice kind="info">{t("readOnly")}</Notice>}
       <div className="finance-tabs">
       <div className="finance-tablist" role="tablist" aria-label={t("title")}>
         {(

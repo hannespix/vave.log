@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
+import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,rightsSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
 import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance,TimeSuggestion,TimeSuggestionInput } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
@@ -32,7 +32,8 @@ export function createService(client:SupabaseClient){
   getMemberships:(workspaceId:string)=>rows<Membership>(client.from('memberships').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('user_id').limit(1001)),
   createWorkspace:(input:{name:string;timezone:string;currency:string})=>{const v=parse(workspaceSchema,input);return rpc<Workspace>('create_workspace',{p_name:v.name,p_timezone:v.timezone,p_currency:v.currency})},
   acceptInvitations:()=>rpc<number>('accept_invitations'),
-  inviteMember:async(input:{workspace_id:string;email:string;role:'manager'|'member'})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role})},
+  inviteMember:async(input:{workspace_id:string;email:string;role:'manager'|'member';template?:string})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role,...(v.template?{p_template:v.template}:{})})},
+  setMemberRights:(input:{workspace_id:string;user_id:string;template:string;permissions?:Record<string,string>})=>{const v=parse(rightsSchema,input);return rpc<Membership>('set_member_rights',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_template:v.template,p_permissions:v.template==='individuell'?v.permissions:null})},
   listInvitations:(workspaceId:string)=>rpc<Invitation[]>('list_invitations',{p_workspace_id:parse(uuid,workspaceId)}),
   revokeInvitation:async(id:string)=>{await rpcVoid('revoke_invitation',{p_id:parse(uuid,id)})},
   setMemberRole:async(input:{workspace_id:string;user_id:string;role:Role})=>{const v=parse(roleSchema,input);await rpcVoid('set_member_role',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_role:v.role})},

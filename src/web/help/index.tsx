@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
-import type { Role } from '../../shared/types';
+import { MODULE_NAMES, type Rights } from '../../shared/rights';
 import { useI18n } from '../i18n';
 import { Empty } from '../components';
 import type { WorkflowTarget } from '../workflow-navigation';
@@ -12,23 +12,23 @@ import './help.css';
 // Hilfe im Produkt (Slack-/Linear-Muster): ein Einstieg mit Suche und den
 // meistgesuchten Themen, ein nummerierter Erste-Schritte-Pfad, dann Kategorien
 // mit je einem Thema pro Artikel. Rollen filtern, was gezeigt wird.
-export interface HelpAreaProps { role: Role; topic: string; onTopic: (id: string) => void; onNavigate: (target: WorkflowTarget) => void }
+export interface HelpAreaProps { rights: Rights; topic: string; onTopic: (id: string) => void; onNavigate: (target: WorkflowTarget) => void }
 
-export function HelpArea({ role, topic, onTopic, onNavigate }: HelpAreaProps) {
+export function HelpArea({ rights, topic, onTopic, onNavigate }: HelpAreaProps) {
   const { t, locale } = useI18n();
   const x = (text: Text) => helpText(locale, text);
-  const visible = HELP_TOPICS.filter(item => helpVisible(item, role));
+  const visible = HELP_TOPICS.filter(item => helpVisible(item, rights));
   const current = visible.find(item => item.id === topic);
   if (topic && !current) return <section className="panel"><Empty title={t('Dieses Thema gibt es nicht – oder nicht für deine Rolle.')} text={t('Nutze die Suche oder die Übersicht, um das passende Thema zu finden.')} action={<button className="button secondary" onClick={() => onTopic('')}>{t('Zur Hilfe-Übersicht')}</button>}/></section>;
   if (current) return <HelpArticle topic={current} visible={visible} x={x} onTopic={onTopic} onNavigate={onNavigate}/>;
-  return <HelpHome role={role} visible={visible} x={x} onTopic={onTopic}/>;
+  return <HelpHome rights={rights} visible={visible} x={x} onTopic={onTopic}/>;
 }
 
-function HelpHome({ role, visible, x, onTopic }: { role: Role; visible: HelpTopic[]; x: (text: Text) => string; onTopic: (id: string) => void }) {
+function HelpHome({ rights, visible, x, onTopic }: { rights: Rights; visible: HelpTopic[]; x: (text: Text) => string; onTopic: (id: string) => void }) {
   const { t, locale } = useI18n();
   const [query, setQuery] = useState('');
   const searching = query.trim().length > 0;
-  const results = searching ? searchHelp(query, role, locale) : [];
+  const results = searching ? searchHelp(query, rights, locale) : [];
   const categoryOf = (item: HelpTopic) => HELP_CATEGORIES.find(category => category.id === item.category)!;
   const chips = HELP_CHIPS.map(id => visible.find(item => item.id === id)).filter((item): item is HelpTopic => Boolean(item));
   return <div className="help-area">
@@ -50,7 +50,7 @@ function HelpHome({ role, visible, x, onTopic }: { role: Role; visible: HelpTopi
         <h2>{t('In fünf Schritten drin.')}</h2>
         <ol>{visible.filter(item => item.category === 'start').map(item => <li key={item.id}><button type="button" className="help-step" onClick={() => onTopic(item.id)}><strong>{x(item.title)}</strong><small>{x(item.summary)}</small></button></li>)}</ol>
       </section>
-      <div className="help-grid">{HELP_CATEGORIES.filter(category => category.id !== 'start' && helpVisible(category, role)).map(category => <section key={category.id} className="panel help-category">
+      <div className="help-grid">{HELP_CATEGORIES.filter(category => category.id !== 'start' && helpVisible(category, rights)).map(category => <section key={category.id} className="panel help-category">
         <h3>{x(category.title)}</h3>
         <p>{x(category.intro)}</p>
         <ul className="help-topics">{visible.filter(item => item.category === category.id).map(item => <li key={item.id}><button type="button" className="help-topic" onClick={() => onTopic(item.id)}>{x(item.title)}<ChevronRight size={14} aria-hidden="true"/></button></li>)}</ul>
@@ -71,7 +71,7 @@ function HelpArticle({ topic, visible, x, onTopic, onNavigate }: { topic: HelpTo
   return <article className="panel help-article">
     <nav className="help-crumbs" aria-label={t('Hilfe')}><button type="button" className="text-button" onClick={() => onTopic('')}>{t('Hilfe')}</button><ChevronRight size={12} aria-hidden="true"/><span>{x(category.title)}</span></nav>
     <h2>{x(topic.title)}</h2>
-    {topic.roles && <span className="help-role">{t('Nur für Inhaber:in und Leitung')}</span>}
+    {topic.module && <span className="help-role">{t('Braucht das Recht „{module}“', { module: t(MODULE_NAMES[topic.module]) })}</span>}
     <p className="help-lead">{x(topic.summary)}</p>
     {body.steps && <ol className="help-steps">{body.steps.map((step, i) => <li key={i}>{x(step)}</li>)}</ol>}
     {body.tip && <aside className="help-callout"><Lightbulb size={16} aria-hidden="true"/><div><strong>{t('Gut zu wissen')}</strong><p>{x(body.tip)}</p></div></aside>}

@@ -10,7 +10,7 @@ Manager/Owner erhalten Kunden, Kosten-/Verrechnungssätze, Mitarbeiter-/Freelanc
 
 Erster Start bietet leeren Workspace (voreingestellt) oder recherchierte VAVE-Beispieldaten: acht öffentliche Studioreferenzen, 49 öffentlich genannte Personen und 63 erfundene Profile bilden das fiktive Szenario mit 100 Mitarbeitenden und zwölf freien Spezialisten. Acht öffentliche und 17 erfundene Projekte füllen die Ansichten; zwölf zusätzliche Großprojekte haben zusammen 22,55 Mio. EUR geplantes Auftragsvolumen. Aufgaben, Arbeitszeiten, Kostensätze, Budgets, Ausgaben sowie offene, bezahlte und stornierte Beispielrechnungen füllen die echten Ansichten. Operative Angaben sind fiktiv und keine Aussage über VAVEs tatsächliche Umsätze oder heutige Beschäftigte. Beispielpersonen haben keine Auth-Konten oder Zugangsdaten. Demo-Rechnungen können über die regulären Abläufe ausprobiert werden; Datenbank und Exporte erhalten dauerhaft DEMO-/Nicht-bezahlen-Markierungen. Bestehende Demos bieten „Demo vervollständigen“; Quellen bleiben in der Entwicklungsdokumentation. Ersteller/Owner kann ausschließlich seinen markierten Demo-Workspace archivieren.
 
-64 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
+65 MCP-Werkzeuge verwenden dieselben validierten Services und Nutzerrechte wie die GUI; keine privilegierten Supabase-Schlüssel im Runtime-System. Endpoint `/api/mcp` (Sites reserviert `/mcp`).
 
 ## Supabase
 
@@ -383,4 +383,15 @@ Statt drei Rollen bekommt jede Mitgliedschaft eine **Rechte-Matrix je Modul** (`
 - Helfer `private.template_rights`, `rights_of`, `rights`, `can(ws, modul, stufe)`, `require_can`; Policies per `alter policy` auf Module umgestellt (Projekte, Aufgaben, Teamzeiten lesen, Abwesenheiten/Urlaubskonten, Audit, alle Finanztabellen); Funktionen `review_entry/_entries`, `revoke_approval`, `guard_entry` (`time_team`), `set_vacation_entitlement`, `set_member_capacity`, `set_work_schedule`, `set_member_location`, `absence_rules/_notify` (`absences_team`), `set_absence_approval`, `set_workspace_location` (`settings`), `project_insight` (`planning`), `task_lifecycle` (`strengths`), `finance_require_manager` → `finance:edit`, neu `finance_require_view` für die Lesefunktionen, `invite_member(…, p_template)`, `list_invitations` (`team:view`), `revoke_invitation` (`team:edit`), `set_member_role` (nur Owner, setzt Vorlage zurück), neu `set_member_rights(ws, person, vorlage, matrix)`: nie auf Owner, nie auf sich selbst, nie mehr Rechte als die eigenen (gilt auch beim Einladen).
 - Tests in `tests/database.test.ts` („database rights per account“): Vorlagen Projektplanung/Lesezugriff/Personal/Finanzen, individuelle Matrix mit Teamrecht, Einladung mit Vorlage, Altrollen.
 
-Oberfläche (Dialog „Rechte“, Navigation je Modul, Einladung mit Vorlage) folgt als M16-B; bis dahin nutzt die App weiter die Rollen und zeigt Vorlagen nicht an.
+Oberfläche folgt als M16-B.
+
+## M16-B: Rechte je Konto – Oberfläche (22.10.2026)
+
+Die App rechnet nicht mehr mit `manager`, sondern mit der Rechte-Matrix (`src/shared/rights.ts`, deckungsgleich mit `private.template_rights` – `tests/rights.test.ts` liest die Vorlagen aus der Migration und vergleicht):
+- `effectiveRights(membership)` (Owner → alles; Matrix → Vorlage → Rolle), `can(rights, modul, stufe)`, `grantable(own, target)` (nie mehr als die eigenen Rechte), `matchTemplate`, `visibleAreas` → Bereiche Team / Finanzen / Planung.
+- **Navigation:** Team, Finanzen und Planung erscheinen nur mit passendem Recht (`navAllowed`); eine gesperrte Ansicht in der Adresse springt auf die Übersicht. Freigabe-Zähler nur mit `time_team: edit`, Teamzeiten-Reports mit `time_team: view`; Bereiche gaten einzeln: Projekte (`projects: edit`, Prognose `planning`, Finanztab `finance`), Abwesenheiten (`absences_team`), Lagebild (`planning`), Stärkenprofile (`strengths`), Finanzen (`finance`; nur sehen → Hinweis „Nur-Lese-Zugriff“, Schreibversuche weist die Datenbank ab), Einstellungen (`settings`).
+- **Dialog „Rechte“** (`src/web/rights-dialog.tsx`, Team-Liste, Recht `team: edit`, nicht bei Owner/sich selbst): Vorlage wählen (nur Vorlagen, die die eigenen Rechte hergeben) oder Matrix je Modul (Kein Zugriff / Sehen / Bearbeiten; Stufen über den eigenen Rechten gesperrt); passt die Matrix zu einer Vorlage, springt die Auswahl dorthin, sonst „Individuell“. Speichern über `set_member_rights`.
+- **Einladung** mit Rechte-Vorlage (Standard „Vorgabe der Rolle“); Team-Liste zeigt die Vorlage je Person; Kapazität/Arbeitszeitmodell nur mit `absences_team: edit`, Stärken nur mit `strengths: view`.
+- **Hilfe** je Modul statt je Rolle (`module`/`level` am Thema, `helpVisible`); neues Thema „Rechte je Person“, Rollen-Matrix mit Vorlagenliste; MCP-Werkzeug `set_member_rights` (65 Werkzeuge).
+- Mitarbeitende (Vorlage Mitarbeit) sehen keine Leistung anderer: keine Teamzeiten, keine Stärkenprofile, kein Lagebild.
+

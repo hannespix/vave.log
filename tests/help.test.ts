@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { AREA_TOPIC, HELP_CATEGORIES, HELP_CHIPS, HELP_TOPICS, helpVisible } from '../src/web/help/catalog';
+import { TEMPLATE_RIGHTS } from '../src/shared/rights';
+const OWNER = TEMPLATE_RIGHTS.admin, MANAGER = TEMPLATE_RIGHTS.leitung, MEMBER = TEMPLATE_RIGHTS.mitarbeit;
 import { HELP_BODIES } from '../src/web/help/articles';
 import { helpBodyText, searchHelp } from '../src/web/help/search';
 
@@ -31,14 +33,19 @@ describe('help catalog', () => {
     }
   });
   it('hides manager-only topics and categories from members', () => {
-    expect(HELP_TOPICS.some(topic => topic.roles)).toBe(true);
-    for (const topic of HELP_TOPICS) { expect(helpVisible(topic, 'owner')).toBe(true); expect(helpVisible(topic, 'manager')).toBe(true); }
-    const member = HELP_TOPICS.filter(topic => helpVisible(topic, 'member'));
+    expect(HELP_TOPICS.some(topic => topic.module)).toBe(true);
+    for (const topic of HELP_TOPICS) { expect(helpVisible(topic, OWNER)).toBe(true); expect(helpVisible(topic, MANAGER)).toBe(true); }
+    const member = HELP_TOPICS.filter(topic => helpVisible(topic, MEMBER));
     expect(ids(member)).not.toContain('fin-invoice-time');
     expect(ids(member)).not.toContain('team-invite');
     expect(ids(member)).toContain('time-submit');
     expect(ids(member)).toContain('start-roles');
-    expect(HELP_CATEGORIES.filter(category => helpVisible(category, 'member')).map(c => c.id)).toEqual(['start', 'time', 'work', 'reference']);
+    expect(HELP_CATEGORIES.filter(category => helpVisible(category, MEMBER)).map(c => c.id)).toEqual(['start', 'time', 'work', 'reference']);
+    // Vorlagen sehen genau die Themen ihrer Module: Finanzen ohne Team-Themen, Projektplanung ohne Finanzen.
+    expect(ids(HELP_TOPICS.filter(topic => helpVisible(topic, TEMPLATE_RIGHTS.finanzen)))).toContain('fin-invoice-time');
+    expect(ids(HELP_TOPICS.filter(topic => helpVisible(topic, TEMPLATE_RIGHTS.finanzen)))).not.toContain('team-invite');
+    expect(ids(HELP_TOPICS.filter(topic => helpVisible(topic, TEMPLATE_RIGHTS.projektplanung)))).not.toContain('fin-invoice-time');
+    expect(ids(HELP_TOPICS.filter(topic => helpVisible(topic, TEMPLATE_RIGHTS.projektplanung)))).toContain('plan-capacity');
   });
   it('starts with the getting-started path and lists every area in the context map', () => {
     expect(HELP_TOPICS.slice(0, 5).every(topic => topic.category === 'start')).toBe(true);
@@ -48,19 +55,19 @@ describe('help catalog', () => {
 
 describe('searchHelp', () => {
   it('returns all visible topics without a query and ranks title matches first', () => {
-    expect(searchHelp('', 'member', 'de')).toHaveLength(HELP_TOPICS.filter(topic => helpVisible(topic, 'member')).length);
-    expect(searchHelp('rechnung stornieren', 'owner', 'de')[0].id).toBe('fin-cancel');
-    expect(searchHelp('cancel invoice', 'owner', 'en')[0].id).toBe('fin-cancel');
+    expect(searchHelp('', MEMBER, 'de')).toHaveLength(HELP_TOPICS.filter(topic => helpVisible(topic, MEMBER)).length);
+    expect(searchHelp('rechnung stornieren', OWNER, 'de')[0].id).toBe('fin-cancel');
+    expect(searchHelp('cancel invoice', OWNER, 'en')[0].id).toBe('fin-cancel');
   });
   it('finds article text, not only titles, and is accent-tolerant across languages', () => {
-    expect(ids(searchHelp('1.440 minuten', 'member', 'de'))).toContain('time-manual');
-    expect(ids(searchHelp('1,440', 'member', 'en'))).toContain('time-manual');
-    expect(ids(searchHelp('gobd', 'owner', 'zh'))).toContain('fin-cancel');
-    expect(ids(searchHelp('zeiten einreichen', 'member', 'en'))).toContain('time-submit');
+    expect(ids(searchHelp('1.440 minuten', MEMBER, 'de'))).toContain('time-manual');
+    expect(ids(searchHelp('1,440', MEMBER, 'en'))).toContain('time-manual');
+    expect(ids(searchHelp('gobd', OWNER, 'zh'))).toContain('fin-cancel');
+    expect(ids(searchHelp('zeiten einreichen', MEMBER, 'en'))).toContain('time-submit');
   });
   it('never surfaces manager-only topics to members', () => {
-    for (const query of ['rechnung', 'einladen', 'datev']) for (const hit of searchHelp(query, 'member', 'de')) expect(hit.roles).toBeUndefined();
-    expect(ids(searchHelp('datev', 'manager', 'de'))).toContain('fin-export');
+    for (const query of ['rechnung', 'einladen', 'datev']) for (const hit of searchHelp(query, MEMBER, 'de')) expect(hit.module).toBeUndefined();
+    expect(ids(searchHelp('datev', MANAGER, 'de'))).toContain('fin-export');
   });
   it('flattens tables and lists into searchable text', () => {
     expect(helpBodyText('ref-shortcuts', 'de')).toContain('Strg+K');

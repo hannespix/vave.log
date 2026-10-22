@@ -497,6 +497,11 @@ const catalog = {
     "Vor der Ausstellung echte Unternehmens- und Zahlungsdaten hinterlegen.",
     "正式开票前，请配置真实公司身份及付款信息。",
   ],
+  readOnly: [
+    "You have read access to Finance: everything is visible, saving and booking are reserved for people with edit rights.",
+    "Du hast Lesezugriff auf die Finanzen: alles ist sichtbar, Speichern und Buchen bleiben Personen mit Bearbeitungsrecht vorbehalten.",
+    "你对财务拥有只读权限：内容均可查看，保存与记账仅限具有编辑权限的人员。",
+  ],
   ownerOnly: [
     "Only workspace owners can edit company billing details.",
     "Nur Workspace-Inhaber können Rechnungsdaten des Unternehmens bearbeiten.",
