@@ -39,10 +39,3 @@ export function StrengthsDialog({ member, tasks, projects, service, workspaceId,
   </Dialog>;
 }
 /** Eigenes Profil auf der Übersicht – nur, wenn es schon etwas zu zeigen gibt. */
-export function MyStrengths({ userId, tasks, projects, service, workspaceId, reloadKey }: { userId: string; tasks: Task[]; projects: Project[]; service: Service; workspaceId: string; reloadKey: unknown }) {
-  const { t } = useI18n();
-  const profiles = useProfiles(service, workspaceId, [userId], tasks, projects, reloadKey);
-  const profile = profiles?.[0];
-  if (!profile || !profile.categories.some((c) => c.done >= MIN_SAMPLES)) return null;
-  return <section className="panel strengths-panel"><div className="panel-heading"><div><p className="eyebrow">{t('DEINE STÄRKEN')}</p><h2>{t('Was dir leicht von der Hand geht.')}</h2></div></div><StrengthsTable profile={profile}/><p className="tiny muted">{t('Aus deinen erledigten Aufgaben: Tempo = gebuchte Zeit ÷ Schätzung, Termintreue = erledigt bis zur Fälligkeit, Durchlauf = Start bis Erledigung. Die Leitung sieht dieselbe Tabelle.')}</p></section>;
-}
