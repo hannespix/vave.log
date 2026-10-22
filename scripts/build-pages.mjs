@@ -37,8 +37,12 @@ writeFileSync(join(out, 'offline.html'), offline);
 // GitHub Pages cannot send response headers. The document carries the same
 // policy as the server (headers helmet cannot express in <meta> are omitted).
 const csp = `default-src 'self'; script-src 'self'; worker-src 'self'; manifest-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'${supabaseUrl ? ` ${new URL(supabaseUrl).origin}` : ''}; base-uri 'none'; form-action 'self'; object-src 'none'`;
+// The same public configuration also travels inside the document: the app
+// reads it from this <meta> and skips the extra config round-trip on start.
+// (A <script> would be blocked by the CSP above; a meta element is data.)
+const configMeta = JSON.stringify({configured, appUrl, supabaseUrl, supabasePublishableKey}).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 const index = readFileSync(join(out, 'index.html'), 'utf8')
-  .replace('<head>', `<head><meta http-equiv="Content-Security-Policy" content="${csp}"/>`)
+  .replace('<head>', `<head><meta http-equiv="Content-Security-Policy" content="${csp}"/><meta name="vave-config" content="${configMeta}"/>`)
   // The touch icon is generated after the Vite build, so Vite leaves its URL alone.
   .replaceAll('href="/icons/', `href="${base}icons/`);
 writeFileSync(join(out, 'index.html'), index);

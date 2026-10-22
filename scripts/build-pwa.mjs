@@ -1,5 +1,5 @@
 // Reproducible app icons from the existing VAVE vector mark; no native tools required.
-import {readFileSync, writeFileSync, mkdirSync, readdirSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync} from 'node:fs';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {deflateSync} from 'node:zlib';
@@ -40,5 +40,31 @@ function versionTree(dir,prefix=''){
   else hash.update(name).update(readFileSync(join(dir,file.name)));
  }
 }
+// Faster start: the workspace chunk, its stylesheet and the Latin font are
+// fetched together with the entry bundle instead of one round-trip later, and
+// the service worker precaches the build files that every session needs
+// (lazy extras like the logo animation and non-Latin fonts stay on demand).
+// The base path is read from the entry script Vite wrote, so the same step
+// serves the root deployment and a Pages project site. Idempotent: a second
+// run leaves the document unchanged.
+const indexPath=join(out,'index.html');
+const assetsDir=join(out,'assets');
+let precache=[];
+if(existsSync(indexPath)&&existsSync(assetsDir)){
+ let html=readFileSync(indexPath,'utf8');
+ const entry=html.match(/<script type="module" crossorigin src="([^"]*\/assets\/)index-[^"]+\.js"><\/script>/);
+ const assets=readdirSync(assetsDir).sort();
+ if(entry&&!html.includes('data-vave-preload')){
+  const prefix=entry[1];
+  const links=[];
+  const find=(pattern)=>assets.find(name=>pattern.test(name));
+  const chunk=find(/^workspace-.*\.js$/),style=find(/^workspace-.*\.css$/),font=find(/^readex-pro-latin-wght-normal-.*\.woff2$/);
+  if(chunk)links.push(`<link rel="modulepreload" crossorigin href="${prefix}${chunk}" data-vave-preload>`);
+  if(style)links.push(`<link rel="preload" as="style" crossorigin href="${prefix}${style}" data-vave-preload>`);
+  if(font)links.push(`<link rel="preload" as="font" type="font/woff2" crossorigin href="${prefix}${font}" data-vave-preload>`);
+  if(links.length){html=html.replace('</head>',links.join('')+'</head>');writeFileSync(indexPath,html);}
+ }
+ if(entry)precache=assets.filter(name=>/\.(?:js|css|woff2)$/.test(name)&&!/^lottie|arabic|vietnamese/.test(name)).map(name=>entry[1]+name);
+}
 versionTree(out);
-writeFileSync(join(out,'sw.js'),readFileSync('public/sw.js','utf8').replace('__VAVE_OFFLINE_VERSION__',hash.digest('hex').slice(0,16)));
+writeFileSync(join(out,'sw.js'),readFileSync('public/sw.js','utf8').replace('__VAVE_OFFLINE_VERSION__',hash.digest('hex').slice(0,16)).replace('[/*__VAVE_ASSETS__*/]',JSON.stringify(precache)));
