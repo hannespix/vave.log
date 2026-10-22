@@ -98,3 +98,5 @@ body.timer-floating.timer-open .app-shell{padding-bottom:calc(var(--mobile-nav-h
 
 /* Elf Menüpunkte: die Navigation darf in niedrigen Fenstern scrollen, statt den Fuß zu verdecken. */
 @media(min-width:701px){.sidebar nav{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}.nav-item{padding:10px 14px}.sidebar-bottom{flex-shrink:0}}
+
+@media(max-width:700px){.team-table thead{display:none}.team-table,.team-table tbody,.team-table tr{display:block}.team-table{min-width:0;width:100%}.team-table tr{padding:12px 18px;border-top:1px solid #edf0e6}.team-table tr:first-child{border-top:0}.team-table td{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 0;border:0;min-width:0}.team-table td[data-label]::before{content:attr(data-label);flex:0 0 100%;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6a745c}.team-table .sm-root{flex:0 0 100%;max-width:100%}.team-table .team-role-cell .sm-root{max-width:100%}.team-table .rights-template{display:inline;margin:0}}
