@@ -851,3 +851,14 @@ test('capacity grid keeps its week columns readable on a phone and scrolls sidew
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBe(0);
  await grid.screenshot({path:testInfo.outputPath('planning.png')});
 });
+test('team list on a phone shows role and rights per person without sideways scrolling',async({page})=>{
+ await setup(page,true);const other='33333333-3333-4333-8333-333333333333';
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:other,role:'manager',display_name:'Pia Planer',email:'pia@example.test',created_at:''}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Team');
+ const rights=page.getByRole('button',{name:'Rights of Pia Planer',exact:true});await expect(rights).toBeVisible();
+ await expect(page.getByRole('button',{name:'Rights of Studio Owner',exact:true})).toHaveCount(0);
+ const box=await rights.boundingBox();const width=await page.evaluate(()=>document.documentElement.clientWidth);expect(box!.x+box!.width,'rights button is on screen without scrolling the table').toBeLessThanOrEqual(width);
+ await rights.click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Rights of Pia Planer'})).toBeVisible();
+ await expect(dialog.getByRole('radio',{name:'Finance: Edit'})).toBeChecked();
+ await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(rights).toBeFocused();
+});

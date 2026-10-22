@@ -374,6 +374,13 @@ Tests: `tests/pwa-worker.test.ts` (Precache best effort, cache-first, nur statis
 
 Noch offen (gemessen, nicht geändert): Beim Start fragt die App `task_effort` dreimal und `time_entries` zweimal ab (mehrere Bereiche laden unabhängig); eine gemeinsame Ladeschicht würde das auf je einen Aufruf bringen. Der Sprachkatalog (alle drei Sprachen, ~35 KB gzip) steckt weiter im Hauptbundle.
 
+## Team-Liste am Handy als Karten, Rollen-Erklärung mit Vorlagen (22.10.2026)
+
+Rückmeldung: „Ich kann keine Rechte anpassen, obwohl ich Inhaber bin.“ Ursache war kein Rechteproblem, sondern die Darstellung: Der Knopf „Rechte“ steht in der Spalte „Rolle“, und die Team-Tabelle hatte am Handy `min-width: 610px` – Rolle, Rechte, Kapazität und Standort lagen rechts außerhalb des Bildschirms und waren nur durch Wischen in der Tabelle erreichbar. Dazu kommt, dass es im Demo-Workspace nur ein weiteres echtes Konto gibt (Beispielpersonen lassen sich nicht ändern, die Datenbank weist das ab) und im zweiten Workspace niemand außer dem Owner ist.
+- `table.team-table` mit `data-label` je Zelle; unter 700 px wird jede Person eine Karte (Kopf, E-Mail, Rolle mit Vorlage und „Rechte“, Kapazität mit „Modell“/„Stärken“, Standort), Tabelle ohne Mindestbreite, keine horizontale Scrollfläche. Desktop unverändert.
+- Rollen-Erklärung unter der Liste nennt jetzt Inhaber:in, Rechte-Vorlagen und Individuell statt Inhaber/Leitung/Mitglied; die eigenen Rechte ändert nie die Person selbst (Datenbank und Oberfläche).
+- e2e „team list on a phone shows role and rights per person without sideways scrolling“: Rechte-Knopf bei der anderen Person sichtbar und im Viewport, keiner bei sich selbst, Dialog öffnet mit der Vorlage der Rolle, Fokus kehrt zum Knopf zurück.
+
 ## Mobil-Feinschliff: Kapazitäts-Cockpit und Hilfe-Suche (22.10.2026)
 
 - **Kapazitäts-Cockpit am Handy:** Das Raster hatte `table-layout: fixed` ohne Mindestbreite – sechs Wochen plus Personenspalte wurden auf 400 px gequetscht, Wochenköpfe („19.10. – 25.10.“) und Zellen („57 / 40 h“) überlappten, die Spalte „Person“ war abgeschnitten. Jetzt wie der Abwesenheitskalender: feste Spaltenbreiten über `--person-col`/`--week-col`/`--weeks` (Tabelle setzt `--weeks` je Horizont), `min-width: 100%`, horizontales Scrollen im `.table-scroll`, Personenspalte haftet links (`position: sticky`), Name mit Ellipse, Unterzeile bricht um. Desktop unverändert (210 px + 110 px je Woche, füllt die Breite).
