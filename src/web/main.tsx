@@ -34,11 +34,26 @@ function Connected({ config }: { config: RuntimeConfig }) {
   if (window.location.pathname === appPath('oauth/consent')) return <OAuthConsent key={session.user.id} client={client} session={session}/>;
   return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<React.Suspense fallback={<div className="boot"><Spinner label={t('Dein Workspace wird geladen …')}/></div>}><WorkspaceApp key={session.user.id} client={client} session={session} config={config} signOut={signOut}/></React.Suspense></>;
 }
+/** Liest die im Pages-Build eingebettete Konfiguration (`<meta name="vave-config">`); fehlt sie oder ist sie unbrauchbar, lädt die App `api/config`. */
+function inlineConfig(): RuntimeConfig | null {
+  try {
+    const raw = document.querySelector('meta[name="vave-config"]')?.getAttribute('content');
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<RuntimeConfig>;
+    return typeof value.configured === 'boolean' && typeof value.supabaseUrl === 'string' && typeof value.supabasePublishableKey === 'string' && typeof value.appUrl === 'string' ? value as RuntimeConfig : null;
+  } catch { return null; }
+}
 function Root() {
   const { t } = useI18n();
   const [config, setConfig] = useState<RuntimeConfig | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  useEffect(() => { const controller = new AbortController(); setLoading(true); setError('');
+    const check = (value: RuntimeConfig) => { if (value.configured && (!value.supabaseUrl || !value.supabasePublishableKey)) throw new Error(t('Die Verbindung ist noch nicht vollständig eingerichtet.')); return value; };
+    // Die statische Auslieferung (GitHub Pages) trägt die öffentliche Konfiguration im Dokument; dann entfällt der Request.
+    const inline = inlineConfig();
+    const load = inline ? Promise.resolve(check(inline)) : fetch(`${import.meta.env.BASE_URL}api/config`, { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(t('Die Server-Konfiguration konnte nicht geladen werden.')); return check(await res.json() as RuntimeConfig); });
+    load.then(setConfig).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); }); return () => controller.abort();
   // oxlint-disable-next-line react-hooks/exhaustive-deps -- Konfiguration einmal laden; t nur für Fehlertexte.
-  useEffect(() => { const controller = new AbortController(); setLoading(true); setError(''); fetch(`${import.meta.env.BASE_URL}api/config`, { signal: controller.signal, cache: 'no-store' }).then(async res => { if (!res.ok) throw new Error(t('Die Server-Konfiguration konnte nicht geladen werden.')); const value = await res.json() as RuntimeConfig; if (value.configured && (!value.supabaseUrl || !value.supabasePublishableKey)) throw new Error(t('Die Verbindung ist noch nicht vollständig eingerichtet.')); setConfig(value); }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); }); return () => controller.abort(); }, []);
+  }, []);
   if (loading) return <div className="boot"><span className="boot-word">VAVE<span>.LOG</span></span><Spinner label={t('Ein Moment für deinen Flow …')}/></div>;
   if (error || !config?.configured) return <Setup error={error} onRetry={() => window.location.reload()}/>;
   return <Connected config={config}/>;

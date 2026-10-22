@@ -56,7 +56,12 @@ async function onlyPublicOfflineCache(page:Page){
  }))));
  expect(cachesFound).toHaveLength(1);
  expect(cachesFound[0].name).toMatch(/^vave-log-offline-[a-f0-9]{16}$/);
- expect(cachesFound[0].urls.sort()).toEqual(offlineAssets.map(path=>new URL(path,page.url()).href).sort());
+ // Offline-Seite plus gehashte Build-Dateien unter /assets/ – nie App-HTML, API- oder Auth-Antworten.
+ const urls=cachesFound[0].urls.sort();
+ const buildFiles=urls.filter(url=>new URL(url).pathname.startsWith('/assets/'));
+ expect(buildFiles.length).toBeGreaterThan(0);
+ expect(buildFiles.every(url=>/\.(?:js|css|woff2)$/.test(new URL(url).pathname))).toBe(true);
+ expect(urls.filter(url=>!new URL(url).pathname.startsWith('/assets/'))).toEqual(offlineAssets.map(path=>new URL(path,page.url()).href).sort());
 }
 
 test('PWA metadata serves credentialed manifest, correctly sized PNG icons and a revalidated root worker',async({page,request})=>{

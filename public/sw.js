@@ -1,10 +1,17 @@
-/* Only public offline assets belong in this cache. No app/API/Auth responses. */
+/* Only public offline assets and content-hashed build files belong in this cache. No app HTML/API/Auth responses. */
 const CACHE_PREFIX = 'vave-log-offline-';
 const CACHE_NAME = CACHE_PREFIX + '__VAVE_OFFLINE_VERSION__';
 const OFFLINE_ASSETS = new Map([
   ['/offline.html', 'text/html'], ['/offline.css', 'text/css'],
   ['/offline.js', 'text/javascript'],
 ]);
+// Build files under /assets/ carry a content hash in their name: a URL never changes meaning, so they
+// are served cache-first (start without network round-trips) and precached on install. The build
+// script fills this list; the raw file keeps it empty. Lazy chunks not listed here are cached on first use.
+const ASSET_PRECACHE = [/*__VAVE_ASSETS__*/];
+const isBuildAsset = pathname => pathname.includes('/assets/') && /\.(?:js|css|woff2?)$/.test(pathname);
+// A build file is public and static; a login redirect or an HTML error page is not.
+const isStaticResponse = response => response.ok && !response.redirected && (!response.url || new URL(response.url).origin === self.location.origin) && !/^text\/html/.test(response.headers.get('content-type') || '');
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // Validate all responses before writing: private-host login redirects are not assets.
@@ -16,6 +23,13 @@ self.addEventListener('install', event => {
     }));
     const cache = await caches.open(CACHE_NAME);
     await Promise.all(responses.map(([path, response]) => cache.put(new URL(path, self.location.origin).href, response)));
+    // Precached build files are best effort: a missing chunk must not block the update, it is fetched on use.
+    await Promise.all(ASSET_PRECACHE.map(async path => {
+      try {
+        const response = await fetch(new Request(new URL(path, self.location.origin), { credentials: 'same-origin' })); // HTTP cache may answer: the page just loaded these files
+        if (isStaticResponse(response)) await cache.put(new URL(path, self.location.origin).href, response);
+      } catch { /* offline during install: served from the network later */ }
+    }));
   })());
 });
 self.addEventListener('activate', event => {
@@ -34,6 +48,17 @@ self.addEventListener('fetch', event => {
   if (url.search || /^\/(?:api|oauth|auth|\.well-known)(?:\/|$)/.test(url.pathname) || url.pathname === '/healthz') return;
   if (OFFLINE_ASSETS.has(url.pathname)) {
     event.respondWith((async () => (await (await caches.open(CACHE_NAME)).match(request)) || fetch(request))());
+    return;
+  }
+  if (isBuildAsset(url.pathname)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (isStaticResponse(response)) await cache.put(request, response.clone());
+      return response;
+    })());
     return;
   }
   if (request.mode !== 'navigate' || url.pathname.split('/').pop().includes('.')) return;
