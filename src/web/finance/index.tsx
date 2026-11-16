@@ -172,7 +172,10 @@ function AuthorizedFinance({
     } catch (e) {
       if (mounted.current) {
         setError(e);
+        // Mit Lesezugriff scheitert jede Änderung erwartbar an der Berechtigung: Die Meldung genügt, die Zahlen bleiben
+        // stehen. Nur wer eben noch schreiben durfte, hat das Recht verloren – dann verschwinden die Finanzdaten sofort.
         if (
+          access !== "view" &&
           typeof e === "object" &&
           e !== null &&
           "code" in e &&

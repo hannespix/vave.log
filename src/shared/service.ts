@@ -1,3 +1,4 @@
+import { hasTranslation } from './i18n.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,rightsSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
@@ -16,7 +17,10 @@ function fail(error:{code?:string;message?:string}|null) {
     'PGRST205':'Die Datenbank ist noch nicht eingerichtet. Bitte die Migration anwenden.'
   };
   // Only controlled exceptions intentionally raised by our migration reach the user.
-  throw new AppError(error.code==='P0001' && error.message && error.message.length<300 ? error.message : messages[error.code??'']??'Die Anfrage konnte nicht gespeichert oder geladen werden. Bitte erneut versuchen.',error.code);
+  // Dazu zählt jeder Text, den der Sprachkatalog kennt – auch mit eigenem Fehlercode (fehlendes Recht, Überschneidung):
+  // „Diese Person hat mehr Rechte als du“ hilft weiter, „Dafür fehlt die Berechtigung“ nicht. Unbekannte Texte bleiben verborgen.
+  const controlled=!!error.message&&error.message.length<300&&(error.code==='P0001'||hasTranslation(error.message));
+  throw new AppError(controlled ? error.message! : messages[error.code??'']??'Die Anfrage konnte nicht gespeichert oder geladen werden. Bitte erneut versuchen.',error.code);
 }
 async function one<T>(query:PromiseLike<{data:unknown;error:{code?:string;message?:string}|null}>):Promise<T>{const {data,error}=await query;fail(error);if(data===null)throw new AppError('Keine Daten zurückgegeben. Bitte neu laden.');return data as T;}
 async function rows<T>(query:PromiseLike<{data:unknown;error:{code?:string;message?:string}|null;count?:number|null}>):Promise<T[]>{const{data,error,count}=await query;fail(error);if((count??0)>1000 || (Array.isArray(data)&&data.length>1000))throw new AppError('Mehr als 1.000 Einträge. Bitte Zeitraum oder Umfang verkleinern.','result_limit');return (data??[]) as T[];}

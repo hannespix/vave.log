@@ -476,3 +476,18 @@ Vier Prüfläufe (Datenbank und Rechte, Rechenlogik, Oberfläche, Finanzen und S
 - Urlaubskonto: Die Felder Übertrag und Korrektur zeigten nach dem Laden 0 und boten „Speichern“ an – ein Klick überschrieb den Übertrag. Die Felder beginnen jetzt mit dem gespeicherten Stand neu, auch beim Jahreswechsel; dasselbe für die Wochenstunden in der Team-Liste.
 - Geänderte Workspace-Einstellungen (Standort, Freigabe) kommen sofort in der Oberfläche an, nicht erst nach dem Neuladen.
 - Zugewiesene ohne Aufgabenrecht können ihre Aufgabe speichern: Die App ändert zuerst und legt nur an, wenn es die Aufgabe noch nicht gibt.
+
+## Audit 16.11.2026, Teil 2: Oberfläche und Rechte je Konto (16.11.2026)
+
+- **Aktionen folgen den Rechten.** „Neue Aufgabe“ und „Aufgabe löschen“ nur mit Aufgabenrecht; Karten lassen sich nur von Personen ändern oder ziehen, die das dürfen (Aufgabenrecht oder selbst zugewiesen). Standort und Abwesenheits-Freigabe in den Einstellungen hängen am Recht „Einstellungen“ statt an der alten Rolle. Einladungen widerruft, wer das Teamrecht hat; „Leitung“ lässt sich nur einladen, wenn die eigenen Rechte das hergeben. In den Projekt-Details fehlen ohne Recht „Bearbeiten“ sowie die Sprünge in Planung und Rechnungen, statt in eine Fehlermeldung zu führen.
+- **Urlaubskonten lesen:** Mit „Abwesenheiten im Team: Sehen“ sind die Konten aller sichtbar (ohne Bearbeiten).
+- **Fehler dort, wo man hinsieht.** Die Dialoge „Rechte“ und „Arbeitszeitmodell“ zeigen Fehler im Dialog; „Rechte“ schließt nach dem Speichern. Nach einer gescheiterten Aktion lädt die Seite den Stand neu. Eine alte Fehlermeldung wandert nicht mehr in einen neu geöffneten Dialog.
+- **Fehlertexte.** 34 Meldungen der Datenbank fehlten im Sprachkatalog; statt der Ursache („Diese Person hat mehr Rechte als du“, „In diesem Zeitraum ist bereits eine Abwesenheit eingetragen“) erschien nur der allgemeine Satz zum Fehlercode. Bekannte Texte gehen jetzt durch, unbekannte bleiben verborgen.
+- **Einzahl.** „1 Eintrag“, „1 offener Entwurf“, „1 Aufgabe überfällig“ statt „1 Einträge“ – 20 Texte in allen drei Sprachen (Begleittext `…#one` im Katalog).
+- **Hilfe:** Führt das „?“ eines Bereichs zu einem Thema, das es für die eigenen Rechte nicht gibt, erscheint die Übersicht mit Hinweis statt einer leeren Seite.
+- **Finanzen mit Lesezugriff:** Ein abgelehnter Schreibversuch leert die Ansicht nicht mehr. Offen: Schreibknöpfe im Lesemodus ganz ausblenden.
+- **CSV:** Negative Zahlen bleiben Zahlen (vorher Text mit Hochkomma); der Schutz vor Formeln bleibt.
+- **Handy:** Der schwebende Timer hält Abstand zur Navigationsleiste auch auf Geräten mit Home-Balken; offene Abwesenheitsanträge brechen sauber um.
+- Text „Verbundene Apps“ in den Einstellungen nennt Rechte je Konto statt der alten Rollen.
+
+**Noch offen aus dem Audit** (bewusst nicht in diesem Durchgang): Schreibknöpfe in Finanzen bei Lesezugriff; Bankabgleich nach Teilfehler (mögliche Doppelbuchung) und Schärfung der Zuordnung; Betragsparser („0,500“), CAMT mit mehreren Einzelposten; DATEV nur EUR und ein Wirtschaftsjahr; E-Rechnung `schemeID` ohne USt-ID; Bezahlt-Schalter neben Teilzahlungen; Storno-Druck mit Nummer statt Kennung; MCP-Beschreibungen mit alten Rollennamen (34 von 67) und `today` in UTC; globaler Anfragezähler vor dem IP-Limit; Finanzübersicht lädt die ganze Historie; Kapazität zählt die laufende Woche voll und verteilt Last auf Abwesenheitstage; Abwesenheiten auf der Team-Seite doppelt zur eigenen Seite.

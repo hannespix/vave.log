@@ -53,3 +53,16 @@ describe('translated presentation', () => {
     expect(errorMessage(new Error('SQLSTATE: internal payroll address secret'), 'zh')).toBe('操作失败，请重试。');
   });
 });
+
+describe('singular forms', () => {
+  it('uses the singular companion for exactly one and the plural otherwise', () => {
+    expect(translate('{count} Einträge', 'de', { count: 1 })).toBe('1 Eintrag');
+    expect(translate('{count} Einträge', 'de', { count: 2 })).toBe('2 Einträge');
+    expect(translate('{count} Einträge', 'de', { count: 0 })).toBe('0 Einträge');
+    expect(translate('{count} Einträge', 'en', { count: 1 })).toBe('1 entry');
+    expect(translate('{count} offene Entwürfe', 'de', { count: 1 })).toBe('1 offener Entwurf');
+    expect(translate('{count} Aufgaben überfällig, z. B. „{name}“', 'de', { count: 1, name: 'Aufbau' })).toBe('1 Aufgabe überfällig: „Aufbau“');
+    // Ohne Begleiter bleibt der Text wie er ist.
+    expect(translate('{count} ungeschätzt', 'de', { count: 1 })).toBe('1 ungeschätzt');
+  });
+});

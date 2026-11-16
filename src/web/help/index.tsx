@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, BookOpen, ChevronLeft, ChevronRight, Lightbulb, Search, Sparkles } from 'lucide-react';
 import { MODULE_NAMES, type Rights } from '../../shared/rights';
 import { useI18n } from '../i18n';
-import { Empty } from '../components';
+import { Empty, Notice } from '../components';
 import type { WorkflowTarget } from '../workflow-navigation';
 import { HELP_CATEGORIES, HELP_CHIPS, HELP_TOPICS, helpText, helpVisible, type HelpTopic, type Text } from './catalog';
 import { HELP_BODIES } from './articles';
@@ -19,9 +19,10 @@ export function HelpArea({ rights, topic, onTopic, onNavigate }: HelpAreaProps) 
   const x = (text: Text) => helpText(locale, text);
   const visible = HELP_TOPICS.filter(item => helpVisible(item, rights));
   const current = visible.find(item => item.id === topic);
-  if (topic && !current) return <section className="panel"><Empty title={t('Dieses Thema gibt es nicht – oder nicht für deine Rolle.')} text={t('Nutze die Suche oder die Übersicht, um das passende Thema zu finden.')} action={<button className="button secondary" onClick={() => onTopic('')}>{t('Zur Hilfe-Übersicht')}</button>}/></section>;
   if (current) return <HelpArticle topic={current} visible={visible} x={x} onTopic={onTopic} onNavigate={onNavigate}/>;
-  return <HelpHome rights={rights} visible={visible} x={x} onTopic={onTopic}/>;
+  // Ein Thema, das es für die eigenen Rechte nicht gibt (etwa über das „?“ eines Bereichs), führt zur Übersicht mit Hinweis –
+  // nicht auf eine leere Seite.
+  return <>{topic && <Notice kind="info">{t('Zu diesem Bereich gibt es für deine Rechte kein eigenes Thema. Hier ist die Übersicht.')}</Notice>}<HelpHome rights={rights} visible={visible} x={x} onTopic={onTopic}/></>;
 }
 
 function HelpHome({ rights, visible, x, onTopic }: { rights: Rights; visible: HelpTopic[]; x: (text: Text) => string; onTopic: (id: string) => void }) {

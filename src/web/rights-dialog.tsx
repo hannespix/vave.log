@@ -5,6 +5,7 @@ import { LEVEL_NAMES, MODULES, MODULE_HINTS, MODULE_LEVELS, MODULE_NAMES, TEMPLA
 import { Dialog, Field, FormActions, Notice } from './components';
 import { SelectMenu } from './select-menu';
 import { useI18n } from './i18n';
+import { errorMessage } from './helpers';
 import './rights.css';
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>;
@@ -20,9 +21,14 @@ export function RightsDialog({ member, own, service, run, busy, onClose }: { mem
   const set = (module: Module, level: Level) => { const next = { ...matrix, [module]: level }; setMatrix(next); setTemplate(matchTemplate(next)); };
   const blocked = grantable(own, matrix);
   const templates = TEMPLATES.filter((tp) => grantable(own, TEMPLATE_RIGHTS[tp]).length === 0);
-  function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (blocked.length) return; void run(() => service.setMemberRights({ workspace_id: member.workspace_id, user_id: member.user_id, template, permissions: template === 'individuell' ? matrix : undefined }), t('Rechte gespeichert.')); }
+  const [error, setError] = useState('');
+  // Nach dem Speichern schließt der Dialog; ein Fehler steht im Dialog selbst (die Meldung der Seite läge dahinter).
+  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (blocked.length) return; setError(''); let message = '';
+    const ok = await run(async () => { try { await service.setMemberRights({ workspace_id: member.workspace_id, user_id: member.user_id, template, permissions: template === 'individuell' ? matrix : undefined }); } catch (e) { message = errorMessage(e); throw e; } }, t('Rechte gespeichert.'));
+    if (ok) onClose(); else setError(message); }
   return <Dialog title={t('Rechte von {name}', { name })} onClose={onClose} busy={busy} wide>
-    <form className="form-stack" onSubmit={submit}>
+    <form className="form-stack" onSubmit={(e) => void submit(e)}>
+      {error && <Notice>{error}</Notice>}
       <Field label={t('Vorlage')} hint={t(TEMPLATE_HINTS[template])}><SelectMenu label={t('Vorlage')} value={template} onChange={(value) => choose(value as RightsTemplate)} searchable={false} options={[...templates.map((tp) => ({ value: tp, label: t(TEMPLATE_NAMES[tp]) })), { value: 'individuell', label: t(TEMPLATE_NAMES.individuell) }]}/></Field>
       <div className="table-scroll" tabIndex={0} role="region" aria-label={t('Rechte je Modul')}><table className="rights-grid"><thead><tr><th scope="col">{t('Modul')}</th>{LEVELS.map((level) => <th scope="col" key={level}>{t(LEVEL_NAMES[level])}</th>)}</tr></thead><tbody>
         {MODULES.map((module) => <tr key={module}><th scope="row"><strong>{t(MODULE_NAMES[module])}</strong><small className="muted">{t(MODULE_HINTS[module])}</small></th>{LEVELS.map((level) => { const allowed = MODULE_LEVELS[module].includes(level); const over = rank(level) > rank(own[module]); return <td key={level}>{allowed ? <input type="radio" name={`rights-${module}`} aria-label={`${t(MODULE_NAMES[module])}: ${t(LEVEL_NAMES[level])}`} checked={matrix[module] === level} disabled={busy || over} title={over ? t('Mehr als deine eigenen Rechte kannst du nicht vergeben.') : undefined} onChange={() => set(module, level)}/> : <span className="muted" aria-hidden="true">–</span>}</td>; })}</tr>)}

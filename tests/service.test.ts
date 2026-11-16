@@ -11,6 +11,11 @@ describe('shared service boundary',()=>{
  it('accepts successful void RPCs',async()=>{const {service}=backend(null);await expect(service.inviteMember({workspace_id:id,email:'a@vave.studio',role:'member'})).resolves.toBeUndefined();await expect(service.discardTimer(id)).resolves.toBeUndefined()});
  it('rejects forged identity before network',async()=>{const{service,fetch}=backend(null);await expect(async()=>service.saveEntry({workspace_id:id,project_id:id,work_date:'2026-10-13',minutes:30,note:'',billable:true,user_id:id} as never)).rejects.toThrow('Eingaben');expect(fetch).not.toHaveBeenCalled()});
  it('throws on RLS denial and does not expose database details',async()=>{const{service}=backend({code:'42501',message:'private SQL internals'},403);await expect(service.listProjects(id)).rejects.toThrow('Berechtigung');});
+ it('passes on database messages the catalog knows, even with their own error code, and hides everything else',async()=>{
+  await expect(backend({code:'42501',message:'Diese Person hat mehr Rechte als du. Ändern kann sie nur jemand mit diesen Rechten.'},403).service.listProjects(id)).rejects.toThrow('mehr Rechte als du');
+  await expect(backend({code:'23P01',message:'In diesem Zeitraum ist für diese Person bereits eine Abwesenheit eingetragen.'},409).service.listProjects(id)).rejects.toThrow('bereits eine Abwesenheit');
+  await expect(backend({code:'23P01',message:'conflicting key value violates exclusion constraint "internal_name"'},409).service.listProjects(id)).rejects.toThrow('erneut versuchen');
+ });
  it('rejects truncated results using exact count',async()=>{const{service}=backend([{id}],200,{'content-range':'0-0/1200'});await expect(service.listProjects(id)).rejects.toThrow('1.000')});
  it('reads tasks and task effort page by page beyond the 1,000-row cap of one request',async()=>{
   const page=(n:number,from:number)=>Array.from({length:n},(_,i)=>({id:`task-${from+i}`,task_id:`task-${from+i}`,minutes:1}));

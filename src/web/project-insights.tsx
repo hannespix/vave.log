@@ -11,11 +11,12 @@ import { formatInsightDate, formatInsightHours, insightText } from './project-in
 import './project-insights.css';
 
 export type ProjectInsightDestination = 'tasks' | 'time' | 'reports' | 'planning' | 'invoices';
-type Actions = { onEdit: (project: Project) => void; onNavigate: (destination: ProjectInsightDestination, filters?: Partial<TaskFilters>) => void };
+/** `canEdit`, `canPlan`, `canFinance`: ohne das Recht fehlen „Bearbeiten“, die Ergänzungs-Hinweise und die Sprünge in Planung und Rechnungen – statt in eine Fehlermeldung zu führen. */
+type Actions = { onEdit: (project: Project) => void; onNavigate: (destination: ProjectInsightDestination, filters?: Partial<TaskFilters>) => void; canEdit?: boolean; canPlan?: boolean; canFinance?: boolean };
 type Props = Actions & { service: Service; workspaceId: string; projectId: string; onClose: () => void };
 type LoadState = {service: Service;workspaceId:string;projectId:string;attempt:number} & ({status:'loaded';insight:ProjectInsight} | {status:'error'});
 
-export function ProjectInsightDialog({service,workspaceId,projectId,onClose,onEdit,onNavigate}: Props) {
+export function ProjectInsightDialog({service,workspaceId,projectId,onClose,onEdit,onNavigate,canEdit=true,canPlan=true,canFinance=true}: Props) {
  const {locale} = useI18n();
  const [attempt,setAttempt] = useState(0);
  const [state,setState] = useState<LoadState | null>(null);
@@ -40,7 +41,7 @@ export function ProjectInsightDialog({service,workspaceId,projectId,onClose,onEd
  // This render guard removes old aggregates immediately, before effect cleanup.
  const scoped = state?.service === service && state.workspaceId === workspaceId && state.projectId === projectId && state.attempt === attempt ? state : null;
  return <Dialog title={insightText(locale,'title')} onClose={onClose} description={scoped?.status === 'loaded' ? scoped.insight.project.name : undefined}>
-  {!scoped ? <Spinner label={insightText(locale,'loading')}/> : scoped.status === 'error' ? <div className="project-insight-error"><Notice>{insightText(locale,'loadError')}</Notice><button className="button secondary small" type="button" onClick={() => setAttempt(value => value + 1)}>{insightText(locale,'retry')}</button></div> : <><div className="project-insight-toolbar"><button type="button" className="text-button" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={13}/>{insightText(locale,'refresh')}</button></div><ProjectInsightSummary insight={scoped.insight} onEdit={onEdit} onNavigate={onNavigate}/></>}
+  {!scoped ? <Spinner label={insightText(locale,'loading')}/> : scoped.status === 'error' ? <div className="project-insight-error"><Notice>{insightText(locale,'loadError')}</Notice><button className="button secondary small" type="button" onClick={() => setAttempt(value => value + 1)}>{insightText(locale,'retry')}</button></div> : <><div className="project-insight-toolbar"><button type="button" className="text-button" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={13}/>{insightText(locale,'refresh')}</button></div><ProjectInsightSummary insight={scoped.insight} onEdit={onEdit} onNavigate={onNavigate} canEdit={canEdit} canPlan={canPlan} canFinance={canFinance}/></>}
  </Dialog>;
 }
 
@@ -48,7 +49,7 @@ function InsightMetric({label,value,children}: {label:string;value:string;childr
  return <div className="project-insight-metric"><dt>{label}</dt><dd>{value}</dd><div>{children}</div></div>;
 }
 
-export function ProjectInsightSummary({insight,onEdit,onNavigate}: {insight:ProjectInsight} & Actions) {
+export function ProjectInsightSummary({insight,onEdit,onNavigate,canEdit=true,canPlan=true,canFinance=true}: {insight:ProjectInsight} & Actions) {
  const {locale} = useI18n();
  const c = (key: Parameters<typeof insightText>[1], values?: Record<string,string | number>) => insightText(locale,key,values);
  const hours = (minutes:number) => formatInsightHours(minutes,locale);
@@ -65,8 +66,8 @@ export function ProjectInsightSummary({insight,onEdit,onNavigate}: {insight:Proj
  if(progress.missingEstimates) missing.push({label:c('missingEstimates',{count:progress.missingEstimates}),action:()=>onNavigate('tasks')});
  if(progress.missingDueDates) missing.push({label:c('missingDates',{count:progress.missingDueDates}),action:()=>onNavigate('tasks',{due:'none'})});
  if(progress.unassigned) missing.push({label:c('missingAssignees',{count:progress.unassigned}),action:()=>onNavigate('tasks',{assignee:'unassigned'})});
- if(!model.budgetMinutes) missing.push({label:c('addBudget'),action:()=>onEdit(insight.project)});
- if(!model.deadlineDate) missing.push({label:c('addDeadline'),action:()=>onEdit(insight.project)});
+ if(canEdit&&!model.budgetMinutes) missing.push({label:c('addBudget'),action:()=>onEdit(insight.project)});
+ if(canEdit&&!model.deadlineDate) missing.push({label:c('addDeadline'),action:()=>onEdit(insight.project)});
  if(progress.percent!==100&&model.blockers.some(value=>['no-effort','insufficient-history','no-pace','invalid-history'].includes(value))) missing.push({label:c('addHistory'),action:()=>onNavigate('time')});
  const blocker = model.blockers.find(value => !['insufficient-history','no-pace','missing-progress','zero-progress','no-effort'].includes(value));
  return <div className="project-insight">
@@ -92,6 +93,6 @@ export function ProjectInsightSummary({insight,onEdit,onNavigate}: {insight:Proj
   </section>
   <details className="project-insight-assumptions project-insight-missing"><summary>{c('missingData')}<span className="project-data-count">{missing.length}</span></summary>{missing.length?<><p>{c('dataHint')}</p><ul>{missing.map((item,index)=><li key={index}><button className="text-button" type="button" onClick={item.action}>{item.label}<ArrowUpRight size={13}/></button></li>)}</ul></>:<p>{c('dataReady')}</p>}</details>
   <details className="project-insight-assumptions"><summary>{c('assumptions')}</summary><p>{c('progressAssumption')}</p><p>{c('taskAssumption')}</p><p>{c('calculation')}</p><p>{model.projectedTotalMinutes===null?c('unavailable'):c('effort')+': '+hours(model.projectedTotalMinutes)+' · '+effortCopy}</p><p>{c('pace')}: {model.paceMinutesPerDay===null?'—':c('paceValue',{hours:hours(model.paceMinutesPerDay)})} · {c('observed',{days:model.observationDays,logged:model.loggedDays})}</p><p>{c('paceAssumption')}</p><p>{c('scheduleAssumption')}</p></details>
-  <div className="project-insight-actions"><button className="text-button" type="button" onClick={() => onEdit(insight.project)}><Pencil size={14}/>{c('edit')}</button><nav className="project-insight-links" aria-label={c('related')}>{(['tasks','time','reports','planning','invoices'] as const).map(destination => <button className="text-button" type="button" key={destination} onClick={() => onNavigate(destination)}>{c(destination)}<ArrowUpRight size={13}/></button>)}</nav></div>
+  <div className="project-insight-actions">{canEdit&&<button className="text-button" type="button" onClick={() => onEdit(insight.project)}><Pencil size={14}/>{c('edit')}</button>}<nav className="project-insight-links" aria-label={c('related')}>{(['tasks','time','reports','planning','invoices'] as const).filter(destination => (destination!=='planning'||canPlan)&&(destination!=='invoices'||canFinance)).map(destination => <button className="text-button" type="button" key={destination} onClick={() => onNavigate(destination)}>{c(destination)}<ArrowUpRight size={13}/></button>)}</nav></div>
  </div>;
 }
