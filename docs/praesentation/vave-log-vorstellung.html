@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <!-- VAVE.LOG – Vorstellung für Projektleitung und Geschäftsführung.
      Eigenständige Datei: Doppelklick genügt, läuft ohne Internet (reveal.js 5.1.0 und die Schrift Readex Pro sind eingebettet).
-     Tasten: Pfeile blättern, S blendet den Sprechzettel ein, F schaltet Vollbild. -->
+     Tasten: Pfeile blättern, S blendet den Sprechzettel ein, F schaltet Vollbild ein und aus (auch Esc). -->
 <title>VAVE.LOG Vorstellung</title>
 <style>
 :root{color-scheme:light}body{margin:0}[hidden]{display:none!important}
@@ -125,6 +125,7 @@ body.notes-open .reveal{bottom:36vh}
 .deck-bar button{font:inherit;font-size:13px;font-weight:400;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;min-height:38px}
 .deck-bar button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
 .deck-bar button:focus-visible{outline:3px solid #8951ff;outline-offset:2px}
+.deck-hint{position:fixed;left:50%;bottom:max(64px,calc(env(safe-area-inset-bottom,0px) + 64px));transform:translateX(-50%);z-index:60;max-width:min(560px,calc(100vw - 32px));background:var(--ink);color:#fff;font-size:14px;line-height:1.45;padding:12px 16px;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.28)}
 .deck-bar kbd{font:inherit;font-size:11px;opacity:.6;margin-left:4px}
 .notes-drawer{position:fixed;left:0;right:0;bottom:0;height:36vh;z-index:30;background:var(--ink);color:#f3f4ee;box-sizing:border-box;padding:16px max(22px,env(safe-area-inset-left,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-right,0px));overflow:auto;font-size:17px;line-height:1.55;font-weight:300}
 .notes-drawer header{display:flex;justify-content:space-between;gap:16px;align-items:baseline;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#b9bfae;margin-bottom:10px}
@@ -138,8 +139,9 @@ body.notes-open .reveal{bottom:36vh}
 <body>
 <div class="deck-bar" role="toolbar" aria-label="Präsentation steuern">
   <button type="button" id="btnNotes" aria-pressed="false" title="Sprechzettel ein- oder ausblenden (Taste S)">Sprechzettel <kbd>S</kbd></button>
-  <button type="button" id="btnFull" title="Vollbild (Taste F)">Vollbild <kbd>F</kbd></button>
+  <button type="button" id="btnFull" aria-pressed="false" title="Vollbild ein- oder ausschalten (Taste F, beenden auch mit Esc)">Vollbild <kbd>F</kbd></button>
 </div>
+<div class="deck-hint" id="deckHint" role="status" aria-live="polite" hidden></div>
 
 <div class="reveal">
   <div class="slides">
@@ -512,13 +514,28 @@ body.notes-open .reveal{bottom:36vh}
     store(on);fill();Reveal.layout();
   }
   btnNotes.addEventListener('click',function(){setNotes(drawer.hidden);});
-  btnFull.addEventListener('click',function(){
+  // Vollbild: Taste F und Knopf schalten ein und aus. Wo der Browser es verweigert (eingebettete
+  // Ansicht, iPhone), erscheint ein Hinweis statt nichts.
+  var hint=document.getElementById('deckHint'),hintTimer=0;
+  function say(text){if(!hint)return;hint.textContent=text;hint.hidden=false;clearTimeout(hintTimer);hintTimer=setTimeout(function(){hint.hidden=true;},7000);}
+  function fsElement(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+  function refused(){say(window.top!==window.self?'Vollbild ist in dieser eingebetteten Ansicht gesperrt. Öffne die Präsentation als eigene Seite oder Datei im Browser – dort geht F, sonst F11.':'Der Browser lässt hier kein Vollbild zu. Versuche F11 (Windows) oder ctrl + cmd + F (Mac).');}
+  function toggleFull(){
     var el=document.documentElement;
-    if(document.fullscreenElement){document.exitFullscreen&&document.exitFullscreen();return;}
-    var p=el.requestFullscreen&&el.requestFullscreen();if(p&&p.catch)p.catch(function(){});
-  });
+    if(fsElement()){var out=document.exitFullscreen||document.webkitExitFullscreen;if(out)out.call(document);return;}
+    var request=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(!request||document.fullscreenEnabled===false||document.webkitFullscreenEnabled===false){refused();return;}
+    try{var p=request.call(el);if(p&&p.catch)p.catch(refused);}catch(e){refused();}
+    setTimeout(function(){if(!fsElement()&&hint&&hint.hidden)refused();},900);
+  }
+  function synced(){var on=!!fsElement();btnFull.setAttribute('aria-pressed',on?'true':'false');if(on&&hint)hint.hidden=true;}
+  document.addEventListener('fullscreenchange',synced);document.addEventListener('webkitfullscreenchange',synced);
+  btnFull.addEventListener('click',function(){toggleFull();btnFull.blur();});
+  // Tasten kommen nur an, wenn die Seite den Fokus hat – in einem Rahmen erst nach einem Klick.
+  try{window.focus();}catch(e){}
+  document.addEventListener('pointerdown',function(){try{window.focus();}catch(e){}},true);
   Reveal.initialize({width:1280,height:720,margin:0.05,minScale:0.2,maxScale:1.6,hash:false,controls:true,progress:true,center:false,transition:'slide',transitionSpeed:'fast',slideNumber:'c/t',help:false,view:'default',scrollActivationWidth:null,
-    keyboard:{83:function(){setNotes(drawer.hidden);}}
+    keyboard:{83:function(){setNotes(drawer.hidden);},70:toggleFull}
   }).then(function(){
     Reveal.on('slidechanged',fill);
     setNotes(stored());
