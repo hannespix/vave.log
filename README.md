@@ -4,6 +4,8 @@ Projekte, Aufgaben, Arbeitszeiten und Agenturfinanzen für VAVE — per Oberflä
 
 **App:** https://hannespix.github.io/vave.log/
 
+**Vorstellung:** [docs/praesentation/vave-log-vorstellung.html](docs/praesentation/vave-log-vorstellung.html) – eigenständige reveal.js-Präsentation (15 Minuten, fünf Stationen mit Live-Klickpfaden, Sprechzettel über die Taste S). Herunterladen und per Doppelklick öffnen; läuft ohne Internet.
+
 React/TypeScript, Supabase Postgres/Auth mit Row Level Security, gemeinsam genutzte Datenzugriffe und ein authentifizierter MCP-Server. Keine Service-Role-Schlüssel im laufenden System. Originales animiertes VAVE-Logo und lokale Readex-Pro-Schrift.
 
 ## Funktionen

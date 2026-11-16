@@ -374,6 +374,10 @@ Tests: `tests/pwa-worker.test.ts` (Precache best effort, cache-first, nur statis
 
 Noch offen (gemessen, nicht geändert): Beim Start fragt die App `task_effort` dreimal und `time_entries` zweimal ab (mehrere Bereiche laden unabhängig); eine gemeinsame Ladeschicht würde das auf je einen Aufruf bringen. Der Sprachkatalog (alle drei Sprachen, ~35 KB gzip) steckt weiter im Hauptbundle.
 
+## Vorstellung für Projektleitung und Geschäftsführung (16.11.2026)
+
+`docs/praesentation/vave-log-vorstellung.html` ist eine eigenständige reveal.js-Präsentation (reveal.js 5.1.0 und die Schrift Readex Pro sind eingebettet, keine Netzabrufe): 15 Folien, etwa 15 Minuten, fünf Stationen (Erfassen, Steuern, Planen, Abrechnen, Absichern) mit Klickpfaden für die Live-Vorführung, je Folie ein Sprechzettel (Taste S) mit Zeitangabe, ehrlicher Stand und die Entscheidungen zum Pilot. Beispiele auf den Folien sind fiktiv und passen zu Space Experience Design (Erlebnisraum, Messestand, Museumsausstellung) – keine Websites.
+
 ## Team-Liste am Handy als Karten, Rollen-Erklärung mit Vorlagen (22.10.2026)
 
 Rückmeldung: „Ich kann keine Rechte anpassen, obwohl ich Inhaber bin.“ Ursache war kein Rechteproblem, sondern die Darstellung: Der Knopf „Rechte“ steht in der Spalte „Rolle“, und die Team-Tabelle hatte am Handy `min-width: 610px` – Rolle, Rechte, Kapazität und Standort lagen rechts außerhalb des Bildschirms und waren nur durch Wischen in der Tabelle erreichbar. Dazu kommt, dass es im Demo-Workspace nur ein weiteres echtes Konto gibt (Beispielpersonen lassen sich nicht ändern, die Datenbank weist das ab) und im zweiten Workspace niemand außer dem Owner ist.
