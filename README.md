@@ -2,6 +2,8 @@
 
 Projekte, Aufgaben, Arbeitszeiten und Agenturfinanzen für VAVE — per Oberfläche oder KI über MCP.
 
+**App:** https://hannespix.github.io/vave.log/
+
 React/TypeScript, Supabase Postgres/Auth mit Row Level Security, gemeinsam genutzte Datenzugriffe und ein authentifizierter MCP-Server. Keine Service-Role-Schlüssel im laufenden System. Originales animiertes VAVE-Logo und lokale Readex-Pro-Schrift.
 
 ## Funktionen
@@ -27,12 +29,10 @@ Die vollständige Anleitung zu Auth, OAuth, SMTP, Backups, Docker und Freigabete
 
 `npm run check` führt TypeScript, Unit-/Integrationstests und Produktionsbuild aus. PostgreSQL/RLS wird mit PGlite tatsächlich ausgeführt; MCP wird mit dem offiziellen Client über HTTP getestet. `npm run test:e2e` prüft die GUI mit Playwright auf Desktop und Mobilgerät gegen kontrollierte API-Antworten. Diese Tests ersetzen keinen vollständigen Live-Test mit Supabase/OAuth. GitHub Actions führt beide Prüfungen aus.
 
-`npm run build:worker` erzeugt zusätzlich den Worker für die private Sites-Bereitstellung; Node und Worker verwenden denselben MCP-/HTTP-Kern. Die Supabase-Konfiguration wird zur Laufzeit geladen, nicht in den Browser-Build eingebrannt.
+`npm run build:worker` erzeugt zusätzlich einen Worker für eine eigene Server-Bereitstellung mit MCP-Endpoint; Node und Worker verwenden denselben MCP-/HTTP-Kern. Die Supabase-Konfiguration wird zur Laufzeit geladen, nicht in den Browser-Build eingebrannt.
 
 ## Bereitstellungsstand
 
-Privater Bereitstellungsort: https://vave-log.pixer.chatgpt.site
-
-Zusätzlich kann die Web-App als statische Seite auf GitHub Pages laufen: `.github/workflows/pages.yml` deployt nach jedem grünen CI-Lauf auf `main` automatisch (`npm run build:pages`; ohne MCP-Endpoint, Konfiguration wird beim Build eingebettet, Seite ist öffentlich erreichbar). Einrichtung und Grenzen: [docs/github-pages.md](docs/github-pages.md).
+Die App läuft unter https://hannespix.github.io/vave.log/ als statische Seite auf GitHub Pages: `.github/workflows/pages.yml` deployt nach jedem grünen CI-Lauf auf `main` automatisch (`npm run build:pages`; ohne MCP-Endpoint, Konfiguration wird beim Build eingebettet, Seite ist öffentlich erreichbar). Einrichtung und Grenzen: [docs/github-pages.md](docs/github-pages.md).
 
 Das eigene Supabase-Projekt ist eingerichtet und verbunden; Datenbank-Zugriffsregeln und Kernworkflows wurden dort geprüft. Für die Betriebsfreigabe fehlen noch die Auth-Weiterleitungen im Dashboard sowie echte Registrierungs-/OAuth-Tests. Ohne Konfiguration zeigt die Anwendung weiterhin ausdrücklich den Einrichtungszustand. Konkrete Nachweise und verbleibende Schritte stehen in [STATE.md](STATE.md).
