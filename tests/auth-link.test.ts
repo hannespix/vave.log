@@ -4,7 +4,10 @@ import { parseAuthLink, stripAuthLink } from '../src/web/helpers';
 describe('parseAuthLink', () => {
   it('reads token-hash links from the email templates', () => {
     expect(parseAuthLink('?token_hash=pkce_abc&type=signup', '')).toMatchObject({ tokenHash: 'pkce_abc', type: 'signup', reset: false, errorCode: '' });
-    expect(parseAuthLink('?reset=1&token_hash=xyz&type=recovery', '')).toMatchObject({ tokenHash: 'xyz', type: 'recovery', reset: true });
+    expect(parseAuthLink('?reset=1&token_hash=xyz&type=recovery', '')).toMatchObject({ tokenHash: 'xyz', type: 'recovery', reset: true, recoveryToken: false });
+    // Standard-Link von Supabase: Rückleitung mit dem Token im Fragment.
+    expect(parseAuthLink('?reset=1', '#access_token=abc&refresh_token=def&type=recovery')).toMatchObject({ reset: true, recoveryToken: true, tokenHash: '' });
+    expect(parseAuthLink('', '#access_token=abc&type=signup').recoveryToken).toBe(false);
   });
   it('reads Supabase error redirects from query or hash, as sent to the Site URL', () => {
     const url = '?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
@@ -20,9 +23,9 @@ describe('parseAuthLink', () => {
 });
 
 describe('stripAuthLink', () => {
-  it('removes token, type and error parameters but keeps reset and the workflow hash', () => {
+  it('removes token, type, error and reset parameters but keeps the workflow hash', () => {
     expect(stripAuthLink('?token_hash=abc&type=signup', '')).toBe('/');
-    expect(stripAuthLink('?reset=1&token_hash=abc&type=recovery', '')).toBe('/?reset=1');
+    expect(stripAuthLink('?reset=1&token_hash=abc&type=recovery', '')).toBe('/');
     expect(stripAuthLink('?error=access_denied&error_code=otp_expired&error_description=x', '#error=access_denied&error_code=otp_expired')).toBe('/');
     expect(stripAuthLink('?token_hash=abc&type=signup', '#w=ws-1&view=time')).toBe('/#w=ws-1&view=time');
     expect(stripAuthLink('', '#access_token=secret&type=signup')).toBe('/');

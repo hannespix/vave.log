@@ -448,6 +448,73 @@ test('a token-hash link from the confirmation email signs the person in on any d
  expect(page.url()).not.toContain('token_hash');
 });
 
+// Passwort zurücksetzen. Feldfall 16.11.2026: Der Link wurde in einem anderen Browser geöffnet als dem, der ihn angefordert
+// hatte; der Tausch scheiterte, die App zeigte wegen `?reset=1` trotzdem „Neues Passwort“ und das Speichern brach mit
+// „Session not found“ ab. Das Formular erscheint jetzt nur nach einem geprüften Link.
+const recoveryToken=()=>{const payload=btoa(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'}));return `eyJhbGciOiJIUzI1NiJ9.${payload}.test`};
+test('a reset link from the email opens the new-password form on any device and saves the password',async({page})=>{
+ await setup(page,false);let saved:Record<string,unknown>|null=null;
+ await page.route('https://test.supabase.co/auth/v1/user',r=>{if(r.request().method()==='PUT'&&r.request().postDataJSON().password)saved=r.request().postDataJSON();return r.fallback()});
+ await page.goto(`/?reset=1#access_token=${recoveryToken()}&refresh_token=test-refresh-token&expires_in=3600&expires_at=2100000000&token_type=bearer&type=recovery`);
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
+ expect(page.url()).not.toContain('access_token');expect(page.url()).not.toContain('reset=1');
+ // Neu laden mitten im Zurücksetzen: das Formular bleibt.
+ await page.reload();await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
+ await page.getByLabel('New password',{exact:true}).fill('correct horse battery');await page.getByLabel('Repeat password',{exact:true}).fill('correct horse battery');
+ await page.getByRole('button',{name:'Save password',exact:true}).click();
+ await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
+ expect(saved).toMatchObject({password:'correct horse battery'});
+ await page.reload();await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();await expect(page.getByRole('heading',{name:'Your new password.'})).toHaveCount(0);
+});
+test('a token-hash reset link works the same way and can be cancelled',async({page})=>{
+ await setup(page,false);let verify:Record<string,unknown>|null=null;
+ await page.route('https://test.supabase.co/auth/v1/verify',r=>{verify=r.request().postDataJSON();
+  return r.fulfill({json:{access_token:recoveryToken(),token_type:'bearer',expires_in:3600,expires_at:2100000000,refresh_token:'test-refresh-token',user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}}});});
+ await page.goto('/?reset=1&token_hash=abc123&type=recovery');
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();expect(verify).toMatchObject({token_hash:'abc123',type:'recovery'});
+ await page.getByRole('button',{name:'Cancel and keep my password',exact:true}).click();
+ await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
+});
+test('a stale or foreign reset link never shows the password form: signed-out people get a fresh-link offer',async({page})=>{
+ await setup(page,false);let recover:Record<string,unknown>|null=null;
+ await page.route('https://test.supabase.co/auth/v1/recover*',r=>{recover=r.request().postDataJSON();return r.fulfill({json:{}})});
+ // So kam der Feldfall zurück: Marker und ein Code, den dieser Browser nicht einlösen kann.
+ await page.goto('/?reset=1&code=0a1b2c3d-foreign-browser');
+ await expect(page.getByText(/This reset link is no longer valid/)).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toHaveCount(0);
+ expect(page.url()).not.toContain('reset=1');expect(page.url()).not.toContain('code=');
+ await page.getByRole('button',{name:'Request a new link',exact:true}).click();
+ await page.getByLabel('Email address',{exact:true}).fill('owner@example.test');
+ await page.getByRole('button',{name:'Request link',exact:true}).click();
+ await expect(page.getByText(/only the link from the most recent email is valid/)).toBeVisible();
+ expect(recover).toMatchObject({email:'owner@example.test'});expect((recover as Record<string,unknown>|null)?.code_challenge??null).toBeNull(); // kein an diesen Browser gebundener Schlüssel
+ await expect(page.getByText(/This reset link is no longer valid/)).toHaveCount(0);
+});
+test('an expired reset link names the next step instead of the confirmation hint',async({page})=>{
+ await setup(page,false);
+ await page.goto('/?reset=1#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+ await expect(page.getByText(/This reset link is no longer valid/)).toBeVisible();
+ await expect(page.getByRole('button',{name:'Request a new link',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Request a new confirmation link',exact:true})).toHaveCount(0);
+});
+test('with an existing sign-in a stale reset marker opens the app, not the password form',async({page})=>{
+ await setup(page,true);
+ await page.goto('/?reset=1');
+ await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toHaveCount(0);expect(page.url()).not.toContain('reset=1');
+});
+test('saving a new password without a live session returns to sign-in with a fresh-link offer',async({page})=>{
+ await setup(page,false);
+ await page.route('https://test.supabase.co/auth/v1/user',r=>r.request().method()==='PUT'?r.fulfill({status:403,json:{code:403,error_code:'session_not_found',msg:'Session from session_id claim in JWT does not exist'}}):r.fallback());
+ await page.route('https://test.supabase.co/auth/v1/logout*',r=>r.fulfill({status:204,body:''}));
+ await page.goto(`/?reset=1#access_token=${recoveryToken()}&refresh_token=test-refresh-token&expires_in=3600&expires_at=2100000000&token_type=bearer&type=recovery`);
+ await page.getByLabel('New password',{exact:true}).fill('correct horse battery');await page.getByLabel('Repeat password',{exact:true}).fill('correct horse battery');
+ await page.getByRole('button',{name:'Save password',exact:true}).click();
+ await expect(page.getByText(/This reset link is no longer valid/)).toBeVisible();
+ await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeVisible();
+ await expect(page.getByText(/Session/)).toHaveCount(0);
+});
+
 test('help explains the tool: landing, search, article, context help and the global search all reach it',async({page})=>{
  await setup(page,true);await page.goto('/');
  await goArea(page,'Help');

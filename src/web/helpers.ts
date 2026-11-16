@@ -163,8 +163,8 @@ export function safeRedirect(url: string) { const parsed = new URL(url); if (!['
 
 export const AUTH_LINK_TYPES = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'] as const;
 export type AuthLinkType = typeof AUTH_LINK_TYPES[number];
-export interface AuthLink { tokenHash: string; type: AuthLinkType | ''; reset: boolean; errorCode: string; errorDescription: string }
-/** Liest Auth-Parameter aus der Adresse: Token-Hash-Links der E-Mail-Vorlagen (`?token_hash=…&type=…`), `?reset=1` und Supabase-Fehlerrückleitungen (`error_code`/`error_description` in Query oder Hash). */
+export interface AuthLink { tokenHash: string; type: AuthLinkType | ''; reset: boolean; recoveryToken: boolean; errorCode: string; errorDescription: string }
+/** Liest Auth-Parameter aus der Adresse: Token-Hash-Links der E-Mail-Vorlagen (`?token_hash=…&type=…`), `?reset=1`, die Rückkehr aus dem Standard-Link von Supabase (`#access_token=…&type=recovery`) und Fehlerrückleitungen (`error_code`/`error_description` in Query oder Hash). */
 export function parseAuthLink(search: string, hash: string): AuthLink {
   const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
@@ -174,14 +174,15 @@ export function parseAuthLink(search: string, hash: string): AuthLink {
     tokenHash: pick('token_hash').slice(0, 200),
     type: (AUTH_LINK_TYPES as readonly string[]).includes(type) ? type as AuthLinkType : '',
     reset: query.get('reset') === '1',
+    recoveryToken: fragment.has('access_token') && fragment.get('type') === 'recovery',
     errorCode: pick('error_code').slice(0, 80),
     errorDescription: pick('error_description').slice(0, 300),
   };
 }
-/** Adresse ohne Auth-Parameter – was nach dem Verarbeiten eines Links in der Leiste stehen bleibt. */
+/** Adresse ohne Auth-Parameter – was nach dem Verarbeiten eines Links in der Leiste stehen bleibt. Auch `reset` fällt weg: ob gerade ein Passwort neu gesetzt wird, entscheidet der geprüfte Link, nicht die Adresse. */
 export function stripAuthLink(search: string, hash: string): string {
   const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-  for (const key of ['token_hash', 'type', 'error', 'error_code', 'error_description', 'code']) query.delete(key);
+  for (const key of ['token_hash', 'type', 'error', 'error_code', 'error_description', 'code', 'reset']) query.delete(key);
   const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
   const keepHash = fragment.has('w') && !fragment.has('error') && !fragment.has('access_token');
   const rest = query.toString();
