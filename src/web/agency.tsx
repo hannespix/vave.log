@@ -18,6 +18,9 @@ const copy={
  disclosure:['Explore a sample agency with team, projects, time, planning and invoices. Names include public VAVE credits and invented people; all operating and billing data is fictional. Sample people have no login. DEMO invoices are not for payment.','Erkunde eine Beispielagentur mit Team, Projekten, Zeiten, Planung und Rechnungen. Namen stammen aus öffentlichen VAVE-Projektcredits oder sind erfunden; alle Arbeits- und Rechnungsdaten sind fiktiv. Beispielpersonen haben keinen Login. DEMO-Rechnungen sind nicht zur Zahlung bestimmt.','探索包含团队、项目、工时、规划及发票的示例工作室。姓名来自 VAVE 公开项目署名或虚构人物；所有工作及账单数据均为虚构。示例人物无法登录，DEMO 发票无需付款。'],
  completeDemo:['Complete demo','Demo vervollständigen','补全示例'],
  completeDemoNote:['Add the 100-person agency scenario, enterprise projects and invoices in the millions. Existing records and your edits are kept.','Ergänze das Szenario einer Agentur mit 100 Mitarbeitenden, Großprojekten und Rechnungen im Millionenbereich. Vorhandene Datensätze und deine Änderungen bleiben erhalten.','添加 100 名员工的工作室场景、大型项目和数百万欧元的发票。现有记录及你的修改均会保留。'],
+ refreshDemo:['Bring up to date','Auf heute bringen','更新到今天'],
+ refreshDemoNote:['The sample data has aged. Bring due dates, absences and booked time up to today. Your edits are kept.','Die Beispieldaten sind gealtert. Bringe Termine, Abwesenheiten und gebuchte Zeiten auf den Stand von heute. Deine Änderungen bleiben erhalten.','示例数据已过期。将截止日期、请假和工时更新到今天，您的修改会保留。'],
+ demoRefreshed:['The sample data is up to date.','Die Beispieldaten sind auf dem Stand von heute.','示例数据已更新到今天。'],
  demoCompleted:['The full demo agency is ready.','Die vollständige Demo-Agentur ist bereit.','完整的示例工作室已准备就绪。'],
  samplePerson:['DEMO','DEMO','示例'],
  samplePublic:['Public project credit','Öffentlicher Projektcredit','公开项目署名'],
@@ -48,10 +51,12 @@ export function DemoChoice({value,onChange,disabled=false}:{value:WorkspaceStart
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
  return <fieldset className="demo-choice" disabled={disabled}><legend>{t('start')}</legend>{(['empty','demo'] as const).map(kind=><label key={kind} className={value===kind?'selected':''}><input type="radio" name="workspace-start" value={kind} checked={value===kind} onChange={()=>onChange(kind)}/><span><strong>{t(kind)}</strong><small>{t(kind==='empty'?'emptyNote':'demoNote')}</small></span></label>)}</fieldset>;
 }
-export function DemoBanner({demo,canArchive,onArchive,onUpgrade,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onUpgrade:()=>void;busy:boolean}){
+export function DemoBanner({demo,canArchive,onArchive,onUpgrade,onRefresh,today,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onUpgrade:()=>void;onRefresh?:()=>void;today?:string;busy:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
  const incomplete=(demo.experience_version??1)<DEMO_EXPERIENCE_VERSION;
- return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{incomplete&&canArchive&&<p>{t('completeDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{incomplete&&<button className="button primary small" disabled={busy} onClick={onUpgrade}>{t('completeDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
+ // Beispieldaten altern: nach einer Woche ohne Auffrischung bietet das Banner an, sie auf heute zu bringen.
+ const stale=!incomplete&&!!onRefresh&&!!today&&(!demo.refreshed_on||Date.parse(`${today}T00:00:00Z`)-Date.parse(`${demo.refreshed_on}T00:00:00Z`)>=7*86400000);
+ return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{incomplete&&canArchive&&<p>{t('completeDemoNote')}</p>}{stale&&canArchive&&<p>{t('refreshDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{incomplete&&<button className="button primary small" disabled={busy} onClick={onUpgrade}>{t('completeDemo')}</button>}{stale&&<button className="button primary small" disabled={busy} onClick={onRefresh}>{t('refreshDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
 }
 export function Connections({tasks,projects,manager}:{tasks:Task[];projects:Project[];manager:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);

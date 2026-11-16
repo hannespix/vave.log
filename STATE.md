@@ -412,3 +412,19 @@ Die App rechnet nicht mehr mit `manager`, sondern mit der Rechte-Matrix (`src/sh
 - **Hilfe** je Modul statt je Rolle (`module`/`level` am Thema, `helpVisible`); neues Thema „Rechte je Person“, Rollen-Matrix mit Vorlagenliste; MCP-Werkzeug `set_member_rights` (65 Werkzeuge).
 - Mitarbeitende (Vorlage Mitarbeit) sehen keine Leistung anderer: keine Teamzeiten, keine Stärkenprofile, kein Lagebild.
 
+
+## Beispieldaten auf dem aktuellen Stand (16.11.2026)
+
+Die Demo stammt in ihren Daten vom 14.10.: Seitdem kamen Arbeitszeitmodell, Urlaubsplanung, Kapazitäts-Cockpit, Stärkenprofile und Rechte je Konto hinzu, die Beispielpersonen hatten davon nichts. Von 112 Beispielpersonen hatten zwei eine Wochenkapazität, niemand ein Arbeitszeitmodell oder einen Urlaubsanspruch; es gab eine einzige Abwesenheit, keine Aufgabe trug eine Kategorie, die letzte gebuchte Zeit lag einen Monat zurück und alle offenen Termine waren überfällig.
+
+- **Neue Funktion `demo_refresh_workspace(workspace)`** (Migration `20261116100000_demo_aktueller_stand.sql`), aufrufbar nur von der Person, die die Demo angelegt hat und noch Inhaber:in ist. Sie ist wiederholbar und überschreibt nichts, was schon gepflegt ist:
+  - Jede Beispielperson bekommt Arbeitszeitmodell und Wochenstunden (sieben von zehn Vollzeit, dazu 4-Tage-Woche, 30 h und 3 Tage), Urlaubsanspruch (30 Tage in Frankfurt, sonst 25) und in Frankfurt den Standort Hessen für die Feiertage.
+  - Urlaubskonto des laufenden Jahres, jede dritte Person mit Resturlaub.
+  - Abwesenheiten rund um heute in allen Zuständen: Urlaub läuft, Urlaub kommt, Antrag wartet auf Entscheidung, krank, halber Tag. Je Person nie überlappend.
+  - Offene Aufgaben rücken zurück in die Gegenwart (der späteste Termin liegt drei Wochen voraus, die Abstände bleiben, ein Teil bleibt überfällig). Alle Aufgaben bekommen eine Kategorie, erledigte eine Bewertung sowie Beginn und Abschluss – damit füllen sich Stärkenprofile und Zuweisungsempfehlung.
+  - Zeiten werden bis gestern nachgetragen: je Arbeitstag laut Modell ein Eintrag, nicht an genehmigten Abwesenheitstagen; ältere Wochen freigegeben, die letzte eingereicht.
+- **Neue Demos** entstehen gleich auf diesem Stand; die bestehende Demo frischt die Migration einmal auf. Weil Beispieldaten altern, bietet das Demo-Banner in den Einstellungen nach einer Woche „Auf heute bringen“ an.
+- **Beispielpersonen zählen jetzt überall mit:** Kapazitäts-Cockpit, Langfrist-Kapazität, Abwesenheitskalender und Urlaubskonten, Lagebild und Zuweisungsempfehlung blendeten sie bisher aus. In der Team-Liste stehen Wochenstunden, Modell und Standort auch bei ihnen.
+- **Fehler behoben, der dabei auffiel:** Ein Workspace ließ sich nicht endgültig löschen, sobald er Abwesenheiten, Urlaubskonten, Hinweise, Zeitvorschläge, Teilzahlungen oder Angebote enthielt (Fremdschlüsselfehler) – diese Tabellen fehlten in der Löschreihenfolge.
+- Kleinigkeiten aus der Sichtprüfung: Jahreszahlen im Urlaubskonto ohne Tausenderpunkt („2026“ statt „2.026“), Filter der Auswertung am Handy ohne seitliches Überlaufen.
+- Tests: `tests/demo-refresh-database.test.ts` (neun Fälle: Modelle, Abwesenheiten, Aufgaben, gealterte Demo, Wiederholbarkeit, gepflegte Werte bleiben, Auffrischung beim Einspielen, Abweisung Fremder, Löschen), Browser-Test für den Knopf im Banner.
