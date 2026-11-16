@@ -27,7 +27,7 @@ export function HealthBoard({ projects, tasks, members, workspace, userId, allPr
   }, [service, workspace.id, reloadKey]);
   const scope = allProjects ? projects : projects.filter((p) => tasks.some((task) => task.project_id === p.id && task.assignee_id === userId));
   // Überlastete Personen dieser Woche (Cockpit-Rechnung ohne Abwesenheiten – die Zelle genügt als Warnsignal).
-  const plan = capacityPlan({ members: members.filter((m) => !m.is_demo), tasks, effort: taskEffort, absences: [], today, weeks: 1, defaultLocation: workspace.default_location ?? null });
+  const plan = capacityPlan({ members: members.filter((m) => m.role !== 'disabled'), tasks, effort: taskEffort, absences: [], today, weeks: 1, defaultLocation: workspace.default_location ?? null });
   const overloaded = new Set(plan.rows.filter((r) => { const p = loadPercent(r.cells[0]); return p != null && p > 100; }).map((r) => r.user_id));
   const list = portfolioHealth(scope, tasks, effort ?? new Map(), { today, overloadedUsers: overloaded, includeBudget: allProjects });
   const hot = list.filter((h) => h.level !== 'green');

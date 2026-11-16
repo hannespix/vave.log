@@ -259,13 +259,14 @@ test('client cards show contacts, remarks and key figures, and the editor manage
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 test('older demo expands once into team, approvals and usable marked invoices',async({page})=>{
- const entries=await setup(page,true);let upgraded=0;let issued=0;
+ const entries=await setup(page,true);let upgraded=0;let issued=0;let refreshed=0;
  const person='55555555-5555-4555-8555-555555555555',customer='66666666-6666-4666-8666-666666666666',draftId='77777777-7777-4777-8777-777777777777';
  const profile={workspace_id:ws,legal_name:'VAVE Demo Studio — fictional',billing_address:'Example street 1',tax_id:'DEMO-NOT-VALID',payment_details:'Do not pay',invoice_prefix:'DEMO',footer:'DEMO — Not for payment'};
  const client={id:customer,workspace_id:ws,name:'Blue Current Foundation (fictional)',billing_address:'Example street 2',contact_email:'client@example.invalid',tax_id:'DEMO-NOT-VALID',language:'en',created_at:''};
  const line={description:'Sample spatial design',quantity:2,unit_price_minor:12500,tax_basis_points:1900,zero_tax_reason:'',time_entry_id:null,net_minor:25000,tax_minor:4750,total_minor:29750};
  const invoice:Record<string,unknown>={id:draftId,workspace_id:ws,client_id:customer,project_id:project,language:'en',currency:'EUR',issue_date:'2026-10-13',due_date:'2026-11-13',service_from:'2026-10-01',service_to:'2026-10-13',notes:'Fictional demo',payment_instructions:'Do not pay',lines:[line],net_minor:25000,tax_minor:4750,total_minor:29750,status:'draft',number:null,is_demo:true,created_at:'2026-10-13T09:00:00Z',issued_at:null,issuer_snapshot:null,customer_snapshot:null,cancellation_of:null,cancellation_id:null,cancellation_reason:'',paid:false};
- await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?DEMO_EXPERIENCE_VERSION:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null}}));
+ await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?DEMO_EXPERIENCE_VERSION:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null,refreshed_on:refreshed?new Date().toISOString().slice(0,10):null}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/demo_refresh_workspace',r=>{expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});refreshed++;return r.fulfill({json:{people:1,absences:1,tasks_moved:0,tasks_tagged:0,entries:5}})});
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},...(upgraded?[{workspace_id:ws,user_id:person,role:'member',display_name:'Elena Weber',email:'elena@example.invalid',created_at:'',is_demo:true,demo_title:'Finance & Operations Lead',demo_studio:'Frankfurt',demo_origin:'fictional'}]:[])]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_upgrade_workspace',r=>{
   expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});upgraded++;
@@ -281,6 +282,9 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await goArea(page,'Settings');
  await page.getByRole('button',{name:'Complete demo',exact:true}).click();
  await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ // Fertige, aber gealterte Beispieldaten: das Banner bietet an, sie auf heute zu bringen – genau einmal.
+ await page.getByRole('button',{name:'Bring up to date',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Bring up to date',exact:true})).toHaveCount(0);expect(refreshed).toBe(1);
  const nav=page.getByRole('navigation');await goArea(page,'Team');
  await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
@@ -293,6 +297,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await dialog.getByRole('button',{name:'Issue sample invoice',exact:true}).click();await expect(dialog).not.toBeVisible();expect(issued).toBe(1);
  await expect(page.getByRole('button',{name:'DEMO-000001',exact:true})).toBeVisible();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
  await page.reload();await goArea(page,'Settings');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await expect(page.getByRole('button',{name:'Bring up to date',exact:true})).toHaveCount(0);expect(refreshed).toBe(1);
 });
 
 const secondProject='99999999-9999-4999-8999-999999999999';

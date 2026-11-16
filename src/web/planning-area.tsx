@@ -41,7 +41,7 @@ function ShortTerm({ members, projects, tasks, workspace, service, run, busy, to
       .catch(() => { if (alive) { setEffort(new Map()); setAbsences([]); } });
     return () => { alive = false; };
   }, [service, workspace.id, today, horizonTo, reloadKey]);
-  const team = members.filter((m) => m.role !== 'disabled' && !m.is_demo);
+  const team = members.filter((m) => m.role !== 'disabled');
   const plan: CapacityPlan = capacityPlan({ members: team, tasks, effort: effort ?? new Map(), absences, today, weeks, defaultLocation: workspace.default_location ?? null });
   const name = (id: string) => { const m = members.find((x) => x.user_id === id); return m?.display_name || m?.email || t('Teammitglied'); };
   const weekLabel = (w: { from: string; to: string }) => `${shortDate(w.from)} – ${shortDate(w.to)}`;
@@ -79,7 +79,7 @@ function LongTerm({ members, projects, workspace, service, finance, today, reloa
       .catch(() => { if (alive) setLoaded({ plans: [], effort: new Map(), absences: [] }); });
     return () => { alive = false; };
   }, [finance, service, workspace.id, today, horizonTo, reloadKey]);
-  const team = members.filter((m) => m.role !== 'disabled' && !m.is_demo);
+  const team = members.filter((m) => m.role !== 'disabled');
   const name = (id: string) => { const m = members.find((x) => x.user_id === id); return m?.display_name || m?.email || t('Teammitglied'); };
   const outlook: Outlook = capacityOutlook({ members: team, projects, plans: loaded?.plans ?? [], effort: loaded?.effort ?? new Map(), absences: loaded?.absences ?? [], today, months, defaultLocation: workspace.default_location ?? null, scenario });
   const monthLabel = (key: string) => new Intl.DateTimeFormat(locale, { month: 'short', year: '2-digit' }).format(new Date(`${key}-01T12:00:00Z`));

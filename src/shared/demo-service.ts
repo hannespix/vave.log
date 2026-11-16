@@ -42,6 +42,12 @@ export function createDemoService(client:SupabaseClient) {
       const {error}=await client.rpc('demo_upgrade_workspace',{p_workspace_id:id});
       fail(error);
     },
+    /** Bringt eine fertige Demo auf den heutigen Stand: Arbeitszeitmodelle, Abwesenheiten, Termine und Zeiten bis gestern. Wiederholbar. */
+    async refresh(workspaceId:string):Promise<void> {
+      const id=parse(uuid,workspaceId);
+      const {error}=await client.rpc('demo_refresh_workspace',{p_workspace_id:id});
+      fail(error);
+    },
     async archive(workspaceId:string):Promise<void> {
       const id=parse(uuid,workspaceId);
       const {error}=await client.rpc('demo_archive_workspace',{p_workspace_id:id});
