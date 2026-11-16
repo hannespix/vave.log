@@ -76,3 +76,13 @@ export function capacityPlan(input: { members: (ScheduledMember & { role?: strin
 }
 /** Auslastung einer Zelle in Prozent; null ohne bekannte Kapazität. */
 export const loadPercent = (cell: CapacityCell) => cell.available == null ? null : cell.available === 0 ? (cell.planned > 0 ? Infinity : 0) : Math.round(cell.planned / cell.available * 100);
+
+/** ISO-Kalenderwoche eines Datums. */
+export function isoWeek(day: string): number {
+  const d = new Date(`${day}T12:00:00Z`); const dow = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dow);
+  // Ganze Tage seit dem 1. Januar des Donnerstag-Jahres. Beide Zeitpunkte liegen auf 12 Uhr UTC; vorher zählte der halbe
+  // Tag mit und schob die Nummer in Jahren, deren erster Donnerstag der 7. Januar ist (2027), um eins nach oben.
+  const days = Math.round((d.getTime() - Date.UTC(d.getUTCFullYear(), 0, 1, 12)) / 86400000);
+  return Math.floor(days / 7) + 1;
+}

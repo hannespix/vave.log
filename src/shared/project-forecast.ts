@@ -70,7 +70,8 @@ export function forecastProject(insight: ProjectInsight): ProjectForecast {
   let projectedTotalMinutes: number | null = null;
   if (progressPercent === 100) projectedTotalMinutes = usedMinutes;
   else if (progressPercent !== null && progressPercent > 0 && usedMinutes > 0) {
-    const projected = usedMinutes / (progressPercent / 100);
+    // Erst multiplizieren, dann teilen und auf ganze Minuten runden: 60 / (30 / 100) ergibt sonst 200,00000000000003.
+    const projected = Math.round(usedMinutes * 100 / progressPercent);
     if (Number.isFinite(projected) && projected <= Number.MAX_SAFE_INTEGER) projectedTotalMinutes = projected;
     else blockers.push('out-of-range');
   }

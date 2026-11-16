@@ -40,7 +40,7 @@ export function projectHealth(project: HealthProject, tasks: HealthTask[], effor
     if (options.includeBudget !== false && project.budget_minutes > 0) {
       const burn = booked / project.budget_minutes;
       if (burn > 1.1) add('budget-over', Math.round(burn * 100), null);
-      else if (burn > 0.9 && (progress.percent ?? 0) < 80) add('budget-ahead', Math.round(burn * 100), progress.percent == null ? null : String(progress.percent));
+      else if (burn > 0.9 && (progress.percent ?? 0) < 80) add('budget-ahead', Math.round(burn * 100), progress.percent == null ? null : String(Math.round(progress.percent)));
     }
     if (open.length > 0 && effort?.last_work_date && effort.last_work_date < staleBefore) add('stale', 1, effort.last_work_date);
     const unassigned = open.filter((t) => !t.assignee_id && t.due_date && t.due_date <= soon);

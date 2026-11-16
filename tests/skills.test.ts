@@ -47,3 +47,17 @@ describe('skill profiles', () => {
     expect(recommendAssignees({ project_id: 'p2' }, projects[1], profiles, new Map())).toEqual([]);
   });
 });
+
+describe('Audit 16.11.2026', () => {
+  const stats = { category: 'motion', tasks: 4, done: 4, minutes: 0, speed: null, speedSamples: 0, onTime: null, onTimeSamples: 0, cycleDays: null, cycleSamples: 0, reopened: 0, rating: null, ratingSamples: 0, lastDone: null };
+  it('gives no fit score without speed, punctuality or rating – "never reopened" alone is not a strength', () => {
+    expect(fitScore(stats)).toBeNull();
+    expect(fitScore({ ...stats, rating: 5, ratingSamples: 1 })).toBe(100);
+    expect(fitScore({ ...stats, rating: 5, ratingSamples: 1, reopened: 2 })).toBe(75);
+  });
+  it('counts a task once per category even when a tag was entered twice', () => {
+    expect(taskCategories(task('t', { tags: ['motion', 'motion', '3d'] }), projects[0])).toEqual(['motion', '3d']);
+    const profile = skillProfiles(['a'], [task('t1', { tags: ['motion', 'motion'] })], projects, new Map())[0];
+    expect(profile.categories.find((c) => c.category === 'motion')?.tasks).toBe(1);
+  });
+});

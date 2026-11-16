@@ -17,8 +17,9 @@ export const MIN_SAMPLES = 3;
 export const normalizeTags = (raw: string | string[]): string[] => { const list = Array.isArray(raw) ? raw : raw.split(/[,;\n]/); const out: string[] = []; for (const t of list) { const v = t.trim().toLowerCase().slice(0, 30); if (v && !out.includes(v)) out.push(v); if (out.length >= 10) break; } return out; };
 /** Kategorien einer Aufgabe: eigene Tags, sonst Projekt-Tags, sonst Kunde/Projekt. */
 export function taskCategories(task: SkillTask, project: SkillProject | undefined): string[] {
-  if (task.tags?.length) return task.tags;
-  if (project?.tags?.length) return project.tags;
+  // Doppelt vergebene Tags zählen eine Aufgabe nur einmal je Kategorie.
+  if (task.tags?.length) return [...new Set(task.tags)];
+  if (project?.tags?.length) return [...new Set(project.tags)];
   return [project?.client ? `kunde:${project.client.toLowerCase()}` : `projekt:${project?.code?.toLowerCase() ?? task.project_id}`];
 }
 const median = (values: number[]) => { if (!values.length) return null; const s = [...values].sort((a, b) => a - b); const mid = Math.floor(s.length / 2); return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2; };
@@ -47,8 +48,10 @@ export function fitScore(stats: CategoryStats | null): number | null {
   const parts: number[] = [];
   if (stats.speed != null && stats.speedSamples >= 2) parts.push(Math.max(0, Math.min(1, 1.5 - stats.speed)));
   if (stats.onTime != null && stats.onTimeSamples >= 2) parts.push(stats.onTime);
-  parts.push(Math.max(0, 1 - stats.reopened / stats.done));
   if (stats.rating != null) parts.push((stats.rating - 1) / 4);
+  // Ohne Tempo, Termintreue oder Bewertung gibt es nichts zu bewerten: „nie wieder geöffnet“ allein ergab vorher 100.
+  if (!parts.length) return null;
+  parts.push(Math.max(0, 1 - stats.reopened / stats.done));
   return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length * 100);
 }
 /** Empfehlung für eine Aufgabe: Kandidaten mit Passung je Kategorie, freie Kapazität als Zweitkriterium. */

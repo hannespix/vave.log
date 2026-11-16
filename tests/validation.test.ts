@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { projectSchema,entrySchema,dateRangeSchema,workspaceSchema,taskSchema } from '../src/shared/validation.js';
+import { projectSchema,entrySchema,dateRangeSchema,workspaceSchema,taskSchema,absenceSchema,suggestionSchema,isWebUrl } from '../src/shared/validation.js';
 const id='11111111-1111-4111-8111-111111111111';
 const entry={workspace_id:id,project_id:id,work_date:'2026-10-13',minutes:60,note:'Konzept',billable:true};
 describe('untrusted input validation',()=>{
@@ -36,5 +36,18 @@ describe('project planning input',()=>{
   for(const progress_percent of [-1,100.1,NaN,Infinity])expect(projectSchema.safeParse({...project,progress_percent}).success).toBe(false);
   for(const due_date of ['2026-02-30','1999-12-31','2101-01-01'])expect(projectSchema.safeParse({...project,due_date}).success).toBe(false);
   expect(projectSchema.safeParse({...project,progress_updated_at:'2026-10-14T00:00:00Z'}).success).toBe(false);
+ });
+});
+describe('Audit 16.11.2026',()=>{
+ it('accepts only web addresses as evidence links',()=>{
+  const base={workspace_id:id,project_id:id,work_date:'2026-11-16',minutes:60,note:'Termin'};
+  expect(suggestionSchema.safeParse({...base,evidence:[{title:'Kalender',url:'https://calendar.example.org/e/1'}]}).success).toBe(true);
+  for(const url of ['javascript:alert(1)','data:text/html,<script>alert(1)</script>','file:///etc/passwd','vbscript:x'])expect(suggestionSchema.safeParse({...base,evidence:[{title:'x',url}]}).success,url).toBe(false);
+  expect(isWebUrl(' HTTPS://Example.org ')).toBe(true);expect(isWebUrl('javascript:https://x')).toBe(false);
+ });
+ it('limits one absence to a year',()=>{
+  const base={workspace_id:id,user_id:id,kind:'vacation' as const,note:''};
+  expect(absenceSchema.safeParse({...base,starts_on:'2027-01-01',ends_on:'2027-12-31'}).success).toBe(true);
+  expect(absenceSchema.safeParse({...base,starts_on:'2027-01-01',ends_on:'2029-01-01'}).success).toBe(false);
  });
 });

@@ -49,3 +49,23 @@ describe('vacation arithmetic', () => {
     expect(ics).not.toContain('20260708');
   });
 });
+
+describe('Audit 16.11.2026: vacation is counted per day', () => {
+  const account = (absences: AbsenceLike[]) => vacationSummary({ entitlement: 30, absences, userId: 'a', year: 2027, location: null });
+  it('does not count sick days inside a vacation as vacation', () => {
+    // Mo 7.6. – Fr 11.6.2027 Urlaub, Mi/Do krank: drei Urlaubstage.
+    expect(account([absence('a', '2027-06-07', '2027-06-11'), absence('a', '2027-06-09', '2027-06-10', { kind: 'sick' })])).toMatchObject({ taken: 3, remaining: 27 });
+    // Abgelehnte Krankmeldung ändert nichts, die einer anderen Person auch nicht.
+    expect(account([absence('a', '2027-06-07', '2027-06-11'), absence('a', '2027-06-09', '2027-06-10', { kind: 'sick', status: 'declined' }), absence('b', '2027-06-07', '2027-06-11', { kind: 'sick' })]).taken).toBe(5);
+  });
+  it('never counts a day twice when older entries overlap', () => {
+    expect(account([absence('a', '2027-06-07', '2027-06-11'), absence('a', '2027-06-10', '2027-06-15')]).taken).toBe(7);
+    expect(account([absence('a', '2027-06-07', '2027-06-08'), absence('a', '2027-06-08', '2027-06-09', { status: 'requested' })])).toMatchObject({ taken: 2, requested: 1 });
+    expect(account([absence('a', '2027-07-01', '2027-07-01', { half_day: 'am' }), absence('a', '2027-07-01', '2027-07-01', { half_day: 'pm' })]).taken).toBe(1);
+  });
+  it('keeps two half days on one date apart in the calendar export', () => {
+    const ics = absencesIcs([absence('a', '2027-07-01', '2027-07-01', { half_day: 'am' }), absence('a', '2027-07-01', '2027-07-01', { half_day: 'pm', kind: 'other' })], () => 'A', { vacation: 'Urlaub', sick: 'Krank', holiday: 'Feiertag', other: 'Sonstiges' });
+    const uids = ics.split('\r\n').filter((l) => l.startsWith('UID:'));
+    expect(new Set(uids).size).toBe(2);
+  });
+});

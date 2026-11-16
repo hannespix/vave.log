@@ -19,14 +19,32 @@ export function absenceWorkdays(a: AbsenceLike, location: string | null | undefi
   return a.half_day && days > 0 ? 0.5 : days;
 }
 
-/** Urlaubskonto einer Person für ein Jahr: Anspruch + Übertrag + Korrektur − genommen (genehmigt) − beantragt. */
+/** Urlaubskonto einer Person für ein Jahr: Anspruch + Übertrag + Korrektur − genommen (genehmigt) − beantragt.
+ * Gezählt wird je Tag, nicht je Eintrag: Ein Tag ist höchstens ein Urlaubstag, auch wenn sich zwei Einträge
+ * überschneiden, und ein Krankheitstag im Urlaub zählt nicht als Urlaub (§ 9 BUrlG). */
 export function vacationSummary(input: { entitlement: number | null | undefined; carriedOver?: number; adjustment?: number; absences: AbsenceLike[]; userId: string; year: number; location: string | null | undefined; schedule?: number[] | null }): VacationSummary {
   const from = `${input.year}-01-01`, to = `${input.year}-12-31`;
+  const own = input.absences.filter((a) => a.user_id === input.userId && absenceStatus(a) !== 'declined' && a.starts_on <= to && a.ends_on >= from);
+  const clip = (a: AbsenceLike) => [a.starts_on < from ? from : a.starts_on, a.ends_on > to ? to : a.ends_on] as const;
+  const sick = new Map<string, number>();
+  for (const a of own) { if (a.kind !== 'sick') continue; const [start, end] = clip(a); for (let day = start; day <= end; day = shiftDate(day, 1)) sick.set(day, Math.min(1, (sick.get(day) ?? 0) + (a.half_day ? 0.5 : 1))); }
+  const holidays = holidaysBetween(input.location, from, to);
+  const works = (day: string) => input.schedule && input.schedule.length === 7 ? input.schedule[(weekday(day) + 6) % 7] > 0 : isWorkday(day);
+  const perDay = new Map<string, { approved: number; requested: number }>();
+  for (const a of own) {
+    if (a.kind !== 'vacation') continue;
+    const [start, end] = clip(a);
+    for (let day = start; day <= end; day = shiftDate(day, 1)) {
+      if (!works(day) || holidays.has(day)) continue;
+      const slot = perDay.get(day) ?? { approved: 0, requested: 0 }; perDay.set(day, slot);
+      if (absenceStatus(a) === 'approved') slot.approved += a.half_day ? 0.5 : 1; else slot.requested += a.half_day ? 0.5 : 1;
+    }
+  }
   let taken = 0, requested = 0;
-  for (const a of input.absences) {
-    if (a.user_id !== input.userId || a.kind !== 'vacation' || absenceStatus(a) === 'declined') continue;
-    const days = absenceWorkdays(a, input.location, from, to, input.schedule);
-    if (absenceStatus(a) === 'approved') taken += days; else requested += days;
+  for (const [day, slot] of perDay) {
+    const room = 1 - (sick.get(day) ?? 0);
+    const approved = Math.min(room, slot.approved);
+    taken += approved; requested += Math.min(room - approved, slot.requested);
   }
   const carriedOver = input.carriedOver ?? 0, adjustment = input.adjustment ?? 0;
   const entitlement = input.entitlement ?? null;
@@ -69,7 +87,7 @@ export function absencesIcs(absences: AbsenceLike[], names: (userId: string) => 
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//vave.log//absences//DE', 'CALSCALE:GREGORIAN'];
   for (const a of absences) {
     if (absenceStatus(a) !== 'approved') continue;
-    const uid = `${a.user_id}-${a.starts_on}-${a.ends_on}@vave.log`;
+    const uid = `${a.user_id}-${a.starts_on}-${a.ends_on}-${a.kind}${a.half_day ? `-${a.half_day}` : ''}@vave.log`; // zwei halbe Tage am selben Tag bleiben zwei Termine
     lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTART;VALUE=DATE:${a.starts_on.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${shiftDate(a.ends_on, 1).replace(/-/g, '')}`, `SUMMARY:${escapeIcs(`${names(a.user_id)} – ${labels[a.kind]}${a.half_day ? ' (½)' : ''}`)}`, 'TRANSP:TRANSPARENT', 'END:VEVENT');
   }
   lines.push('END:VCALENDAR');

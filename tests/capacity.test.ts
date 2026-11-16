@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capacityPlan, loadPercent, mondayOf, remainingMinutes, weeksFrom, type PlannableTask } from '../src/shared/capacity';
+import { capacityPlan, isoWeek, loadPercent, mondayOf, remainingMinutes, weeksFrom, type PlannableTask } from '../src/shared/capacity';
 
 const task = (id: string, extra: Partial<PlannableTask> = {}): PlannableTask => ({ id, project_id: 'p', title: id, status: 'todo', assignee_id: 'a', due_date: null, estimated_minutes: null, ...extra });
 const today = '2026-10-14'; // Mittwoch
@@ -41,5 +41,18 @@ describe('capacity plan', () => {
     expect(loadPercent({ available: 0, planned: 10, unestimated: 0, tasks: [] })).toBe(Infinity);
     expect(loadPercent({ available: 0, planned: 0, unestimated: 0, tasks: [] })).toBe(0);
     expect(loadPercent({ available: null, planned: 0, unestimated: 0, tasks: [] })).toBeNull();
+  });
+});
+
+describe('isoWeek', () => {
+  it('numbers weeks by their Thursday, also in years that start late in the week', () => {
+    // 2027 beginnt an einem Freitag: der 4. Januar ist Woche 1 (vorher lieferte die Rechnung 2).
+    expect(isoWeek('2027-01-04')).toBe(1);expect(isoWeek('2027-01-10')).toBe(1);expect(isoWeek('2027-01-11')).toBe(2);
+    expect(isoWeek('2027-01-01')).toBe(53);expect(isoWeek('2026-12-31')).toBe(53);expect(isoWeek('2026-12-28')).toBe(53);
+    expect(isoWeek('2026-11-16')).toBe(47);expect(isoWeek('2026-01-01')).toBe(1);expect(isoWeek('2025-12-29')).toBe(1);
+    expect(isoWeek('2024-12-30')).toBe(1);expect(isoWeek('2021-01-03')).toBe(53);expect(isoWeek('2028-12-31')).toBe(52);
+    // Jede Woche trägt Montag bis Sonntag dieselbe Nummer, und die Nummer steigt um genau eins.
+    let previous = isoWeek('2027-03-01');
+    for (let i = 1; i < 30; i++) { const monday = new Date(Date.UTC(2027, 2, 1 + i * 7, 12)).toISOString().slice(0, 10), sunday = new Date(Date.UTC(2027, 2, 7 + i * 7, 12)).toISOString().slice(0, 10); expect(isoWeek(sunday)).toBe(isoWeek(monday)); expect(isoWeek(monday)).toBe(previous + 1); previous = isoWeek(monday); }
   });
 });

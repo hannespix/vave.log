@@ -23,6 +23,8 @@ function scoreText(queryTokens: string[], haystack: string): number {
   }
   return Math.round(hits / queryTokens.length * 100);
 }
+/** Der Projektcode steht als eigenes Wort im Text – nicht bloß als Buchstabenfolge („A“ steckt in fast jedem Satz). */
+const codeIn = (text: string, code: string) => { if (!code) return false; let at = text.indexOf(code); while (at >= 0) { const before = text[at - 1], after = text[at + code.length]; if (!(before && /[a-z0-9]/.test(before)) && !(after && /[a-z0-9]/.test(after))) return true; at = text.indexOf(code, at + 1); } return false; };
 export function matchProject(query: string, projects: MatchableProject[], tasks: MatchableTask[] = [], limit = 5): ProjectMatch[] {
   const q = fold(query).trim();
   const qt = tokens(query);
@@ -31,7 +33,7 @@ export function matchProject(query: string, projects: MatchableProject[], tasks:
   for (const p of projects) {
     const reasons: string[] = [];
     let score = 0;
-    if (fold(p.code) === q || q.includes(fold(p.code))) { score = 100; reasons.push('code'); }
+    if (fold(p.code) === q || codeIn(q, fold(p.code))) { score = 100; reasons.push('code'); }
     const byName = scoreText(qt, p.name); if (byName > score) { score = byName; reasons.length = 0; reasons.push('name'); } else if (byName >= 60) reasons.push('name');
     const byClient = p.client ? scoreText(qt, p.client) : 0; if (byClient > score) { score = byClient; reasons.length = 0; reasons.push('client'); } else if (byClient >= 60) reasons.push('client');
     const byTags = p.tags?.length ? scoreText(qt, p.tags.join(' ')) : 0; if (byTags > score) { score = byTags; reasons.length = 0; reasons.push('tags'); } else if (byTags >= 60) reasons.push('tags');
