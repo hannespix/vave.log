@@ -12,6 +12,15 @@ describe('shared service boundary',()=>{
  it('rejects forged identity before network',async()=>{const{service,fetch}=backend(null);await expect(async()=>service.saveEntry({workspace_id:id,project_id:id,work_date:'2026-10-13',minutes:30,note:'',billable:true,user_id:id} as never)).rejects.toThrow('Eingaben');expect(fetch).not.toHaveBeenCalled()});
  it('throws on RLS denial and does not expose database details',async()=>{const{service}=backend({code:'42501',message:'private SQL internals'},403);await expect(service.listProjects(id)).rejects.toThrow('Berechtigung');});
  it('rejects truncated results using exact count',async()=>{const{service}=backend([{id}],200,{'content-range':'0-0/1200'});await expect(service.listProjects(id)).rejects.toThrow('1.000')});
+ it('reads tasks and task effort page by page beyond the 1,000-row cap of one request',async()=>{
+  const page=(n:number,from:number)=>Array.from({length:n},(_,i)=>({id:`task-${from+i}`,task_id:`task-${from+i}`,minutes:1}));
+  const fetch=vi.fn(async(input:RequestInfo|URL)=>{const offset=Number(new URL(String(input)).searchParams.get('offset')??0);return new Response(JSON.stringify(offset===0?page(1000,0):offset===1000?page(1000,1000):page(3,2000)),{status:200,headers:{'content-type':'application/json'}});});
+  const service=createService(createClient('https://test.supabase.co','sb_publishable_test',{auth:{persistSession:false,autoRefreshToken:false},global:{fetch}}));
+  const tasks=await service.listTasks(id);expect(tasks).toHaveLength(2003);expect(new Set(tasks.map(t=>t.id)).size).toBe(2003);
+  const urls=fetch.mock.calls.map(c=>new URL(String(c[0])));expect(urls.map(u=>u.searchParams.get('offset'))).toEqual(['0','1000','2000']);
+  expect(urls.every(u=>u.searchParams.get('limit')==='1000'&&u.searchParams.get('order')==='created_at.asc,id.asc')).toBe(true);
+  fetch.mockClear();expect(await service.listTaskEffort(id)).toHaveLength(2003);expect(new URL(String(fetch.mock.calls[0]![0])).searchParams.get('order')).toBe('task_id.asc');
+ });
  it('sends explicit date filters and authenticated-only write fields',async()=>{const{service,fetch}=backend([],200,{'content-range':'*/0'});await service.listEntries(id,'2026-10-01','2026-10-13');const url=String(fetch.mock.calls[0]?.[0]);expect(url).toContain('work_date=gte.2026-10-01');expect(url).toContain('work_date=lte.2026-10-13');expect(url).toContain('workspace_id=eq.');});
  it('reports inaccessible deletes as errors rather than success',async()=>{const{service}=backend({code:'PGRST116'},406);await expect(service.deleteEntry(id)).rejects.toThrow('nicht gefunden')});
 });

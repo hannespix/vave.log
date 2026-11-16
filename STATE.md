@@ -448,3 +448,31 @@ Feldfall aus den Auth-Protokollen: zwei Anforderungen kurz nacheinander, der Lin
 - **Abmelden beendete alle Geräte.** `signOut()` ohne Angabe beendet bei Supabase jede Anmeldung der Person; ein anderes Gerät hielt danach eine Anmeldung, die es serverseitig nicht mehr gab. Abmelden gilt jetzt für das Gerät, auf dem man klickt.
 
 Dazu: Scheitert der Link (abgelaufen, schon verwendet, neuere E-Mail), steht auf der Anmeldeseite ein Hinweis mit „Neuen Link anfordern“ statt des Hinweises zur E-Mail-Bestätigung; scheitert das Speichern mangels gültiger Anmeldung, meldet die App lokal ab und bietet denselben Schritt an, statt die Rohmeldung zu zeigen. Die Bestätigung nach dem Anfordern sagt, dass nur der Link der neuesten E-Mail gilt. Sechs neue Browser-Tests decken Erfolg (beide Linkarten), Abbruch, fremden/abgelaufenen Link, bestehende Anmeldung und fehlende Sitzung ab.
+
+## Audit 16.11.2026, Teil 1: Rechte, Abwesenheiten, Rechenfehler (16.11.2026)
+
+Vier Prüfläufe (Datenbank und Rechte, Rechenlogik, Oberfläche, Finanzen und Server) plus eine Sichtprüfung im Browser ergaben rund 60 Befunde. Teil 1 behebt die Datenbankseite und die Rechenfehler; Oberfläche und Finanzen folgen.
+
+**Datenbank** (Migration `20261116110000_audit_rechte_abwesenheiten.sql`)
+
+- **Rechte nie nach oben umgehen.** Mit dem Teamrecht ließen sich die Rechte einer Person mit *mehr* Rechten ändern (also herabstufen) und Einladungen mit mehr Rechten überschreiben oder widerrufen. Geprüft wurde nur der Zielstand, jetzt auch der Ausgangsstand.
+- **Wiederkehrende Aufgaben** lassen sich auch von der zugewiesenen Person ohne Aufgabenrecht erledigen; die Folgeaufgabe legt die Regel an (vorher scheiterte der Abschluss an der Einfügeregel).
+- **Je Person und Tag eine Abwesenheit.** Überschneidungen sind gesperrt. Ausnahmen: abgelehnte Anträge, zwei halbe Tage (vormittags und nachmittags) und eine Krankmeldung im Urlaub – die Krankheitstage zählen dann nicht als Urlaub.
+- Urlaubskonten anderer sieht nur, wer das Recht „Abwesenheiten im Team“ hat; das Protokoll liest, wer Team oder Workspace verwaltet; offene Einladungen sieht, wer das Team sieht.
+- „Angebot → Projekt“ braucht zusätzlich das Projektrecht. Hilfsfunktionen der Angebote sind nicht mehr direkt aufrufbar. Vorlage „individuell“ und Matrix sind per Regel aneinander gebunden.
+
+**Rechenlogik**
+
+- Aufgaben und ihr Aufwand werden seitenweise geladen. Vorher brach die App ab 1.001 Aufgaben mit „Mehr als 1.000 Einträge“ ab (ein größeres Limit hilft nicht, der Abruf liefert höchstens 1.000 Zeilen).
+- Kapazitätsplanung: Der Horizont reicht 365 Tage statt „gleiches Datum im nächsten Jahr“ – über einen Schalttag hinweg wurde der Zeitraum abgelehnt und alle Abwesenheiten fehlten still. Ladefehler stehen jetzt als Hinweis über der Planung; ohne Finanzrecht fehlen nur die Projektpläne, nicht mehr alles.
+- Kalenderwochen stimmen auch in Jahren, die spät in der Woche beginnen (2027: der 4. Januar war „KW 2“).
+- Urlaubskonto zählt je Tag statt je Eintrag: kein Doppelzählen bei alten Überschneidungen, Krankheitstage im Urlaub zählen nicht als Urlaub.
+- Zuweisungsempfehlung: keine Passung „100“ mehr ohne Tempo, Termintreue oder Bewertung; doppelt vergebene Tags zählen einmal.
+- KI-Vorschläge: Ein Projektcode gilt nur als Treffer, wenn er als eigenes Wort im Text steht; Belege verlinken nur noch `http(s)`-Adressen.
+- Prognose rundet auf ganze Minuten; Abwesenheiten dauern höchstens ein Jahr.
+
+**Oberfläche (die drei schwersten Befunde)**
+
+- Urlaubskonto: Die Felder Übertrag und Korrektur zeigten nach dem Laden 0 und boten „Speichern“ an – ein Klick überschrieb den Übertrag. Die Felder beginnen jetzt mit dem gespeicherten Stand neu, auch beim Jahreswechsel; dasselbe für die Wochenstunden in der Team-Liste.
+- Geänderte Workspace-Einstellungen (Standort, Freigabe) kommen sofort in der Oberfläche an, nicht erst nach dem Neuladen.
+- Zugewiesene ohne Aufgabenrecht können ihre Aufgabe speichern: Die App ändert zuerst und legt nur an, wenn es die Aufgabe noch nicht gibt.

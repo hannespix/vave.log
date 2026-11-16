@@ -127,6 +127,15 @@ describe('finance offers',()=>{
   expect(accepted.status).toBe('accepted');expect(accepted.decided_at).toBeTruthy();
   await expect(attempt('select public.finance_decide_offer($1,$2,false)',[w,o.id])).rejects.toThrow(/FINANCE_CONFLICT/);
   expect((await one<{v:any}>('select public.finance_send_offer($1,$2) v',[w,(await saveOffer()).id])).v.number).toMatch(/-0002$/)});
+ it('needs the project right to turn an offer into a project: the finance template alone is not enough',async()=>{
+  const o=await saveOffer();await db.query('select public.finance_send_offer($1,$2)',[w,o.id]);await db.query('select public.finance_decide_offer($1,$2,true)',[w,o.id]);
+  await login(owner);await db.query("select public.set_member_rights($1,$2,'finanzen')",[w,manager]);
+  await login(manager);
+  await expect(attempt("select public.finance_offer_project($1,$2,'WEB-09')",[w,o.id])).rejects.toMatchObject({code:'42501'});
+  expect(await rows("select id from public.projects where workspace_id=$1 and code='WEB-09'",[w])).toEqual([]);
+  await login(owner);
+  expect((await one<{v:any}>("select public.finance_offer_project($1,$2,'WEB-09') v",[w,o.id])).v.project_id).toBeTruthy();
+ });
  it('turns an accepted offer into exactly one fixed-fee project',async()=>{
   const o=await saveOffer();
   await db.query('select public.finance_send_offer($1,$2)',[w,o.id]);

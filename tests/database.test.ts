@@ -197,6 +197,81 @@ describe('database rights per account', () => {
     await login(owner); await db.query("select public.set_member_role($1,$2,'manager')",[workspace,manager]);
     expect(await first('select rights_template,permissions from public.memberships where workspace_id=$1 and user_id=$2',[workspace,manager])).toEqual({rights_template:null,permissions:null});
   });
+  // Audit 16.11.2026: Wer weniger darf, verändert niemanden, der mehr darf – weder Rechte noch Einladungen.
+  it('never lets someone change rights, or overwrite and revoke invitations, that exceed their own', async () => {
+    const wide = matrix({ projects:'edit', time_team:'edit', absences_team:'edit', planning:'view', strengths:'edit', team:'edit', settings:'edit' });
+    await login(owner);
+    await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,manager,wide]);
+    await db.query("select public.set_member_rights($1,$2,'finanzen')",[workspace,member]);
+    await db.query("select public.invite_member($1,'chef@example.org','manager','admin')",[workspace]);
+    await login(manager);
+    await expect(attempt("select public.set_member_rights($1,$2,'lesen')",[workspace,member])).rejects.toThrow(/mehr Rechte als du/);
+    await expect(attempt("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,member,matrix()])).rejects.toThrow(/mehr Rechte als du/);
+    await expect(attempt("select public.invite_member($1,'chef@example.org','member','mitarbeit')",[workspace])).rejects.toThrow(/mehr Rechte, als du selbst hast/);
+    const inv=await first<{id:string}>("select id from public.invitations where workspace_id=$1 and email='chef@example.org'",[workspace]); // Team sehen genügt jetzt zum Lesen
+    expect(inv.id).toBeTruthy();
+    await expect(attempt('select public.revoke_invitation($1)',[inv.id])).rejects.toThrow(/mehr Rechte, als du selbst hast/);
+    expect((await first<{rights_template:string}>('select rights_template from public.memberships where workspace_id=$1 and user_id=$2',[workspace,member])).rights_template).toBe('finanzen');
+    // Was die eigenen Rechte hergeben, bleibt möglich.
+    await db.query("select public.invite_member($1,'kollegin@example.org','member','mitarbeit')",[workspace]);
+    await db.query("select public.invite_member($1,'kollegin@example.org','member')",[workspace]); // überschreiben einer Einladung im eigenen Rahmen
+    await db.query('select public.revoke_invitation((select id from public.invitations where workspace_id=$1 and email=$2))',[workspace,'kollegin@example.org']);
+    await login(owner);
+    await db.query("select public.set_member_rights($1,$2,'lesen')",[workspace,member]);
+    await db.query('select public.revoke_invitation($1)',[inv.id]);
+    await login(member); // Lesezugriff: Team sichtbar, Protokoll nicht
+    expect(await rows('select id from public.audit_log where workspace_id=$1',[workspace])).toEqual([]);
+    await login(owner);
+    expect((await rows('select id from public.audit_log where workspace_id=$1',[workspace])).length).toBeGreaterThan(0);
+    await db.exec('reset role');
+    await expect(attempt("update public.memberships set rights_template='individuell',permissions=null where workspace_id=$1 and user_id=$2",[workspace,member])).rejects.toThrow(/memberships_rights_shape/);
+    await expect(attempt("update public.memberships set rights_template='lesen',permissions=$3 where workspace_id=$1 and user_id=$2",[workspace,member,matrix()])).rejects.toThrow(/memberships_rights_shape/);
+    await login(member);
+  });
+  it('lets an assignee without task rights complete a repeating task; the follow-up is created for them', async () => {
+    await login(owner);
+    await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,member,matrix({ tasks:'view' })]);
+    const id=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,due_date,repeat,assignee_id) values($1,$2,'Wochenbericht Audit','2026-10-16','weekly',$3) returning id",[workspace,project,member])).id;
+    await login(member);
+    await expect(attempt("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Nicht erlaubt')",[workspace,project])).rejects.toThrow();
+    expect(await rows("update public.tasks set status='done' where id=$1 returning status",[id])).toEqual([{status:'done'}]);
+    const next=await first<{due:string;status:string;repeat:string;assignee_id:string}>("select due_date::text as due,status,repeat,assignee_id from public.tasks where workspace_id=$1 and title='Wochenbericht Audit' and id<>$2",[workspace,id]);
+    expect(next).toMatchObject({due:'2026-10-23',status:'todo',repeat:'weekly',assignee_id:member});
+  });
+  it('shows vacation accounts to their owner and to people with the team-absence right only', async () => {
+    await login(owner);
+    await db.query("insert into public.vacation_balances(workspace_id,user_id,year,carried_over) values($1,$2,2027,2),($1,$3,2027,4)",[workspace,member,manager]);
+    await login(member);
+    expect(await rows('select user_id from public.vacation_balances where workspace_id=$1',[workspace])).toEqual([{user_id:member}]);
+    await login(manager);
+    expect(await rows('select user_id from public.vacation_balances where workspace_id=$1 order by carried_over',[workspace])).toHaveLength(2);
+    await login(outsider);
+    expect(await rows('select user_id from public.vacation_balances where workspace_id=$1',[workspace])).toEqual([]);
+    await login(member);
+  });
+  it('keeps one absence per person and day: no overlaps, but sick leave inside a vacation, two half days and declined requests', async () => {
+    await login(member);
+    const first1=await first<{id:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-07','2027-06-11','vacation') returning id",[workspace]);
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-10','2027-06-14','vacation')",[workspace])).rejects.toThrow(/bereits eine Abwesenheit/);
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-01','2027-06-07','other')",[workspace])).rejects.toThrow(/bereits eine Abwesenheit/);
+    // Krank im Urlaub ist erlaubt, zwei Krankmeldungen am selben Tag nicht.
+    await db.query("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-09','2027-06-10','sick')",[workspace]);
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-10','2027-06-10','sick')",[workspace])).rejects.toThrow(/bereits eine Abwesenheit/);
+    // Vormittag und Nachmittag ergänzen sich, zweimal Vormittag nicht.
+    await db.query("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-07-01','2027-07-01','vacation','am')",[workspace]);
+    await db.query("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-07-01','2027-07-01','other','pm')",[workspace]);
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-07-01','2027-07-01','vacation','am')",[workspace])).rejects.toThrow(/bereits eine Abwesenheit/);
+    // Verlängern in eine andere Abwesenheit hinein scheitert ebenfalls.
+    const later=await first<{id:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-21','2027-06-22','vacation') returning id",[workspace]);
+    await expect(attempt("update public.absences set starts_on='2027-06-11' where id=$1",[later.id])).rejects.toThrow(/bereits eine Abwesenheit/);
+    // Abgelehnte Anträge sperren den Zeitraum nicht; andere Personen sind unabhängig.
+    await login(manager);
+    await db.query("update public.absences set status='declined' where id=$1",[first1.id]);
+    await db.query("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-07','2027-06-11','vacation')",[workspace]); // eigener Urlaub der Leitung
+    await login(member);
+    await db.query("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-07','2027-06-08','vacation')",[workspace]);
+    await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-06-08','2027-06-08','vacation')",[workspace])).rejects.toThrow(/bereits eine Abwesenheit/);
+  });
   it('carries the template through the invitation and keeps legacy roles unchanged', async () => {
     await login(owner); await db.query("select public.invite_member($1,'outsider@example.org','member','lesen')",[workspace]);
     await login(outsider); await db.exec('select public.accept_invitations()');

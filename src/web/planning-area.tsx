@@ -4,10 +4,11 @@ import type { Absence, Membership, Project, Task, Workspace } from '../shared/ty
 import type { Service } from '../shared/service';
 import type { FinanceService } from '../shared/finance-service';
 import { capacityOutlook, type Outlook, type OutlookScenario, type ScenarioProject } from '../shared/outlook';
-import { capacityPlan, loadPercent, type CapacityCell, type CapacityPlan } from '../shared/capacity';
+import { capacityPlan, isoWeek, loadPercent, type CapacityCell, type CapacityPlan } from '../shared/capacity';
 import { Empty, Notice } from './components';
 import { useI18n } from './i18n';
-import { initials, minutesLabel, shortDate } from './helpers';
+import { errorMessage, initials, minutesLabel, shortDate } from './helpers';
+import { shiftDate } from '../shared/holidays';
 import { SelectMenu } from './select-menu';
 import './planning.css';
 
@@ -33,12 +34,14 @@ function ShortTerm({ members, projects, tasks, workspace, service, run, busy, to
   const [effort, setEffort] = useState<Map<string, number> | null>(null);
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [selected, setSelected] = useState<{ user: string; week: number } | null>(null);
-  const horizonTo = `${Number(today.slice(0, 4)) + 1}${today.slice(4)}`;
+  const [loadError, setLoadError] = useState('');
+  // 365 Tage voraus, nicht „gleiches Datum im nächsten Jahr“: über einen Schalttag hinweg sind das 366 Tage, die Abfrage
+  // lehnt den Zeitraum dann ab – und weil der Fehler verschluckt wurde, fehlten still alle Abwesenheiten.
+  const horizonTo = shiftDate(today, 365);
   useEffect(() => {
     let alive = true;
-    Promise.resolve().then(() => Promise.all([service.listTaskEffort(workspace.id), service.listAbsences(workspace.id, today, horizonTo < `${today.slice(0, 4)}-12-31` ? horizonTo : horizonTo)]))
-      .then(([rows, list]) => { if (alive) { setEffort(new Map(rows.map((r) => [r.task_id, r.minutes]))); setAbsences(list); } })
-      .catch(() => { if (alive) { setEffort(new Map()); setAbsences([]); } });
+    Promise.resolve().then(() => Promise.allSettled([service.listTaskEffort(workspace.id), service.listAbsences(workspace.id, today, horizonTo)]))
+      .then(([rows, list]) => { if (!alive) return; setEffort(new Map(rows.status === 'fulfilled' ? rows.value.map((r) => [r.task_id, r.minutes]) : [])); setAbsences(list.status === 'fulfilled' ? list.value : []); const failed = rows.status === 'rejected' ? rows.reason : list.status === 'rejected' ? list.reason : null; setLoadError(failed ? errorMessage(failed) : ''); });
     return () => { alive = false; };
   }, [service, workspace.id, today, horizonTo, reloadKey]);
   const team = members.filter((m) => m.role !== 'disabled');
@@ -51,6 +54,7 @@ function ShortTerm({ members, projects, tasks, workspace, service, run, busy, to
   const totals = plan.weeks.map((_, i) => plan.rows.reduce((acc, r) => ({ available: acc.available + (r.cells[i].available ?? 0), planned: acc.planned + r.cells[i].planned }), { available: 0, planned: 0 }));
   if (!team.length) return <section className="panel"><Empty title={t('Niemand gefunden.')} text={t('Lade zuerst Personen in den Workspace ein und pflege ihre Kapazität.')}/></section>;
   return <>
+    {loadError && <Notice>{t('Die Planung ist unvollständig geladen: {reason}', { reason: loadError })}</Notice>}
     <div className="list-toolbar planning-toolbar"><div className="segmented" aria-label={t('Zeithorizont')}>{WEEK_OPTIONS.map((n) => <button key={n} className={weeks === n ? 'selected' : ''} aria-pressed={weeks === n} onClick={() => { setWeeks(n); setSelected((s) => s && s.week < n ? s : null); }}>{t('{count} Wochen', { count: n })}</button>)}</div><span className="planning-legend" aria-hidden="true"><span className="load-swatch load-free"/>{t('unter 80 %')}<span className="load-swatch load-full"/>{t('80–100 %')}<span className="load-swatch load-over"/>{t('über 100 %')}<span className="load-swatch load-off"/>{t('abwesend')}</span></div>
     <Notice kind="info">{t('Geplant = Restaufwand der zugewiesenen offenen Aufgaben (Schätzung minus gebuchte Zeit), gleichmäßig über die Werktage bis zum Termin verteilt. Ohne Termin zählt alles in die laufende Woche. Verfügbar = Arbeitszeitmodell minus Feiertage und genehmigte Abwesenheiten.')}</Notice>
     <section className="panel table-panel"><div className="table-scroll" tabIndex={0} role="region" aria-label={t('Kapazität je Person und Woche')}><table className="planning-grid" style={{ '--weeks': plan.weeks.length } as CSSProperties}><thead><tr><th scope="col">{t('Person')}</th>{plan.weeks.map((w, i) => <th scope="col" key={w.from} className={today >= w.from && today <= w.to ? 'week-current' : ''}><span>{t('KW {week}', { week: isoWeek(w.from) })}</span><strong>{weekLabel(w)}</strong>{totals[i].available > 0 && <small>{Math.round(totals[i].planned / totals[i].available * 100)} %</small>}</th>)}</tr></thead><tbody>
@@ -71,12 +75,13 @@ function LongTerm({ members, projects, workspace, service, finance, today, reloa
   const [loaded, setLoaded] = useState<{ plans: { project_id: string; lines: { user_id: string | null; planned_minutes: number }[] }[]; effort: Map<string, number>; absences: Absence[] } | null>(null);
   const [scenario, setScenario] = useState<OutlookScenario>({ projects: [], pausedUsers: [], extraWeeklyMinutes: 0 });
   const [draft, setDraft] = useState({ name: '', hours: '', from: today, to: today.slice(0, 4) + '-12-31', user_id: '' });
-  const horizonTo = `${Number(today.slice(0, 4)) + 1}${today.slice(4)}`;
+  const [loadError, setLoadError] = useState('');
+  const horizonTo = shiftDate(today, 365);
   useEffect(() => {
     let alive = true;
-    Promise.resolve().then(() => Promise.all([finance.listProjectPlans(workspace.id), service.listProjectEffort(workspace.id), service.listAbsences(workspace.id, today, horizonTo)]))
-      .then(([plans, effort, absences]) => { if (alive) setLoaded({ plans: plans.map((p) => ({ project_id: p.project_id, lines: p.lines })), effort: new Map(effort.map((e) => [e.project_id, e.minutes])), absences }); })
-      .catch(() => { if (alive) setLoaded({ plans: [], effort: new Map(), absences: [] }); });
+    // Einzeln auswerten: Ohne Finanzrecht fehlen nur die Projektpläne – Aufwand und Abwesenheiten zählen trotzdem.
+    Promise.resolve().then(() => Promise.allSettled([finance.listProjectPlans(workspace.id), service.listProjectEffort(workspace.id), service.listAbsences(workspace.id, today, horizonTo)]))
+      .then(([plans, effort, absences]) => { if (!alive) return; setLoaded({ plans: plans.status === 'fulfilled' ? plans.value.map((p) => ({ project_id: p.project_id, lines: p.lines })) : [], effort: new Map(effort.status === 'fulfilled' ? effort.value.map((e) => [e.project_id, e.minutes]) : []), absences: absences.status === 'fulfilled' ? absences.value : [] }); const failed = effort.status === 'rejected' ? effort.reason : absences.status === 'rejected' ? absences.reason : null; setLoadError(failed ? errorMessage(failed) : ''); });
     return () => { alive = false; };
   }, [finance, service, workspace.id, today, horizonTo, reloadKey]);
   const team = members.filter((m) => m.role !== 'disabled');
@@ -89,6 +94,7 @@ function LongTerm({ members, projects, workspace, service, finance, today, reloa
   const addScenario = () => { const minutes = Math.round((Number(draft.hours.replace(',', '.')) || 0) * 60); if (!draft.name.trim() || minutes <= 0 || draft.from > draft.to) return; const item: ScenarioProject = { id: `s-${Date.now()}`, name: draft.name.trim(), minutes, from: draft.from, to: draft.to, user_id: draft.user_id || null }; setScenario((s) => ({ ...s, projects: [...s.projects, item] })); setDraft((d) => ({ ...d, name: '', hours: '' })); };
   const active = scenario.projects.length > 0 || scenario.pausedUsers.length > 0 || scenario.extraWeeklyMinutes > 0;
   return <>
+    {loadError && <Notice>{t('Die Planung ist unvollständig geladen: {reason}', { reason: loadError })}</Notice>}
     <div className="list-toolbar planning-toolbar"><div className="segmented" aria-label={t('Zeithorizont')}>{MONTH_OPTIONS.map((n) => <button key={n} className={months === n ? 'selected' : ''} aria-pressed={months === n} onClick={() => setMonths(n)}>{t('{count} Monate', { count: n })}</button>)}</div>{active && <span className="badge badge-submitted">{t('Szenario aktiv')}</span>}</div>
     <Notice kind="info">{t('Bedarf = geplanter Aufwand je Projekt (Finanzplanung je Person, sonst Zeitbudget) minus gebuchte Zeit, gleichmäßig über die Werktage bis zum Projekttermin verteilt (ohne Termin: drei Monate). Angebot = Arbeitszeitmodelle minus Feiertage und genehmigte Abwesenheiten. Szenarien werden nicht gespeichert.')}</Notice>
     <section className="panel"><div className="panel-heading"><div><p className="eyebrow">{t('BEDARF GEGEN ANGEBOT')}</p><h2>{t('Reicht das Team für die Pipeline?')}</h2></div></div>
@@ -125,11 +131,4 @@ function TaskRow({ task, project, share, booked, members, service, run, busy, lo
   const save = () => { const minutes = hours.trim() === '' ? null : Math.round(Number(hours.replace(',', '.')) * 60); if (minutes !== null && (!Number.isFinite(minutes) || minutes < 1)) return; void run(() => service.saveTask({ id: task.id, workspace_id: task.workspace_id, project_id: task.project_id, title: task.title, status: task.status, assignee_id: assignee || null, due_date: due || null, estimated_minutes: minutes, is_milestone: task.is_milestone ?? false, repeat: task.repeat }), t('Aufgabe umgeplant.')); };
   return <div className="planning-task"><div className="planning-task-main"><button className="project-text-link" onClick={() => onOpenProject(task.project_id)} aria-label={t('Projekt {name} öffnen', { name: project?.name ?? '' })}><span className="color-dot" style={{ backgroundColor: project?.color }}/>{project?.code ?? ''}<ArrowUpRight size={11}/></button><button className="task-title planning-task-title" onClick={() => onEdit(task)}>{task.title}</button><small className="muted">{t('{share} in dieser Woche', { share: minutesLabel(share) })}{task.estimated_minutes ? ` · ${t('{booked} von {estimate} gebucht', { booked: minutesLabel(booked), estimate: minutesLabel(task.estimated_minutes) })}` : ` · ${t('ohne Schätzung')}`}{task.status === 'doing' && ` · ${t('In Arbeit')}`}</small></div>
     <div className="planning-task-controls"><SelectMenu compact label={t('Zuständig für {name}', { name: task.title })} value={assignee} onChange={setAssignee} options={[{ value: '', label: t('Nicht zugewiesen') }, ...members.map((m) => ({ value: m.user_id, label: m.display_name || m.email }))]}/><label className="planning-inline"><span className="sr-only">{t('Termin für {name}', { name: task.title })}</span><input type="date" min="2000-01-01" max="2100-12-31" value={due} onChange={(e) => setDue(e.target.value)} lang={locale}/></label><label className="planning-inline planning-hours"><span className="sr-only">{t('Schätzung für {name} in Stunden', { name: task.title })}</span><input type="number" min="0.25" step="0.25" inputMode="decimal" placeholder="h" value={hours} onChange={(e) => setHours(e.target.value)}/></label>{changed && <button type="button" className="icon-button" aria-label={t('Umplanung speichern')} title={t('Umplanung speichern')} disabled={busy} onClick={save}><Check size={15}/></button>}</div></div>;
-}
-/** ISO-Kalenderwoche eines Datums. */
-export function isoWeek(day: string): number {
-  const d = new Date(`${day}T12:00:00Z`); const dow = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dow);
-  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
-  return Math.ceil(((d.getTime() - yearStart) / 86400000 + 1) / 7);
 }

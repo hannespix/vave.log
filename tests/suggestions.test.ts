@@ -32,3 +32,13 @@ describe('project matching for suggestions', () => {
     expect(overlapsBooked('2026-10-14', 120, [])).toEqual({ booked: 0, total: 120, overDay: false });
   });
 });
+
+describe('Audit 16.11.2026: project codes match as words', () => {
+  const list = [{ id: 'a', code: 'A', name: 'Zentrale', client: '', status: 'active' as const }, { id: 'b', code: 'VAV-002', name: 'Museum', client: '', status: 'active' as const }];
+  it('does not treat a code as a hit just because its letters occur in the text', () => {
+    expect(matchProject('Abendtermin mit Kanzlei', list).filter((m) => m.reasons.includes('code'))).toEqual([]);
+    expect(matchProject('Zeit auf A buchen', list)[0]).toMatchObject({ project_id: 'a', score: 100, reasons: ['code'] });
+    expect(matchProject('Renderings VAV-002, zweite Runde', list)[0]).toMatchObject({ project_id: 'b', score: 100 });
+    expect(matchProject('XVAV-0029', list).filter((m) => m.reasons.includes('code'))).toEqual([]);
+  });
+});
