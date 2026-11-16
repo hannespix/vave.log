@@ -20,3 +20,17 @@ test('the Pages bundle boots under its base path without touching the domain roo
   expect(leaks).toEqual([]);
   expect(failures).toEqual([]);
 });
+
+// GitHub Pages liefert JavaScript als application/javascript aus. Der Service Worker prüft die Typen
+// seiner Offline-Dateien; lehnt er diesen Typ ab, scheitert seine Installation still – ohne Worker
+// gibt es weder Offline-Seite noch Updates, und ältere Browser bieten die App nicht zur Installation an.
+test('the service worker installs and takes control under the Pages base path', async ({page}) => {
+  await page.route('https://test.supabase.co/**', route => route.fulfill({json: {}}));
+  await page.goto('/vave.log/');
+  await expect(page.getByLabel('Email address', {exact: true})).toBeVisible();
+  await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration('/vave.log/'))?.active?.state), {timeout: 20000}).toBe('activated');
+  expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration('/vave.log/'))?.scope)).toMatch(/\/vave\.log\/$/);
+  const manifest = await (await page.request.get('/vave.log/manifest.webmanifest')).json();
+  expect(manifest).toMatchObject({start_url: '/vave.log/', scope: '/vave.log/', display: 'standalone'});
+  for (const icon of manifest.icons) expect((await page.request.get(icon.src)).ok(), icon.src).toBe(true);
+});

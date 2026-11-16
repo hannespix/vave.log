@@ -428,3 +428,13 @@ Die Demo stammt in ihren Daten vom 14.10.: Seitdem kamen Arbeitszeitmodell, Urla
 - **Fehler behoben, der dabei auffiel:** Ein Workspace ließ sich nicht endgültig löschen, sobald er Abwesenheiten, Urlaubskonten, Hinweise, Zeitvorschläge, Teilzahlungen oder Angebote enthielt (Fremdschlüsselfehler) – diese Tabellen fehlten in der Löschreihenfolge.
 - Kleinigkeiten aus der Sichtprüfung: Jahreszahlen im Urlaubskonto ohne Tausenderpunkt („2026“ statt „2.026“), Filter der Auswertung am Handy ohne seitliches Überlaufen.
 - Tests: `tests/demo-refresh-database.test.ts` (neun Fälle: Modelle, Abwesenheiten, Aufgaben, gealterte Demo, Wiederholbarkeit, gepflegte Werte bleiben, Auffrischung beim Einspielen, Abweisung Fremder, Löschen), Browser-Test für den Knopf im Banner.
+
+## Installierbare App auf GitHub Pages: Service Worker installiert wieder (16.11.2026)
+
+Auf `hannespix.github.io/vave.log` ist der Service Worker nie aktiv geworden. Er prüft beim Installieren den Dateityp seiner drei Offline-Dateien und verlangte für `offline.js` genau `text/javascript`; GitHub Pages liefert JavaScript als `application/javascript`. Die Installation brach deshalb still ab – ohne Worker keine Offline-Seite, kein Update-Hinweis, kein schneller Zweitstart aus dem Cache, und Browser, die für „App installieren“ einen Worker voraussetzen, bieten nichts an. Manifest und Icons waren in Ordnung (Chromium meldet keine Installationshindernisse).
+
+- `public/sw.js` behandelt `application/javascript` und `text/javascript` als denselben Typ; eine HTML-Antwort (Login-Seite) bleibt abgewiesen.
+- Der lokale Pages-Server (`scripts/serve-pages.mjs`) liefert JavaScript jetzt wie GitHub Pages aus, damit die Browser-Tests diesen Unterschied sehen. Neuer Test im Projekt „pages“: Der Worker wird unter `/vave.log/` aktiv, Manifest und Icons liegen unter dem Basispfad. Ohne die Korrektur schlägt er fehl.
+- Wo die Installation zu finden ist: Chrome und Edge am Rechner zeigen kein Fenster, sondern ein kleines Symbol rechts in der Adressleiste (alternativ Menü ⋮ → „Streamen, speichern und teilen“ → „Seite als App installieren“). In der App selbst steht „App installieren“ auf der Anmeldeseite und unter Einstellungen. Auf verwalteten Firmenrechnern kann eine Richtlinie die Installation sperren.
+
+Live-Stand 16.11.2026: Migration `20261116100000_demo_aktueller_stand.sql` ist eingespielt. In der Demo haben alle 112 Beispielpersonen Arbeitszeitmodell, Wochenstunden und Urlaubsanspruch (79 × 40 h, je 11 × 32 h, 30 h und 24 h; 9 in Hessen), dazu 66 Abwesenheiten in allen Zuständen, 37 Urlaubskonten, Kategorien an allen 102 Aufgaben und Zeiten bis zum letzten Arbeitstag.

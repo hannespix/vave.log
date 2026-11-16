@@ -9,6 +9,9 @@ const OFFLINE_ASSETS = new Map([
 // are served cache-first (start without network round-trips) and precached on install. The build
 // script fills this list; the raw file keeps it empty. Lazy chunks not listed here are cached on first use.
 const ASSET_PRECACHE = [/*__VAVE_ASSETS__*/];
+// Hosts name JavaScript differently: GitHub Pages sends application/javascript, the Node server
+// text/javascript. Both are the same type; anything else (an HTML login page) stays rejected.
+const mimeOf = response => { const mime = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase(); return mime === 'application/javascript' || mime === 'application/x-javascript' ? 'text/javascript' : mime; };
 const isBuildAsset = pathname => pathname.includes('/assets/') && /\.(?:js|css|woff2?)$/.test(pathname);
 // A build file is public and static; a login redirect or an HTML error page is not.
 const isStaticResponse = response => response.ok && !response.redirected && (!response.url || new URL(response.url).origin === self.location.origin) && !/^text\/html/.test(response.headers.get('content-type') || '');
@@ -18,7 +21,7 @@ self.addEventListener('install', event => {
     const responses = await Promise.all([...OFFLINE_ASSETS].map(async ([path, mime]) => {
       const request = new Request(new URL(path, self.location.origin), { cache: 'reload', credentials: 'same-origin' });
       const response = await fetch(request);
-      if (!response.ok || response.redirected || (response.url && new URL(response.url).origin !== self.location.origin) || response.headers.get('content-type')?.split(';')[0].trim() !== mime) throw new Error('Offline asset unavailable');
+      if (!response.ok || response.redirected || (response.url && new URL(response.url).origin !== self.location.origin) || mimeOf(response) !== mime) throw new Error('Offline asset unavailable');
       return [path, response];
     }));
     const cache = await caches.open(CACHE_NAME);

@@ -10,7 +10,8 @@ const root = normalize(process.argv[2] || 'dist/pages');
 const base = process.env.PAGES_BASE || '/vave.log/';
 const port = Number(process.env.PAGES_PORT || 4174);
 if (!base.startsWith('/') || !base.endsWith('/')) throw Error('PAGES_BASE must start and end with "/".');
-const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.txt': 'text/plain', '.woff2': 'font/woff2', '.map': 'application/json'};
+// Wie GitHub Pages: JavaScript kommt als application/javascript – der Service Worker muss damit installieren.
+const types = {'.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.txt': 'text/plain', '.woff2': 'font/woff2', '.map': 'application/json'};
 
 createServer(async (req, res) => {
   const path = new URL(req.url, 'http://localhost').pathname;
