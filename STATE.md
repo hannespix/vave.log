@@ -1,6 +1,6 @@
 # VAVE.LOG — aktueller Arbeitsstand
 
-14.10.2026. Repository: hannespix/vave.log. Private Site: https://vave-log.pixer.chatgpt.site.
+Repository: hannespix/vave.log. App: https://hannespix.github.io/vave.log/ (GitHub Pages, automatisches Deploy nach grünem CI auf `main`).
 
 ## Anwendung
 
