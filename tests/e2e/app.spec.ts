@@ -845,8 +845,8 @@ test('situation board flags burning projects with reasons and links into tasks a
  await expect(board).toContainText('1 burning');await expect(board).toContainText('1 running');
  const card=board.locator('.health-card').filter({hasText:'Brand Experience'});await expect(card).toHaveClass(/health-red/);
  await expect(card).toContainText('Project deadline Thu, Oct 1 missed');
- await expect(card).toContainText('1 milestones overdue, e.g. “Launch”');
- await expect(card).toContainText('1 tasks overdue, e.g. “Brand sketch”');
+ await expect(card).toContainText('1 milestone overdue: “Launch”');
+ await expect(card).toContainText('1 task overdue: “Brand sketch”');
  await expect(card).toContainText('Time budget 117 % used');
  await expect(card).toContainText('No booked time since Sun, Sep 20');
  await expect(board.locator('.health-card').filter({hasText:'Museum Experience'})).toHaveCount(0);

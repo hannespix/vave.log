@@ -135,7 +135,9 @@ export function errorMessage(error: unknown, locale: Locale = getLocale()): stri
   const message = typeof value.message === 'string' ? value.message : '';
   const code = typeof value.code === 'string' ? value.code : '';
   const byCode: Record<string, string> = { '42501': 'Dafür fehlt die Berechtigung.', '23503': 'Projekt, Person oder Workspace passen nicht zusammen.', '23505': 'Dieser Eintrag existiert bereits. Bitte den aktuellen Stand laden.', '23514': 'Diese Änderung verletzt eine Datenregel. Bitte Eingaben prüfen.', PGRST116: 'Eintrag nicht gefunden oder kein Zugriff.', PGRST301: 'Die Sitzung ist abgelaufen. Bitte erneut anmelden.', PGRST205: 'Die Datenbank ist noch nicht eingerichtet. Bitte die Migration anwenden.', validation: 'Bitte Eingaben prüfen.' };
-  let safe = byCode[code];
+  // Ein Text der Datenbank, den der Katalog kennt, sagt genauer, was los ist, als der allgemeine Satz zum Fehlercode
+  // („Diese Person hat mehr Rechte als du“ statt „Dafür fehlt die Berechtigung“). Unbekannte Texte bleiben verborgen.
+  let safe = hasTranslation(message) ? message : byCode[code];
   if (!safe && /invalid login credentials/i.test(message)) safe = 'E-Mail oder Passwort stimmt nicht.';
   if (!safe && /email not confirmed/i.test(message)) safe = 'Bitte bestätige zuerst deine E-Mail-Adresse.';
   if (!safe && /rate limit|too many requests/i.test(message)) safe = 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.';
@@ -145,8 +147,10 @@ export function errorMessage(error: unknown, locale: Locale = getLocale()): stri
   if (!safe && hasTranslation(message)) safe = message;
   return translate(safe || 'Das hat nicht geklappt. Bitte erneut versuchen.', locale);
 }
+/** Eine reine Zahl ist keine Formel: „-12,50“ bleibt eine Zahl, statt als Text mit Hochkomma in der Tabelle zu landen. */
+const plainNumber = (text: string) => /^[+-]?\d{1,15}(?:[.,]\d{1,6})?$/.test(text);
 // oxlint-disable-next-line no-control-regex -- CSV-Injection-Schutz prüft bewusst auf Steuerzeichen.
-export function csvCell(value: unknown) { const original = String(value ?? ''); const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(original) || /^[\t\r\n]/.test(original) ? `'${original}` : original; return `"${safe.replaceAll('"', '""')}"`; }
+export function csvCell(value: unknown) { const original = String(value ?? ''); const safe = !plainNumber(original) && (/^[\s\u0000-\u001f]*[=+\-@]/.test(original) || /^[\t\r\n]/.test(original)) ? `'${original}` : original; return `"${safe.replaceAll('"', '""')}"`; }
 export function entriesCsv(entries: TimeEntry[], projects: Project[], members: Membership[], locale: Locale = getLocale()) {
   const rows: unknown[][] = [['Datum', 'Person', 'Projektcode', 'Projekt', 'Kunde', 'Minuten', 'Stunden', 'Beschreibung', 'Abrechenbar', 'Status'].map(label => translate(label, locale))];
   for (const e of entries) { const p = projects.find(p => p.id === e.project_id); const m = members.find(m => m.user_id === e.user_id); rows.push([e.work_date, m?.display_name || m?.email || e.user_id, p?.code ?? '', p?.name ?? '', p?.client ?? '', e.minutes, new Intl.NumberFormat(localeTag(locale), { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(e.minutes / 60), e.note, translate(e.billable ? 'Ja' : 'Nein', locale), translate(statusNames[e.status], locale)]); }

@@ -8,6 +8,10 @@ import type {Membership} from '../src/shared/types.js';
 import {describe,it,expect} from 'vitest';
 import {csvCell,dateInZone,weekFor,minutesLabel,validRange,shortDate,longDate} from '../src/web/helpers.js';
 describe('presentation data safety',()=>{
+ it('keeps plain negative numbers numeric while still neutralizing formulas',()=>{
+  for(const value of ['-12,50','-12.5','-7','+3',-42])expect(csvCell(value)).toBe(`"${value}"`);
+  for(const value of ['-1+2','-A1','--5','-12,50+1','- 5'])expect(csvCell(value)).toMatch(/^"'/);
+ });
  it('neutralizes spreadsheet formulas, including leading whitespace',()=>{for(const value of ['=HYPERLINK("https://bad")',' +2+2','-1+2','@SUM(A1)','\t=1+1'])expect(csvCell(value)).toMatch(/^"'/);expect(csvCell('Studio "West"')).toBe('"Studio ""West"""')});
  it('keeps workspace dates correct across zones',()=>{const date=new Date('2026-10-13T23:30:00Z');expect(dateInZone('Europe/Berlin',date)).toBe('2026-10-14');expect(dateInZone('America/New_York',date)).toBe('2026-10-13')});
  it('handles Sunday and year transitions',()=>{expect(weekFor('2027-01-03')).toEqual({from:'2026-12-28',to:'2027-01-03'});expect(minutesLabel(75)).toBe('1:15 h');expect(validRange('2026-10-13','2026-10-12')).toBe(false)});
