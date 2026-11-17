@@ -14,15 +14,15 @@ export type Template = typeof TEMPLATES[number];
 export type RightsTemplate = Template | 'individuell';
 export interface RightsMembership { role: 'owner' | 'manager' | 'member' | 'disabled'; rights_template?: string | null; permissions?: Partial<Record<string, string>> | null }
 
-/** Welche Stufen ein Modul kennt: Projekte und Aufgaben sieht jede Person, Planung lässt sich nur sehen, Einstellungen nur bearbeiten. */
+/** Welche Stufen ein Modul kennt: Projekte und Aufgaben sieht jede Person, Einstellungen lassen sich nur bearbeiten. */
 export const MODULE_LEVELS: Record<Module, Level[]> = {
   projects: ['view', 'edit'], tasks: ['view', 'edit'], time_team: ['none', 'view', 'edit'], absences_team: ['none', 'view', 'edit'],
-  planning: ['none', 'view'], strengths: ['none', 'view', 'edit'], finance: ['none', 'view', 'edit'], team: ['none', 'view', 'edit'], settings: ['none', 'edit'],
+  planning: ['none', 'view', 'edit'], strengths: ['none', 'view', 'edit'], finance: ['none', 'view', 'edit'], team: ['none', 'view', 'edit'], settings: ['none', 'edit'],
 };
 export const TEMPLATE_RIGHTS: Record<Template, Rights> = {
-  admin: { projects: 'edit', tasks: 'edit', time_team: 'edit', absences_team: 'edit', planning: 'view', strengths: 'edit', finance: 'edit', team: 'edit', settings: 'edit' },
-  leitung: { projects: 'edit', tasks: 'edit', time_team: 'edit', absences_team: 'edit', planning: 'view', strengths: 'edit', finance: 'edit', team: 'view', settings: 'edit' },
-  projektplanung: { projects: 'edit', tasks: 'edit', time_team: 'view', absences_team: 'view', planning: 'view', strengths: 'view', finance: 'none', team: 'view', settings: 'none' },
+  admin: { projects: 'edit', tasks: 'edit', time_team: 'edit', absences_team: 'edit', planning: 'edit', strengths: 'edit', finance: 'edit', team: 'edit', settings: 'edit' },
+  leitung: { projects: 'edit', tasks: 'edit', time_team: 'edit', absences_team: 'edit', planning: 'edit', strengths: 'edit', finance: 'edit', team: 'view', settings: 'edit' },
+  projektplanung: { projects: 'edit', tasks: 'edit', time_team: 'view', absences_team: 'view', planning: 'edit', strengths: 'view', finance: 'none', team: 'view', settings: 'none' },
   personal: { projects: 'view', tasks: 'edit', time_team: 'edit', absences_team: 'edit', planning: 'view', strengths: 'edit', finance: 'none', team: 'edit', settings: 'none' },
   finanzen: { projects: 'view', tasks: 'view', time_team: 'view', absences_team: 'none', planning: 'none', strengths: 'none', finance: 'edit', team: 'none', settings: 'none' },
   mitarbeit: { projects: 'view', tasks: 'edit', time_team: 'none', absences_team: 'none', planning: 'none', strengths: 'none', finance: 'none', team: 'none', settings: 'none' },
@@ -66,14 +66,14 @@ export function visibleAreas(rights: Rights): { team: boolean; finance: boolean;
 /** Namen und Erklärungen (deutsche Schlüssel für den Sprachkatalog). */
 export const TEMPLATE_NAMES: Record<RightsTemplate, string> = { admin: 'Administration', leitung: 'Leitung', projektplanung: 'Projektplanung', personal: 'Personal', finanzen: 'Finanzen', mitarbeit: 'Mitarbeit', lesen: 'Lesezugriff', individuell: 'Individuell' };
 export const TEMPLATE_HINTS: Record<RightsTemplate, string> = {
-  admin: 'Alles – auch Team, Rechte und Einstellungen.', leitung: 'Alles außer Team verwalten (bisherige Leitung).', projektplanung: 'Projekte und Aufgaben planen, Team und Zeiten sehen, keine Finanzen.',
+  admin: 'Alles – auch Team, Rechte und Einstellungen.', leitung: 'Alles außer Team verwalten (bisherige Leitung).', projektplanung: 'Projekte, Aufgaben und Kapazität planen, Team und Zeiten sehen, keine Finanzen.',
   personal: 'Abwesenheiten, Zeiten und Stärken des Teams betreuen, Personen einladen.', finanzen: 'Rechnungen, Angebote und Zahlungen; Zeiten nur sehen.', mitarbeit: 'Eigene Zeiten und Aufgaben, Projekte sehen.', lesen: 'Alles sehen, nichts ändern.', individuell: 'Eigene Zusammenstellung je Modul.',
 };
 export const MODULE_NAMES: Record<Module, string> = { projects: 'Projekte & Kunden', tasks: 'Aufgaben', time_team: 'Zeiten des Teams', absences_team: 'Abwesenheiten & Personal', planning: 'Kapazität & Lagebild', strengths: 'Stärkenprofile', finance: 'Finanzen', team: 'Team & Rechte', settings: 'Workspace-Einstellungen' };
 export const MODULE_HINTS: Record<Module, string> = {
   projects: 'Sehen: Liste und Details. Bearbeiten: anlegen, ändern, archivieren, Tags.', tasks: 'Sehen: alle Aufgaben. Bearbeiten: anlegen, zuweisen, ändern, löschen (eigene Aufgaben immer).',
   time_team: 'Sehen: Zeiten aller Personen und Reports. Bearbeiten: freigeben, zurückweisen, Freigabe aufheben.', absences_team: 'Sehen: Teamkalender und Konten. Bearbeiten: entscheiden, Anspruch, Arbeitszeitmodell, Kapazität, Standort anderer.',
-  planning: 'Sehen: Kapazitäts-Cockpit, Langfristplanung, Lagebild, Projektprognose.', strengths: 'Sehen: Profile und Zuweisungsempfehlung. Bearbeiten: Aufgaben bewerten.',
+  planning: 'Sehen: Kapazitätsplan, Auslastung, Langfristplanung, Lagebild, Projektprognose. Bearbeiten: Kapazitätsplan pflegen und importieren, Phasen und Leistungsarten.', strengths: 'Sehen: Profile und Zuweisungsempfehlung. Bearbeiten: Aufgaben bewerten.',
   finance: 'Sehen: Rechnungen, Angebote, Zahlungen. Bearbeiten: alles buchen.', team: 'Sehen: Einladungen. Bearbeiten: einladen, Rechte setzen (nie Owner-Rollen).', settings: 'Bearbeiten: Standort-Standard, Freigabepflicht für Abwesenheiten.',
 };
 export const LEVEL_NAMES: Record<Level, string> = { none: 'Kein Zugriff', view: 'Sehen', edit: 'Bearbeiten' };

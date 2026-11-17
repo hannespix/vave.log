@@ -4,7 +4,8 @@ import { MODULES, MODULE_LEVELS, TEMPLATES, TEMPLATE_RIGHTS, can, effectiveRight
 
 describe('rights per account', () => {
   it('mirrors the database templates exactly', () => {
-    const sql = readFileSync('supabase/migrations/20261022100000_rechte_je_konto.sql', 'utf8');
+    // Die jüngste Fassung der Vorlagen: seit dem Kapazitätsplan kennt die Planung auch „Bearbeiten“.
+    const sql = readFileSync('supabase/migrations/20261117100000_phasen_leistungsarten_kapazitaetsplan.sql', 'utf8');
     for (const template of TEMPLATES) {
       const match = sql.match(new RegExp(`when '${template}' then '(\\{[^']*\\})'::jsonb`));
       const fromSql = JSON.parse(match ? match[1]! : sql.match(/else '(\{[^']*\})'::jsonb/)![1]!);
@@ -19,7 +20,8 @@ describe('rights per account', () => {
     expect(effectiveRights({ role: 'manager' })).toEqual(TEMPLATE_RIGHTS.leitung);
     expect(effectiveRights({ role: 'member' })).toEqual(TEMPLATE_RIGHTS.mitarbeit);
     expect(effectiveRights({ role: 'member', rights_template: 'finanzen' })).toEqual(TEMPLATE_RIGHTS.finanzen);
-    expect(effectiveRights({ role: 'member', rights_template: 'individuell', permissions: { ...TEMPLATE_RIGHTS.mitarbeit, finance: 'view', planning: 'edit' } })).toMatchObject({ finance: 'view', planning: 'none', tasks: 'edit' });
+    expect(effectiveRights({ role: 'member', rights_template: 'individuell', permissions: { ...TEMPLATE_RIGHTS.mitarbeit, finance: 'view', planning: 'alles', settings: 'view' } })).toMatchObject({ finance: 'view', planning: 'none', settings: 'none', tasks: 'edit' });
+    expect(effectiveRights({ role: 'member', rights_template: 'individuell', permissions: { ...TEMPLATE_RIGHTS.mitarbeit, planning: 'edit' } }).planning).toBe('edit');
     expect(effectiveRights({ role: 'disabled', rights_template: 'admin' }).finance).toBe('none');
     expect(effectiveRights(undefined).projects).toBe('view');
     expect(templateFor({ role: 'manager' })).toBe('leitung'); expect(templateFor({ role: 'owner', rights_template: 'lesen' })).toBe('admin'); expect(templateFor({ role: 'member', rights_template: 'unbekannt' })).toBe('mitarbeit');
