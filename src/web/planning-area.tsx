@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
-import type { Absence, Membership, Project, Task, Workspace } from '../shared/types';
+import type { Absence, Membership, PlanRow, Project, ProjectPhase, ServiceType, Task, Workspace } from '../shared/types';
 import type { Service } from '../shared/service';
 import type { FinanceService } from '../shared/finance-service';
 import { capacityOutlook, type Outlook, type OutlookScenario, type ScenarioProject } from '../shared/outlook';
@@ -10,20 +10,28 @@ import { useI18n } from './i18n';
 import { errorMessage, initials, minutesLabel, shortDate } from './helpers';
 import { shiftDate } from '../shared/holidays';
 import { SelectMenu } from './select-menu';
+import { CapacityPlanArea } from './capacity-plan';
 import './planning.css';
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>;
-interface Props { members: Membership[]; projects: Project[]; tasks: Task[]; workspace: Workspace; service: Service; finance: FinanceService; run: Run; busy: boolean; today: string; reloadKey: unknown; onEdit: (task: Task) => void; onOpenProject: (id: string) => void }
+interface Props { members: Membership[]; projects: Project[]; tasks: Task[]; phases: ProjectPhase[]; serviceTypes: ServiceType[]; planRows: PlanRow[]; planReady: boolean; canPlan: boolean; canProjects: boolean; workspace: Workspace; service: Service; finance: FinanceService; run: Run; busy: boolean; today: string; reloadKey: unknown; onEdit: (task: Task) => void; onOpenProject: (id: string) => void }
+type Mode = 'plan' | 'short' | 'long';
+const MODE_KEY = 'vave-log.planning-mode';
+const readMode = (): Mode => { try { const v = localStorage.getItem(MODE_KEY); return v === 'short' || v === 'long' ? v : 'plan'; } catch { return 'plan'; } };
 const WEEK_OPTIONS = [4, 6, 8, 12];
 const UNASSIGNED = '__unassigned__';
 
-/** Kapazitäts-Cockpit: Heatmap Personen × Wochen, Nachsteuerung direkt in der Zelle. */
+/** Planung: der Kapazitätsplan (Projekte × Personen × Kalenderwochen), die Auslastung aus Aufgaben und der Langfristblick. */
 export function PlanningArea(props: Props) {
   const { t } = useI18n();
-  const [mode, setMode] = useState<'short' | 'long'>('short');
+  const [stored, setMode] = useState<Mode>(readMode);
+  // Kennt die Datenbank den Kapazitätsplan noch nicht (Migration steht aus), bleibt es bei den bisherigen zwei Ansichten.
+  const mode: Mode = stored === 'plan' && !props.planReady ? 'short' : stored;
+  const choose = (next: Mode) => { setMode(next); try { localStorage.setItem(MODE_KEY, next); } catch { /* ohne Speicher gilt die Wahl bis zum Neuladen */ } };
+  const tab = (id: Mode, label: string) => <button className={mode === id ? 'selected' : ''} aria-pressed={mode === id} onClick={() => choose(id)}>{t(label)}</button>;
   return <>
-    <div className="segmented planning-mode" aria-label={t('Planungshorizont')}><button className={mode === 'short' ? 'selected' : ''} aria-pressed={mode === 'short'} onClick={() => setMode('short')}>{t('Kurzfristig')}</button><button className={mode === 'long' ? 'selected' : ''} aria-pressed={mode === 'long'} onClick={() => setMode('long')}>{t('Langfristig')}</button></div>
-    {mode === 'short' ? <ShortTerm {...props}/> : <LongTerm {...props}/>}
+    <div className="segmented planning-mode" aria-label={t('Planungshorizont')}>{props.planReady && tab('plan', 'Kapazitätsplan')}{tab('short', 'Kurzfristig')}{tab('long', 'Langfristig')}</div>
+    {mode === 'plan' ? <CapacityPlanArea members={props.members} projects={props.projects} phases={props.phases} serviceTypes={props.serviceTypes} planRows={props.planRows} workspace={props.workspace} service={props.service} run={props.run} busy={props.busy} today={props.today} reloadKey={props.reloadKey} canEdit={props.canPlan} canProjects={props.canProjects} onOpenProject={props.onOpenProject}/> : mode === 'short' ? <ShortTerm {...props}/> : <LongTerm {...props}/>}
   </>;
 }
 

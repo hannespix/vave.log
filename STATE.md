@@ -491,3 +491,37 @@ Vier Prüfläufe (Datenbank und Rechte, Rechenlogik, Oberfläche, Finanzen und S
 - Text „Verbundene Apps“ in den Einstellungen nennt Rechte je Konto statt der alten Rollen.
 
 **Noch offen aus dem Audit** (bewusst nicht in diesem Durchgang): Schreibknöpfe in Finanzen bei Lesezugriff; Bankabgleich nach Teilfehler (mögliche Doppelbuchung) und Schärfung der Zuordnung; Betragsparser („0,500“), CAMT mit mehreren Einzelposten; DATEV nur EUR und ein Wirtschaftsjahr; E-Rechnung `schemeID` ohne USt-ID; Bezahlt-Schalter neben Teilzahlungen; Storno-Druck mit Nummer statt Kennung; MCP-Beschreibungen mit alten Rollennamen (34 von 67) und `today` in UTC; globaler Anfragezähler vor dem IP-Limit; Finanzübersicht lädt die ganze Historie; Kapazität zählt die laufende Woche voll und verteilt Last auf Abwesenheitstage; Abwesenheiten auf der Team-Seite doppelt zur eigenen Seite.
+
+## Kapazitätsplan, Phasen und Leistungsarten (17.11.2026)
+
+Aus dem Schulterblick vom 16.11.: Die Planung lebt bisher in einer Excel-Matrix (Projekte × Personen × Kalenderwochen), Zeiten werden auf Phase und Leistungsart gebucht, und „abrechenbar“ soll niemand je Eintrag wählen müssen. Das Tool bildet das jetzt ab.
+
+**Kapazitätsplan** (Planung → erster Reiter)
+
+- Oben das Team mit den **freien Stunden je Kalenderwoche**: Arbeitszeitmodell minus Feiertage, genehmigte Abwesenheiten und Planstunden. Frei, knapp, voll, überbucht und abwesend sind farblich getrennt; jede Person steht einmal da, auch mit mehreren Rollen. Darunter „Team frei“ und die Stunden, die noch niemandem zugewiesen sind.
+- Je Projekt ein Block: Phasen als Balken über den Wochen, darunter je Leistungsart und Person eine Zeile mit Stunden je Woche. Die Summe läuft immer über den ganzen Zeitraum (nicht nur über die sichtbaren Wochen), daneben Angebot, Plan und gebuchte Zeit als Balken. Unter jedem Planwert steht klein die gebuchte Zeit der Woche.
+- Stunden tippt man direkt in die Zelle (7,5 oder 1:30); Enter und Pfeiltasten springen zur nächsten Zeile, jede Zelle speichert einzeln. „Zeile hinzufügen“ plant eine Person oder eine offene Stelle ein und füllt auf Wunsch einen Zeitraum mit denselben Wochenstunden.
+- Ausschnitt 8, 13 oder 26 Wochen, vier Wochen vor und zurück, Filter nach Person und Projekt. Auf dem Telefon bleibt die erste Spalte stehen, die Wochen scrollen seitlich.
+
+**Phasen und Leistungsarten**
+
+- Phasen sind die Ebene zwischen Projekt und Aufgabe: Name, Zeitraum, Stundenbudget. Der Dialog zeigt je Phase Budget, geplante und gebuchte Stunden.
+- Leistungsarten (PM, CD, 3D …) pflegt man einmal je Workspace; Kapazitätsplan und Zeiterfassung nutzen dieselbe Liste.
+- **Buchen:** Der Zeit-Dialog schlägt die Phase vor, in deren Zeitraum der Tag liegt, und die Leistungsart, mit der die Person im Plan des Projekts steht. Dieselbe Regel gilt in der Datenbank – Timer, KI-Vorschläge und MCP bekommen die Werte also auch. Bei zwei passenden Phasen oder Rollen wählt das Tool nichts.
+- **Abrechenbar** ist eine Eigenschaft des Projekts („Zeiten auf diesem Projekt sind abrechenbar“). Mitarbeitende sehen nur noch den Hinweis; abweichen kann, wer Projekte oder die Zeiten des Teams bearbeitet. Die Datenbank setzt die Vorgabe durch. Projekte, auf die bisher nie abrechenbar gebucht wurde, starten als nicht abrechenbar.
+- Zeitenliste und CSV-Export zeigen Phase und Leistungsart (die CSV-Spalten nur, wenn es welche gibt).
+
+**Import aus Excel**
+
+- Liest die übliche Matrix: Kopfzeile mit Kalenderwochen („KW 23“ oder „CW 23“, auch über den Jahreswechsel), links Projekt, Position, Person und angebotene Stunden, je Projekt ein Block, Phasen als Beschriftung über den Wochen (verbundene Zellen geben die Dauer; „50 %“- und „100 %“-Stände gehören zur selben Phase). Team- und Urlaubsblock werden erkannt, aber nicht übernommen – freie Kapazität rechnet das Tool selbst.
+- `.xlsx` wird ohne zusätzliche Bibliothek im Browser gelesen (`src/shared/xlsx-read.ts`: ZIP-Verzeichnis, `DecompressionStream`, Werte und verbundene Zellen); alternativ kopierte Zellen einfügen. Die Datei verlässt den Browser nicht.
+- Vor der Übernahme: Kürzel den Personen zuordnen (Vorschlag bei eindeutigem Treffer, die Zuordnung wird im Browser gemerkt), Projekte zuordnen, anlegen oder auslassen. Unbekannte Kürzel bleiben als offene Zeile mit dem Kürzel als Notiz. Die Übernahme läuft in einer Transaktion (`import_capacity_plan`) und ersetzt auf Wunsch den bisherigen Plan der enthaltenen Projekte.
+- Geprüft gegen eine echte Planungsdatei dieses Aufbaus. Die Datei und ihre Inhalte liegen nicht im Repository; die Tests nutzen künstliche Daten.
+
+**Rechte:** Das Modul „Kapazität & Lagebild“ kennt jetzt „Bearbeiten“. Administration, Leitung und Projektplanung planen; Personal und Lesezugriff sehen. Die eigenen Planzeilen sieht jede Person.
+
+**Datenbank** (Migration `20261117100000_phasen_leistungsarten_kapazitaetsplan.sql`): Tabellen `project_phases`, `service_types`, `capacity_rows`, `capacity_cells`; `time_entries.phase_id` und `service_type_id`; `projects.billable_default`; Sichten `capacity_actuals`, `capacity_row_totals`, `phase_plan`, `phase_effort`; `delete_workspace` räumt die neuen Tabellen mit ab. Die Demo bekommt Leistungsarten, Phasen für alle aktiven Projekte und einen Plan für die acht größten – mit freien und überbuchten Wochen und einer offenen Stelle.
+
+**Übergang:** Solange die Migration in der Live-Datenbank fehlt, bleibt der Reiter „Kapazitätsplan“ ausgeblendet und Zeiterfassung wie Projektformular verhalten sich wie zuvor.
+
+**Bewusst noch nicht enthalten:** Stundensätze je Leistungsart (VK/EK) und Auswertung je Phase in Euro – dafür fehlen die Sätze; Phase und Leistungsart direkt am Timer wählen (der Timer bucht nach der Automatik, der Entwurf lässt sich ändern); Abwesenheiten aus dem Urlaubsblock der Excel-Datei; Verschieben von Stunden per Ziehen.

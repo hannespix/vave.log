@@ -1,8 +1,8 @@
 import { hasTranslation } from './i18n.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,rightsSchema,locationSchema,projectSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance,TimeSuggestion,TimeSuggestionInput } from './types.js';
+import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,rightsSchema,locationSchema,projectSchema,phaseSchema,serviceTypeSchema,planRowSchema,planCellSchema,planImportSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance,TimeSuggestion,TimeSuggestionInput,ProjectPhase,ProjectPhaseInput,ServiceType,PlanRow,PlanRowInput,PlanCell,PlanActual,PhaseEffort,PlanImport,PlanImportResult } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -70,6 +70,27 @@ export function createService(client:SupabaseClient){
   listProjects:(workspaceId:string)=>rows<Project>(client.from('projects').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('id').limit(1001)),
   getProjectInsight:(workspaceId:string,projectId:string)=>rpc<ProjectInsight>('project_insight',{p_workspace_id:parse(uuid,workspaceId),p_project_id:parse(uuid,projectId)}),
   saveProject:(input:ProjectInput&{id?:string})=>one<Project>(client.from('projects').upsert(parse(projectSchema,input)).select().single()),
+  // Phasen und Leistungsarten: lesen dürfen alle Mitglieder (sie buchen darauf), pflegen die Planung.
+  listPhases:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<ProjectPhase>((from,to)=>client.from('project_phases').select('*').eq('workspace_id',w).order('project_id').order('position').order('id').range(from,to));},
+  savePhase:(input:ProjectPhaseInput&{id?:string})=>one<ProjectPhase>(client.from('project_phases').upsert(parse(phaseSchema,input)).select().single()),
+  deletePhase:async(id:string)=>{await one(client.from('project_phases').delete().eq('id',parse(uuid,id)).select('id').single())},
+  listServiceTypes:(workspaceId:string)=>rows<ServiceType>(client.from('service_types').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('position').order('name').limit(1001)),
+  saveServiceType:(input:{id?:string;workspace_id:string;name:string;position:number;active:boolean})=>one<ServiceType>(client.from('service_types').upsert(parse(serviceTypeSchema,input)).select().single()),
+  deleteServiceType:async(id:string)=>{await one(client.from('service_types').delete().eq('id',parse(uuid,id)).select('id').single())},
+  // Kapazitätsplan: Zeilen ganz, Wochenwerte und gebuchte Zeit nur für den sichtbaren Ausschnitt, Summen je Zeile über alles.
+  listPlanRows:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<PlanRow>((from,to)=>client.from('capacity_rows').select('*').eq('workspace_id',w).order('project_id').order('position').order('id').range(from,to));},
+  listPlanCells:(workspaceId:string,from:string,to:string)=>{const w=parse(uuid,workspaceId),a=parse(date,from),b=parse(date,to);return allRows<PlanCell>((start,end)=>client.from('capacity_cells').select('*').eq('workspace_id',w).gte('week_start',a).lte('week_start',b).order('row_id').order('week_start').range(start,end));},
+  listPlanTotals:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<{row_id:string;minutes:number;first_week:string;last_week:string}>((from,to)=>client.from('capacity_row_totals').select('row_id,minutes,first_week,last_week').eq('workspace_id',w).order('row_id').range(from,to));},
+  listPlanActuals:(workspaceId:string,from:string,to:string)=>{const w=parse(uuid,workspaceId),a=parse(date,from),b=parse(date,to);return allRows<PlanActual>((start,end)=>client.from('capacity_actuals').select('project_id,user_id,week_start,minutes').eq('workspace_id',w).gte('week_start',a).lte('week_start',b).order('project_id').order('user_id').order('week_start').range(start,end));},
+  listPhaseEffort:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<PhaseEffort>((from,to)=>client.from('phase_effort').select('project_id,phase_id,service_type_id,minutes,billable_minutes,entries').eq('workspace_id',w).order('project_id').order('phase_id').order('service_type_id').range(from,to));},
+  listPhasePlan:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<{project_id:string;phase_id:string;minutes:number}>((from,to)=>client.from('phase_plan').select('project_id,phase_id,minutes').eq('workspace_id',w).order('phase_id').range(from,to));},
+  savePlanRow:(input:PlanRowInput&{id?:string})=>one<PlanRow>(client.from('capacity_rows').upsert(parse(planRowSchema,input)).select().single()),
+  deletePlanRow:async(id:string)=>{await one(client.from('capacity_rows').delete().eq('id',parse(uuid,id)).select('id').single())},
+  /** Schreibt Wochenwerte: 0 löscht die Zelle, alles andere setzt sie. */
+  setPlanCells:async(cells:PlanCell[])=>{const list=cells.slice(0,2000).map(c=>parse(planCellSchema,c));const keep=list.filter(c=>c.minutes>0),drop=list.filter(c=>c.minutes===0);
+   if(keep.length){const{error}=await client.from('capacity_cells').upsert(keep,{onConflict:'row_id,week_start'});fail(error);}
+   for(const c of drop){const{error}=await client.from('capacity_cells').delete().eq('row_id',c.row_id).eq('week_start',c.week_start);fail(error);}},
+  importPlan:(workspaceId:string,plan:PlanImport)=>rpc<PlanImportResult>('import_capacity_plan',{p_workspace_id:parse(uuid,workspaceId),p_plan:parse(planImportSchema,plan)}),
   listTasks:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<Task>((from,to)=>client.from('tasks').select('*').eq('workspace_id',w).order('created_at').order('id').range(from,to));},
   // Erst ändern, dann anlegen: Ein Upsert ist für die Datenbank immer auch ein Einfügen und braucht das Recht, Aufgaben
   // anzulegen. Wer nur die eigene Aufgabe bearbeiten darf (zugewiesen, ohne Aufgabenrecht), scheiterte damit an jedem Statuswechsel.

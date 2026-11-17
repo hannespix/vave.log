@@ -785,7 +785,7 @@ test('planning cockpit shows load per person and week and reassigns a task from 
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[{task_id:'10000000-0000-4000-8000-000000000001',minutes:120,entries:1,last_work_date:'2026-10-12'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
- await page.goto('/');await goArea(page,'Planning');
+ await page.goto('/');await goArea(page,'Planning');await page.getByRole('button',{name:'Short term',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'Who has room, where it gets tight.'})).toBeVisible();
  // Woche 12.–18.10.: Brand sketch Rest 480 (600 − 120) bis Fr 16.10. → 8 h von 40 h; „Open end“ ohne Schätzung zählt als +1?.
  const own=page.getByRole('button',{name:/^Studio Owner, 10\/12 – 10\/18/});
@@ -911,7 +911,7 @@ test('AI suggestions inbox: adjust, accept as draft, dismiss, accept the whole d
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
 test('capacity grid keeps its week columns readable on a phone and scrolls sideways instead of overlapping',async({page},testInfo)=>{
- await setup(page,true);await page.goto('/');await goArea(page,'Planning');
+ await setup(page,true);await page.goto('/');await goArea(page,'Planning');await page.getByRole('button',{name:'Short term',exact:true}).click();
  const grid=page.getByRole('region',{name:'Capacity per person and week'});await expect(grid).toBeVisible();
  const heads=grid.locator('thead th');await expect(heads).toHaveCount(7);
  const boxes=[];for(let i=0;i<7;i++){const b=await heads.nth(i).boundingBox();expect(b,`header ${i}`).not.toBeNull();boxes.push(b!);}
