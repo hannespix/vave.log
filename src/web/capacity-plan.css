@@ -13,12 +13,12 @@
 .plan-save{margin-left:auto;min-height:1em;font-size:11px}
 .plan-panel{padding:0;overflow:hidden}
 .plan-panel .table-scroll{max-height:max(560px,calc(100vh - 150px))}
-.plan-grid{--label-col:250px;--sum-col:78px;--week-col:58px;border-collapse:separate;border-spacing:0;table-layout:fixed;width:calc(var(--label-col) + var(--sum-col) + var(--weeks) * var(--week-col));max-width:none;font-size:12px}
+.plan-grid{--label-col:250px;--sum-col:78px;--week-col:58px;border-collapse:separate;border-spacing:0;table-layout:fixed;width:calc(var(--label-col) + var(--sum-col) + var(--weeks) * var(--week-col));min-width:100%;max-width:none;font-size:12px}
 .plan-grid th,.plan-grid td{padding:0;border-bottom:1px solid #eef0e8;text-align:center;font-weight:400;height:34px}
 .plan-grid tbody th{text-transform:none;letter-spacing:0;font-size:12px;color:#1b1b1b;white-space:normal}
 .plan-grid .plan-label{position:sticky;left:0;z-index:2;width:var(--label-col);min-width:var(--label-col);max-width:var(--label-col);background:white;text-align:left;padding:0 10px 0 16px;border-right:1px solid #e6e9df}
 .plan-grid .plan-sum{width:var(--sum-col);min-width:var(--sum-col);padding:0 8px;text-align:right;color:#3d4336;border-right:1px solid #eef0e8;white-space:nowrap}
-.plan-grid .plan-sum small{color:var(--muted);font-size:10px}
+.plan-grid .plan-sum small{display:inline;color:var(--muted);font-size:10px}
 .plan-grid thead th{position:sticky;top:0;z-index:3;background:#f6f7f2;color:#5b6251;font-size:10px;height:auto;padding:6px 2px;border-bottom:1px solid #e1e4d8}
 .plan-grid thead .plan-label{z-index:4;background:#f6f7f2;padding-left:16px;font-size:10px;letter-spacing:.04em}
 .plan-grid thead .plan-sum{background:#f6f7f2;text-align:right;padding-right:8px}
@@ -79,7 +79,7 @@
 .plan-row:hover .plan-icon,.plan-row .plan-icon:focus-visible{opacity:1}
 .plan-cell{position:relative;font-variant-numeric:tabular-nums}
 .plan-cell-set{background:#f4efff}
-.plan-input{width:100%;height:33px;border:0;background:none;text-align:center;font-size:12px;padding:0 2px 9px;color:#1b1b1b;border-radius:0;outline-offset:-2px}
+.plan-input{width:100%;height:33px;min-height:0;box-shadow:none;border:0;background:none;text-align:center;font-size:12px;padding:0 2px 9px;color:#1b1b1b;border-radius:0;outline-offset:-2px}
 .plan-input:hover{background:#f6f7f2}
 .plan-input:focus{background:white;outline:2px solid var(--purple)}
 .plan-input[aria-invalid]{background:#f8ddd8;outline:2px solid #b23a2c}
