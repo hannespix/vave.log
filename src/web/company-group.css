@@ -1,0 +1,19 @@
+.company-group .group-list,.handover-list{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.company-group .group-list li{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border,#e7e8e1);border-radius:12px;background:#fff;flex-wrap:wrap}
+.company-group .group-list li>div{display:grid;gap:2px;flex:1;min-width:160px}
+.company-group .group-list small{font-size:13px}
+.group-link{display:flex;align-items:flex-end;gap:12px;margin-top:18px;flex-wrap:wrap}
+.group-link .field{flex:1;min-width:220px;margin:0}
+.handover-panel{margin-bottom:22px}
+.handover-item{padding:14px 16px;border:1px solid var(--border,#e7e8e1);border-radius:12px;background:#fff;display:grid;gap:10px}
+.handover-item.handover-incoming{border-color:#bda1fc;background:#faf8ff}
+.handover-head{display:flex;gap:12px;align-items:flex-start}
+.handover-head>div{display:grid;gap:3px;min-width:0}
+.handover-head small{font-size:13px}
+.handover-note{margin:0;padding:10px 12px;border-left:3px solid #641dff;background:#f2eeff;border-radius:0 8px 8px 0;font-size:14px;white-space:pre-wrap}
+.handover-facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0}
+.handover-facts>div{display:grid;gap:2px}
+.handover-facts dt{font-size:12px;color:#5d6258;text-transform:uppercase;letter-spacing:.04em}
+.handover-facts dd{margin:0;font-weight:600;font-size:14px}
+.handover-explain{display:grid;gap:8px;padding:12px 14px;border:1px solid var(--border,#e7e8e1);border-radius:12px;background:#f8f9f6;font-size:14px}
+.handover-explain p{margin:0}

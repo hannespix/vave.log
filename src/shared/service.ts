@@ -2,7 +2,7 @@ import { hasTranslation } from './i18n.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { absenceSchema,date,dateRangeSchema,entrySchema,inviteSchema,rightsSchema,locationSchema,projectSchema,phaseSchema,serviceTypeSchema,planRowSchema,planCellSchema,planImportSchema,roleSchema,taskSchema,timerSchema,suggestionSchema,uuid,vacationBalanceSchema,workScheduleSchema,workspaceSchema } from './validation.js';
-import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance,TimeSuggestion,TimeSuggestionInput,ProjectPhase,ProjectPhaseInput,ServiceType,PlanRow,PlanRowInput,PlanCell,PlanActual,PhaseEffort,PlanImport,PlanImportResult } from './types.js';
+import type { Workspace,Membership,Invitation,Project,ProjectInput,Task,TaskInput,TimeEntry,EntryInput,RunningTimer,TimerInput,Role,Absence,AbsenceInput,AppNotification,VacationBalance,TimeSuggestion,TimeSuggestionInput,ProjectPhase,ProjectPhaseInput,ServiceType,PlanRow,PlanRowInput,PlanCell,PlanActual,PhaseEffort,PlanImport,PlanImportResult,SisterWorkspace,ProjectHandover } from './types.js';
 import type { ProjectInsight } from './project-insight-types.js';
 import { readTimeEntryPages } from './time-entry-pages.js';
 
@@ -115,7 +115,16 @@ export function createService(client:SupabaseClient){
   getTimer:async()=>{const {data,error}=await client.from('running_timers').select('*').maybeSingle();fail(error);return data as RunningTimer|null},
   startTimer:(input:TimerInput)=>{const v=parse(timerSchema,input);return rpc<RunningTimer>('start_timer',{p_workspace_id:v.workspace_id,p_project_id:v.project_id,p_note:v.note,p_billable:v.billable,p_task_id:v.task_id??null})},
   stopTimer:(id:string)=>rpc<TimeEntry[]>('stop_timer',{p_timer_id:parse(uuid,id)}),
-  discardTimer:async(id:string)=>{await rpcVoid('discard_timer',{p_timer_id:parse(uuid,id)})}
+  discardTimer:async(id:string)=>{await rpcVoid('discard_timer',{p_timer_id:parse(uuid,id)})},
+  // Firmenverbund: Schwesterfirmen und Projektübergaben. Die Rechte prüft die Datenbank in beiden Firmen.
+  listSisters:(workspaceId:string)=>rpc<SisterWorkspace[]>('sister_workspaces',{p_workspace_id:parse(uuid,workspaceId)}),
+  linkWorkspaces:async(input:{workspace_id:string;other_workspace_id:string})=>{const v=parse(z.strictObject({workspace_id:uuid,other_workspace_id:uuid}),input);await rpcVoid('link_workspaces',{p_workspace_id:v.workspace_id,p_other_workspace_id:v.other_workspace_id})},
+  unlinkWorkspaces:async(input:{workspace_id:string;other_workspace_id:string})=>{const v=parse(z.strictObject({workspace_id:uuid,other_workspace_id:uuid}),input);await rpcVoid('unlink_workspaces',{p_workspace_id:v.workspace_id,p_other_workspace_id:v.other_workspace_id})},
+  listHandovers:(workspaceId:string)=>{const id=parse(uuid,workspaceId);return rows<ProjectHandover>(client.from('project_handovers').select('*',{count:'exact'}).or(`source_workspace_id.eq.${id},target_workspace_id.eq.${id}`).order('offered_at',{ascending:false}).limit(100))},
+  offerHandover:(input:{project_id:string;target_workspace_id:string;note?:string})=>{const v=parse(z.strictObject({project_id:uuid,target_workspace_id:uuid,note:z.string().trim().max(1000).default('')}),input);return rpc<ProjectHandover>('offer_project_handover',{p_project_id:v.project_id,p_target_workspace_id:v.target_workspace_id,p_note:v.note})},
+  acceptHandover:(id:string)=>rpc<ProjectHandover>('accept_project_handover',{p_handover_id:parse(uuid,id)}),
+  declineHandover:(id:string)=>rpc<ProjectHandover>('decline_project_handover',{p_handover_id:parse(uuid,id)}),
+  withdrawHandover:(id:string)=>rpc<ProjectHandover>('withdraw_project_handover',{p_handover_id:parse(uuid,id)})
  };
 }
 export type Service=ReturnType<typeof createService>;

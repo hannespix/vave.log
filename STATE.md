@@ -578,3 +578,18 @@ Neu im Kalender:
 - **Vereinigte Arabische Emirate (Dubai):** Feiertage der Privatwirtschaft für 2025–2027. Die islamischen Tage hängen an der Mondsichtung; 2027 steht nach dem astronomischen Kalender drin und gilt als vorläufig (±1 Tag). Für das islamische Neujahr und den Geburtstag des Propheten 2026 lag keine Mitteilung für die Privatwirtschaft vor – dort steht der Kalendertag bzw. der Tag des öffentlichen Dienstes. Für andere Jahre nur Neujahr und Nationalfeiertag.
 
 `planKnown(standort, jahr)` ersetzt `chinaPlanKnown`: Fehlt der amtliche Plan oder ist er nicht bestätigt, nennt der Abwesenheitskalender die betroffenen Standorte. Die Pläne (`CN_PLANS`, `SG_PLANS`, `AE_PLANS`) werden einmal im Jahr ergänzt: China Anfang November, Singapur im Frühsommer, Emirate je Feiertag kurz vorher.
+
+## Firmenverbund: Schwesterfirmen und Projektübergabe (20.11.2026)
+
+**Entscheidung:** Jede Firma der Gruppe ist ein eigener Workspace. Der bringt alles mit, was getrennte Firmen brauchen – eigene Mitglieder und Rechte, Währung, Zeitzone, Feiertags-Standard, Rechnungskreis und Rechnungsprofil. Ein gemeinsamer Workspace mit Standort-Filter hätte nur eine Währung und einen Rechnungskreis, und jede Leseregel bräuchte einen zusätzlichen Filter. Wer in mehreren Firmen arbeitet, ist in mehreren Workspaces Mitglied und wechselt oben links.
+
+**Neu** (Migration `20261120100000_firmenverbund.sql`, Oberfläche `src/web/company-group.tsx`):
+
+- **Firmen verknüpfen** (Einstellungen → Firmenverbund): Zwei Workspaces werden Schwesterfirmen. Das darf nur, wer in beiden die Einstellungen bearbeiten darf; zur Wahl stehen die eigenen anderen Workspaces. Trennen kann jede Seite, nach einem zweiten Klick. Demo-Workspaces bleiben außen vor.
+- **Projekt übergeben** (Projekte → Menü am Projekt): Wer Projekte bearbeiten darf, bietet ein Projekt einer Schwesterfirma an, auf Wunsch mit Notiz. Dort erscheint das Angebot über der Projektliste mit Restbudget, Phasen, offenen Aufgaben und geplanten Stunden. Wer dort Projekte bearbeiten darf, nimmt an oder lehnt ab; die abgebende Seite kann zurückziehen. Wer in beiden Firmen das Recht hat, übergibt in einem Schritt.
+- **Beim Annehmen** entsteht das Projekt in der Zielfirma: Kürzel wie im Original (bei Kollision mit laufender Nummer), Restbudget (Budget minus bereits gebuchte Zeit), laufende und künftige Phasen, offene Aufgaben, Kapazitätsplan ab der laufenden Woche. Leistungsarten werden über den Namen zugeordnet und bei Bedarf angelegt. Personen bleiben zugewiesen, wenn sie auch in der Zielfirma aktiv sind; sonst wird die Planzeile zur offenen Stelle mit dem Namen in der Notiz.
+- **Im Original** bleibt alles Vergangene: gebuchte Zeiten, Rechnungen, Angebote, Ausgaben, Finanzplanung, abgeschlossene Phasen. Das Projekt wird archiviert, die künftige Planung entfernt. Finanzdaten wandern bewusst nicht mit – andere Währung, anderer Rechnungskreis.
+
+**Technik:** Tabellen `workspace_links` (ein Paar je Verknüpfung) und `project_handovers` (Angebot mit Kurzfassung als JSON, damit die Zielfirma nichts aus den Tabellen der Quelle lesen muss). Geschrieben wird nur über Funktionen, die die Rechte in der jeweils richtigen Firma prüfen: `link_workspaces`, `unlink_workspaces`, `sister_workspaces`, `offer_project_handover`, `accept_project_handover`, `decline_project_handover`, `withdraw_project_handover`. Beide Firmen protokollieren die Übergabe. Fehlen die Tabellen noch, bleibt der Bereich in der Oberfläche leer.
+
+**Noch offen:** Mitarbeit über Firmengrenzen (Personen aus Firma B buchen auf ein Projekt von Firma A, mit interner Verrechnung), ein gemeinsamer Kapazitätsblick für die Gruppenleitung, ein Hilfe-Artikel und MCP-Werkzeuge für den Verbund.
