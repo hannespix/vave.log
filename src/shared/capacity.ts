@@ -1,4 +1,4 @@
-import { holidaysBetween, shiftDate } from './holidays.js';
+import { holidaysBetween, makeupDaysBetween, shiftDate } from './holidays.js';
 import { dayTarget, effectiveSchedule, type ScheduledMember } from './schedule.js';
 import { absenceStatus, type AbsenceLike } from './vacation.js';
 
@@ -48,12 +48,12 @@ export function capacityPlan(input: { members: (ScheduledMember & { role?: strin
   const horizonFrom = weeks[0].from, horizonTo = weeks[weeks.length - 1].to;
   const rows: CapacityRow[] = input.members.filter((m) => m.role !== 'disabled').map((m) => {
     const schedule = effectiveSchedule(m);
-    const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
+    const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo), makeup = makeupDaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
     const own = input.absences.filter((a) => a.user_id === m.user_id && absenceStatus(a) === 'approved');
     return { user_id: m.user_id, cells: weeks.map((w) => {
       if (!schedule) return emptyCell(null);
       let available = 0;
-      for (let day = w.from; day <= w.to; day = shiftDate(day, 1)) available += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null) ?? 0;
+      for (let day = w.from; day <= w.to; day = shiftDate(day, 1)) available += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null, makeup.has(day)) ?? 0;
       return emptyCell(available);
     }) };
   });

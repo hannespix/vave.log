@@ -1,4 +1,4 @@
-import { holidaysBetween, shiftDate } from './holidays.js';
+import { holidaysBetween, makeupDaysBetween, shiftDate } from './holidays.js';
 import { dayTarget, effectiveSchedule, type ScheduledMember } from './schedule.js';
 import { absenceStatus, type AbsenceLike } from './vacation.js';
 import { isoWeek, mondayOf } from './capacity.js';
@@ -99,7 +99,7 @@ export function capacityMatrix(input: MatrixInput): Matrix {
   let overbooked = 0;
   const people: MatrixPerson[] = input.members.filter((m) => m.role !== 'disabled').map((m) => {
     const schedule = effectiveSchedule(m);
-    const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
+    const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo), makeup = makeupDaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
     const own = input.absences.filter((a) => a.user_id === m.user_id && absenceStatus(a) === 'approved');
     const planned = plannedByUser.get(m.user_id) ?? zeros();
     const target: (number | null)[] = [], absent: number[] = [], available: (number | null)[] = [], free: (number | null)[] = [];
@@ -107,8 +107,8 @@ export function capacityMatrix(input: MatrixInput): Matrix {
       if (!schedule) { target.push(null); absent.push(0); available.push(null); free.push(null); return; }
       let soll = 0, ist = 0;
       for (let day = w.start; day <= w.end; day = shiftDate(day, 1)) {
-        soll += dayTarget(schedule, day, holidays.get(day), null) ?? 0;
-        ist += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null) ?? 0;
+        soll += dayTarget(schedule, day, holidays.get(day), null, makeup.has(day)) ?? 0;
+        ist += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null, makeup.has(day)) ?? 0;
       }
       target.push(soll); absent.push(soll - ist); available.push(ist); free.push(ist - planned[i]);
       if (planned[i] > ist) overbooked++;

@@ -1,4 +1,4 @@
-import { holidaysBetween, shiftDate } from './holidays.js';
+import { holidaysBetween, makeupDaysBetween, shiftDate } from './holidays.js';
 import { absenceStatus, type AbsenceLike } from './vacation.js';
 
 /**
@@ -24,10 +24,13 @@ export function effectiveSchedule(member: ScheduledMember): WorkSchedule | null 
   const daily = Math.round(weekly / 5);
   return [daily, daily, daily, daily, daily, 0, 0];
 }
-/** Soll eines Tages: Modellwert, 0 an Feiertagen und ganztägigen Abwesenheiten, halbiert bei halben Tagen. */
-export function dayTarget(schedule: WorkSchedule | null, day: string, holiday: string | null | undefined, absence: AbsenceLike | null | undefined): number | null {
+/** Soll eines normalen Arbeitstags der Person: der höchste Wert Mo–Fr. Gilt an Ausgleichs-Arbeitstagen. */
+export const normalDay = (schedule: WorkSchedule) => Math.max(...schedule.slice(0, 5));
+/** Soll eines Tages: Modellwert, 0 an Feiertagen und ganztägigen Abwesenheiten, halbiert bei halben Tagen.
+ * `makeup`: Der Tag ist am Standort ein Ausgleichs-Arbeitstag (China) – ein sonst freier Tag zählt dann wie ein normaler Arbeitstag. */
+export function dayTarget(schedule: WorkSchedule | null, day: string, holiday: string | null | undefined, absence: AbsenceLike | null | undefined, makeup = false): number | null {
   if (!schedule) return null;
-  const base = schedule[scheduleIndex(day)];
+  const base = schedule[scheduleIndex(day)] || (makeup ? normalDay(schedule) : 0);
   if (holiday || !base) return 0;
   if (!absence) return base;
   return absence.half_day ? Math.round(base / 2) : 0;
@@ -38,14 +41,14 @@ const absenceOn = (absences: AbsenceLike[], userId: string, day: string) => abse
 export function timeAccount(member: ScheduledMember, entries: { user_id: string; work_date: string; minutes: number }[], absences: AbsenceLike[], from: string, to: string, defaultLocation: string | null = null): TimeAccount | null {
   const schedule = effectiveSchedule(member);
   if (!schedule || from > to) return null;
-  const holidays = holidaysBetween(member.location ?? defaultLocation, from, to);
+  const holidays = holidaysBetween(member.location ?? defaultLocation, from, to), makeup = makeupDaysBetween(member.location ?? defaultLocation, from, to);
   const actualByDay = new Map<string, number>();
   for (const e of entries) if (e.user_id === member.user_id && e.work_date >= from && e.work_date <= to) actualByDay.set(e.work_date, (actualByDay.get(e.work_date) ?? 0) + e.minutes);
   const days: DayTarget[] = [];
   let targetMinutes = 0, actualMinutes = 0;
   for (let day = from; day <= to; day = shiftDate(day, 1)) {
     const holiday = holidays.get(day) ?? null, absence = absenceOn(absences, member.user_id, day);
-    const target = dayTarget(schedule, day, holiday, absence) ?? 0;
+    const target = dayTarget(schedule, day, holiday, absence, makeup.has(day)) ?? 0;
     targetMinutes += target; actualMinutes += actualByDay.get(day) ?? 0;
     days.push({ day, target, holiday, absence });
   }

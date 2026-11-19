@@ -1,19 +1,25 @@
-import { holidaysBetween, shiftDate } from './holidays.js';
+import { holidaysBetween, makeupDaysBetween, shiftDate } from './holidays.js';
 
-/** Reine Urlaubsrechnung: Werktage Mo–Fr, abzüglich Feiertage des Standorts, halbe Tage zählen 0,5. */
+/** Reine Urlaubsrechnung: Werktage Mo–Fr, abzüglich Feiertage des Standorts, halbe Tage zählen 0,5.
+ * Ausgleichs-Arbeitstage des Standorts (China: Arbeit am Wochenende) zählen als Arbeitstage. */
 export interface AbsenceLike { user_id: string; starts_on: string; ends_on: string; kind: 'vacation' | 'sick' | 'holiday' | 'other'; status?: 'requested' | 'approved' | 'declined'; half_day?: '' | 'am' | 'pm' }
 export interface VacationSummary { entitlement: number | null; carriedOver: number; adjustment: number; taken: number; requested: number; remaining: number | null }
 
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay();
 export const isWorkday = (day: string) => { const dow = weekday(day); return dow >= 1 && dow <= 5; };
+/** Arbeitet die Person an dem Tag? Laut Modell, ohne Modell Mo–Fr; an Ausgleichs-Arbeitstagen, sobald sie überhaupt Mo–Fr arbeitet. */
+const worksOnDay = (schedule: number[] | null | undefined, day: string, makeup: boolean) => {
+  if (!schedule || schedule.length !== 7) return isWorkday(day) || makeup;
+  return schedule[(weekday(day) + 6) % 7] > 0 || (makeup && schedule.slice(0, 5).some((m) => m > 0));
+};
 export const absenceStatus = (a: AbsenceLike) => a.status ?? 'approved';
 
 /** Zählt die Arbeitstage einer Abwesenheit im Fenster [from, to] (beides optional), ohne Wochenenden und Feiertage. */
 export function absenceWorkdays(a: AbsenceLike, location: string | null | undefined, from?: string, to?: string, schedule?: number[] | null): number {
   const start = from && a.starts_on < from ? from : a.starts_on, end = to && a.ends_on > to ? to : a.ends_on;
   if (start > end) return 0;
-  const holidays = holidaysBetween(location, start, end);
-  const works = (day: string) => schedule && schedule.length === 7 ? schedule[(weekday(day) + 6) % 7] > 0 : isWorkday(day);
+  const holidays = holidaysBetween(location, start, end), makeup = makeupDaysBetween(location, start, end);
+  const works = (day: string) => worksOnDay(schedule, day, makeup.has(day));
   let days = 0;
   for (let day = start; day <= end; day = shiftDate(day, 1)) if (works(day) && !holidays.has(day)) days++;
   return a.half_day && days > 0 ? 0.5 : days;
@@ -28,8 +34,8 @@ export function vacationSummary(input: { entitlement: number | null | undefined;
   const clip = (a: AbsenceLike) => [a.starts_on < from ? from : a.starts_on, a.ends_on > to ? to : a.ends_on] as const;
   const sick = new Map<string, number>();
   for (const a of own) { if (a.kind !== 'sick') continue; const [start, end] = clip(a); for (let day = start; day <= end; day = shiftDate(day, 1)) sick.set(day, Math.min(1, (sick.get(day) ?? 0) + (a.half_day ? 0.5 : 1))); }
-  const holidays = holidaysBetween(input.location, from, to);
-  const works = (day: string) => input.schedule && input.schedule.length === 7 ? input.schedule[(weekday(day) + 6) % 7] > 0 : isWorkday(day);
+  const holidays = holidaysBetween(input.location, from, to), makeup = makeupDaysBetween(input.location, from, to);
+  const works = (day: string) => worksOnDay(input.schedule, day, makeup.has(day));
   const perDay = new Map<string, { approved: number; requested: number }>();
   for (const a of own) {
     if (a.kind !== 'vacation') continue;
