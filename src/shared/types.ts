@@ -34,3 +34,8 @@ export interface PhaseEffort { project_id:string; phase_id:string|null; service_
 /** Ein ganzer Plan für den Import (Excel, Zwischenablage): Projekte mit Phasen, Zeilen und Wochenwerten in Minuten. */
 export interface PlanImport { replace:boolean; service_types:string[]; projects:{ project_id:string|null; create?:{ code:string; name:string; client?:string; budget_minutes?:number }; budget_minutes?:number|null; phases:{ name:string; starts_on:string|null; ends_on:string|null }[]; rows:{ user_id:string|null; service_type:string|null; offered_minutes:number|null; note:string; cells:Record<string,number> }[] }[] }
 export interface PlanImportResult { projects:number; created_projects:number; rows:number; cells:number; phases:number; service_types:number }
+/** Schwesterfirma: ein verknüpfter Workspace. `can_accept`: die angemeldete Person darf dort Projekte annehmen. */
+export interface SisterWorkspace { workspace_id:string; name:string; currency:string; timezone:string; can_accept:boolean; can_unlink:boolean }
+export interface HandoverSummary { code:string; name:string; client:string; due_date:string|null; budget_minutes:number; booked_minutes:number; phases:number; open_tasks:number; plan_rows:number; planned_minutes:number; source_name:string; target_name:string; offered_by_name?:string|null }
+/** Angebot, ein Projekt an eine Schwesterfirma zu übergeben. */
+export interface ProjectHandover { id:string; source_workspace_id:string; source_project_id:string; target_workspace_id:string; target_project_id:string|null; status:'offered'|'accepted'|'declined'|'withdrawn'; note:string; summary:HandoverSummary; offered_by:string; offered_at:string; decided_by:string|null; decided_at:string|null }
