@@ -1,4 +1,4 @@
-import { holidaysBetween, shiftDate } from './holidays.js';
+import { holidaysBetween, makeupDaysBetween, shiftDate } from './holidays.js';
 import { dayTarget, effectiveSchedule, type ScheduledMember } from './schedule.js';
 import { absenceStatus, type AbsenceLike } from './vacation.js';
 
@@ -54,9 +54,9 @@ export function capacityOutlook(input: { members: (ScheduledMember & { role?: st
     const schedule = effectiveSchedule(m);
     const supply = zero();
     if (schedule && !scenario.pausedUsers.includes(m.user_id)) {
-      const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
+      const holidays = holidaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo), makeup = makeupDaysBetween(m.location ?? input.defaultLocation ?? null, horizonFrom, horizonTo);
       const own = input.absences.filter((a) => a.user_id === m.user_id && absenceStatus(a) === 'approved');
-      months.forEach((mo, i) => { for (let day = mo.from; day <= mo.to; day = shiftDate(day, 1)) supply[i] += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null) ?? 0; });
+      months.forEach((mo, i) => { for (let day = mo.from; day <= mo.to; day = shiftDate(day, 1)) supply[i] += dayTarget(schedule, day, holidays.get(day), own.find((a) => a.starts_on <= day && a.ends_on >= day) ?? null, makeup.has(day)) ?? 0; });
     }
     return { user_id: m.user_id, supply, demand: zero() };
   });

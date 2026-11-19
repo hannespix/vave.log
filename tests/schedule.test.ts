@@ -53,3 +53,20 @@ describe('work schedule', () => {
     expect(vacationSummary({ entitlement: 24, absences: [a], userId: 'a', year: 2026, location: null, schedule: fourDays }).taken).toBe(4);
   });
 });
+
+describe('make-up working days (China)', () => {
+  const full: WorkSchedule = [480, 480, 480, 480, 480, 0, 0];
+  it('counts a make-up Saturday as a normal working day and the holiday week as free', () => {
+    expect(dayTarget(full, '2026-02-14', null, null, true)).toBe(480); // Samstag, Ausgleichs-Arbeitstag
+    expect(dayTarget(full, '2026-02-14', null, null)).toBe(0);
+    expect(dayTarget([240, 240, 240, 0, 0, 0, 0], '2026-02-14', null, null, true)).toBe(240);
+    expect(dayTarget([0, 0, 0, 0, 0, 300, 0], '2026-02-14', null, null, true)).toBe(300); // eigenes Samstagsmodell bleibt
+    expect(dayTarget(full, '2026-02-14', null, { user_id: 'a', starts_on: '2026-02-14', ends_on: '2026-02-14', kind: 'vacation' }, true)).toBe(0);
+    // Februar 2026 in Shanghai: 20 Werktage − 6 freie Werktage (16.–23.2.) + 2 Ausgleichssamstage = 16 Arbeitstage.
+    const shanghai = timeAccount({ user_id: 'a', work_schedule: full, location: 'CN-SH' }, [], [], '2026-02-01', '2026-02-28');
+    expect(shanghai?.targetMinutes).toBe(16 * 480);
+    expect(shanghai?.days.find((d) => d.day === '2026-02-28')?.target).toBe(480);
+    const frankfurt = timeAccount({ user_id: 'a', work_schedule: full, location: 'DE-HE' }, [], [], '2026-02-01', '2026-02-28');
+    expect(frankfurt?.targetMinutes).toBe(20 * 480);
+  });
+});

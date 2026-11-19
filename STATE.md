@@ -554,3 +554,16 @@ Die Demo war über sechs Aufbaustufen auf 112 Personen, 25 Projekte und knapp 6.
 **Beispieldaten neu laden** (`public.demo_reset_workspace`, Knopf im Demo-Banner unter Einstellungen): ersetzt den gesamten Inhalt eines Demo-Workspace durch den kompakten Satz – nach ausdrücklicher Rückfrage, nur für die Person, die die Demo angelegt hat, und nicht bei laufendem Timer. Workspace, echte Mitglieder und Einladungen bleiben. Bestehende große Demos werden nicht von selbst umgestellt; ihr Banner bietet „Kompakte Beispieldaten laden“ an (ersetzt das frühere „Demo vervollständigen“).
 
 **Aufgeräumt:** `src/shared/demo-data.ts` schrumpft von 1.106 auf 18 Zeilen (das große Manifest mit Projekt-Credits lebt nur noch in den alten Migrationen). Die Tests der früheren Aufbaustufen sind an den Stand vor dieser Migration gebunden; neu ist `tests/demo-compact-database.test.ts`. „Auf heute bringen“ lässt den kompakten Satz klein: Es rückt Termine nach und trägt Zeiten bis gestern nach, legt aber keine zufälligen Abwesenheiten oder Planzeilen mehr an.
+
+## Feiertage in China und Ausgleichs-Arbeitstage (19.11.2026)
+
+Der Standort-Kalender kannte Deutschland, Österreich und die Schweiz. Neu ist Festlandchina (`CN`, dazu `CN-SH`, `CN-BJ`, `CN-GD`, `CN-ZJ`, `CN-JS`, `CN-SC` – die Feiertage gelten landesweit, die Regionen dienen nur der Zuordnung). Hongkong, Macau und Taiwan haben eigene Kalender und sind nicht enthalten.
+
+**Zwei Quellen** (`src/shared/holidays.ts`):
+
+- **Amtlicher Plan** des Staatsrats, hinterlegt für 2025, 2026 und 2027 (Mitteilung vom 5.11.2026): freie Tage am Stück – etwa neun Tage Frühlingsfest – und die **Ausgleichs-Arbeitstage** am Wochenende (调休).
+- **Gerechnet** für alle anderen Jahre: die 13 gesetzlichen Feiertage ohne Brückentage und ohne Ausgleichstage, denn die legt erst der Plan fest. Der Abwesenheitskalender sagt das dann dazu. Der Plan erscheint meist Anfang November für das Folgejahr; dann wird `CN_PLANS` um ein Jahr ergänzt.
+
+Die Mondkalender-Feste (Frühlingsfest, Drachenbootfest, Mittherbstfest) stehen als Tabelle 2000–2100 im Code. Sie stammt aus dem chinesischen Kalender der ICU und ist gegen eine eigene Neumond-Rechnung in chinesischer Zeit geprüft; 2027 und 2030 lag die ICU einen Tag daneben (Neumond wenige Minuten um Mitternacht) und ist korrigiert. Ab etwa 2050 sind einzelne Tage vorläufig.
+
+**Ausgleichs-Arbeitstage** sind neu im Modell (`makeupDaysFor`, `makeupDaysBetween`): An einem solchen Samstag oder Sonntag gilt das Soll eines normalen Arbeitstags der Person (höchster Wert Mo–Fr; ein eigenes Wochenendmodell bleibt). Das wirkt überall, wo Feiertage wirken: Tagessoll und Gleitzeit, Kapazität und Kapazitätsplan, Ausblick, Berichte, Urlaubszählung (ein Urlaubstag an einem Ausgleichssamstag kostet einen Tag). Im Abwesenheitskalender ist der Tag nicht schraffiert und trägt eine Markierung. MCP: `list_holidays` kennt `CN`, neu ist `list_makeup_workdays`.

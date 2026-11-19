@@ -69,3 +69,15 @@ describe('Audit 16.11.2026: vacation is counted per day', () => {
     expect(new Set(uids).size).toBe(2);
   });
 });
+
+describe('vacation at a Chinese location', () => {
+  it('costs a day on a make-up Saturday and none during the holiday week', () => {
+    const a = { user_id: 'a', starts_on: '2026-02-13', ends_on: '2026-02-24', kind: 'vacation' as const };
+    // Fr 13.2., Sa 14.2. (Ausgleichs-Arbeitstag), Di 24.2. – der Rest ist Frühlingsfest oder Wochenende.
+    expect(absenceWorkdays(a, 'CN-SH')).toBe(3);
+    expect(absenceWorkdays(a, 'DE-HE')).toBe(8);
+    expect(absenceWorkdays(a, 'CN-SH', undefined, undefined, [480, 480, 480, 480, 480, 0, 0])).toBe(3);
+    expect(absenceWorkdays(a, 'CN-SH', undefined, undefined, [0, 0, 0, 0, 0, 0, 0])).toBe(0);
+    expect(vacationSummary({ entitlement: 15, absences: [a], userId: 'a', year: 2026, location: 'CN-SH' }).taken).toBe(3);
+  });
+});

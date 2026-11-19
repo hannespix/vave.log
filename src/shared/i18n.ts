@@ -292,6 +292,8 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Urlaub": {"en": "Vacation", "de": "Urlaub", "zh": "休假"},
   "Krank": {"en": "Sick", "de": "Krank", "zh": "病假"},
   "Feiertag": {"en": "Public holiday", "de": "Feiertag", "zh": "法定假日"},
+  "Ausgleichs-Arbeitstag": {"en": "Make-up working day", "de": "Ausgleichs-Arbeitstag", "zh": "调休上班日"},
+  "China {year}: vorläufig nur die gesetzlichen Feiertage. Brückentage und Ausgleichs-Arbeitstage am Wochenende legt der amtliche Plan fest, meist im November des Vorjahres.": {"en": "China {year}: provisionally the statutory holidays only. Bridge days and make-up working days at weekends are set by the official plan, usually in November of the year before.", "de": "China {year}: vorläufig nur die gesetzlichen Feiertage. Brückentage und Ausgleichs-Arbeitstage am Wochenende legt der amtliche Plan fest, meist im November des Vorjahres.", "zh": "中国 {year} 年：暂时仅含法定节假日。调休放假和周末补班以国务院办公厅通知为准，通常在上一年 11 月发布。"},
   "Sonstiges": {"en": "Other", "de": "Sonstiges", "zh": "其他"},
   "Art": {"en": "Type", "de": "Art", "zh": "类型"},
   "Notiz": {"en": "Note", "de": "Notiz", "zh": "备注"},

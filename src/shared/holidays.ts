@@ -3,6 +3,9 @@
  * `LAND` oder `LAND-REGION` nach ISO 3166-2, z. B. `DE-BW`, `AT-9`, `CH-ZH`. Unbekannte
  * Regionen fallen auf die bundesweiten Feiertage des Landes zurück; unbekannte Länder
  * haben keine Feiertage (die Kapazitätsrechnung bleibt dann wie bisher).
+ *
+ * China (Festland) kennt neben freien Tagen auch Ausgleichs-Arbeitstage: Wochenendtage, an denen
+ * gearbeitet wird, damit eine Feiertagswoche am Stück frei ist (调休). Die liefert `makeupDaysFor`.
  */
 export interface Holiday { date: string; name: string }
 
@@ -61,7 +64,16 @@ export const LOCATIONS: { code: string; country: string; name: string }[] = [
   { code: 'CH-NW', country: 'CH', name: 'Nidwalden' },
   { code: 'CH-OW', country: 'CH', name: 'Obwalden' },
   { code: 'CH-UR', country: 'CH', name: 'Uri' },
+  // Festlandchina: Die gesetzlichen Feiertage gelten landesweit; die Regionen dienen nur der Zuordnung.
+  { code: 'CN', country: 'CN', name: 'China (Festland)' },
+  { code: 'CN-SH', country: 'CN', name: 'Shanghai' },
+  { code: 'CN-BJ', country: 'CN', name: 'Peking' },
+  { code: 'CN-GD', country: 'CN', name: 'Guangdong (Guangzhou, Shenzhen)' },
+  { code: 'CN-ZJ', country: 'CN', name: 'Zhejiang (Hangzhou)' },
+  { code: 'CN-JS', country: 'CN', name: 'Jiangsu (Suzhou, Nanjing)' },
+  { code: 'CN-SC', country: 'CN', name: 'Sichuan (Chengdu)' },
 ];
+export const COUNTRY_NAMES: Record<string, string> = { DE: 'Deutschland', AT: 'Österreich', CH: 'Schweiz', CN: 'China' };
 export const LOCATION_CODES = new Set(LOCATIONS.map((l) => l.code));
 export const LOCATION_PATTERN = /^[A-Z]{2}(-[A-Z0-9]{1,3})?$/;
 export const isLocation = (code: string) => LOCATION_PATTERN.test(code);
@@ -178,13 +190,63 @@ function switzerland(region: string, year: number): Holiday[] {
   if (has('TI')) list.push({ date: iso(year, 3, 19), name: 'Josefstag' }, { date: iso(year, 6, 29), name: 'Peter und Paul' });
   return dedupe(list);
 }
+/**
+ * China (Festland). Zwei Quellen:
+ * 1. Der amtliche Plan des Staatsrats je Jahr (meist Anfang November für das Folgejahr): freie Tage
+ *    am Stück und die Ausgleichs-Arbeitstage am Wochenende. Hinterlegt für 2025–2027.
+ * 2. Für alle anderen Jahre die 13 gesetzlichen Feiertage, gerechnet – ohne Brückentage und ohne
+ *    Ausgleichs-Arbeitstage, weil die erst der amtliche Plan festlegt. `chinaPlanKnown` sagt, was gilt.
+ *
+ * Mondkalender-Feste (Frühlingsfest, Drachenbootfest, Mittherbstfest) je Jahr 2000–2100 als MMTT·3.
+ * Erzeugt aus dem chinesischen Kalender der ICU und gegen die Neumond-Rechnung nach Meeus in
+ * chinesischer Zeit geprüft (korrigiert: 2027 und 2030, dort lag die ICU einen Tag daneben).
+ * Ab etwa 2050 vorläufig: Liegt ein Neumond wenige Minuten um Mitternacht, kann der Tag kippen.
+ */
+const CN_LUNAR = '020506060912 012406251001 021206150921 020106040911 012206220928 020906110918 012905311006 021806190925 020706080914 012605281003 021406160922 020306060912 012306230930 021006120919 013106020908 021906200927 020806090915 012805301004 021606180924 020506070913 012506251001 021206140921 020106030910 012206220929 021006100917 012905311006 021706190925 020606090915 012605281003 021306160922 020306050912 012306241001 021106120919 013106010908 021906200927 020806100916 012805301004 021506180924 020406070913 012405271002 021206140920 020106030910 012206220928 021006110917 013005311005 021706190925 020606080915 012605291004 021406150922 020206040911 012306230930 021106130919 020106010907 021906200926 020806100916 012805301005 021506170924 020406060913 012406251002 021206140921 020206030909 012106220928 020906110917 012906011006 021706190925 020506080915 012605281003 021406160923 020306040911 012306230929 021106130919 013106020908 021906200926 020706100916 012705301005 021506170924 020506060912 012406241001 021206140920 020206040910 012206220928 020906110917 012906011006 021706190926 020606070914 012605271003 021406150922 020306050911 012406230929 021006130918 013006020908 021806210927 020706090916 012705291005 021506170924 020506060913 012506240930 021206140920 020106040909 012106230929 020906120918'.split(' ');
+function chinaLunar(year: number): { spring: string; dragonBoat: string; midAutumn: string } | null {
+  const row = CN_LUNAR[year - 2000];
+  if (!row) return null;
+  const at = (i: number) => iso(year, Number(row.slice(i, i + 2)), Number(row.slice(i + 2, i + 4)));
+  return { spring: at(0), dragonBoat: at(4), midAutumn: at(8) };
+}
+/** Qingming (Sonnenterm, 4. oder 5. April), Näherungsformel für das 21. Jahrhundert. */
+function qingming(year: number): string {
+  const y = year % 100;
+  return iso(year, 4, year >= 2100 ? 5 : Math.floor(y * 0.2422 + 4.81) - Math.floor(y / 4));
+}
+const CN = { newYear: 'Neujahr (元旦)', spring: 'Frühlingsfest (春节)', qingming: 'Qingming-Fest (清明节)', labour: 'Tag der Arbeit (劳动节)', dragonBoat: 'Drachenbootfest (端午节)', midAutumn: 'Mittherbstfest (中秋节)', national: 'Nationalfeiertag (国庆节)', makeup: 'Ausgleichs-Arbeitstag (调休)' };
+type ChinaPlan = { off: [from: string, to: string, name: string][]; work: string[] };
+/** Amtliche Pläne (Mitteilungen des Staatsrats). Daten als MM-TT im jeweiligen Jahr. */
+const CN_PLANS: Record<number, ChinaPlan> = {
+  2025: { off: [['01-01', '01-01', CN.newYear], ['01-28', '02-04', CN.spring], ['04-04', '04-06', CN.qingming], ['05-01', '05-05', CN.labour], ['05-31', '06-02', CN.dragonBoat], ['10-01', '10-08', `${CN.national} · ${CN.midAutumn}`]], work: ['01-26', '02-08', '04-27', '09-28', '10-11'] },
+  2026: { off: [['01-01', '01-03', CN.newYear], ['02-15', '02-23', CN.spring], ['04-04', '04-06', CN.qingming], ['05-01', '05-05', CN.labour], ['06-19', '06-21', CN.dragonBoat], ['09-25', '09-27', CN.midAutumn], ['10-01', '10-07', CN.national]], work: ['01-04', '02-14', '02-28', '05-09', '09-20', '10-10'] },
+  2027: { off: [['01-01', '01-03', CN.newYear], ['02-05', '02-13', CN.spring], ['04-03', '04-05', CN.qingming], ['05-01', '05-05', CN.labour], ['06-09', '06-09', CN.dragonBoat], ['09-15', '09-15', CN.midAutumn], ['10-01', '10-07', CN.national]], work: ['01-31', '02-14', '05-08', '09-26', '10-09'] },
+};
+/** Liegt für das Jahr der amtliche Plan vor? Sonst gelten nur die gerechneten gesetzlichen Feiertage. */
+export const chinaPlanKnown = (year: number) => year in CN_PLANS;
+function china(year: number): Holiday[] {
+  const plan = CN_PLANS[year];
+  if (plan) {
+    const list: Holiday[] = [];
+    for (const [from, to, name] of plan.off) for (let day = `${year}-${from}`; day <= `${year}-${to}`; day = shiftDate(day, 1)) list.push({ date: day, name });
+    return list;
+  }
+  const lunar = chinaLunar(year);
+  const list: Holiday[] = [{ date: iso(year, 1, 1), name: CN.newYear }, { date: qingming(year), name: CN.qingming }, { date: iso(year, 5, 1), name: CN.labour }, { date: iso(year, 5, 2), name: CN.labour },
+    { date: iso(year, 10, 1), name: CN.national }, { date: iso(year, 10, 2), name: CN.national }, { date: iso(year, 10, 3), name: CN.national }];
+  if (lunar) {
+    for (const offset of [-1, 0, 1, 2]) list.push({ date: shiftDate(lunar.spring, offset), name: CN.spring }); // Vorabend und die ersten drei Tage
+    list.push({ date: lunar.dragonBoat, name: CN.dragonBoat }, { date: lunar.midAutumn, name: CN.midAutumn });
+  }
+  return list;
+}
 function dedupe(list: Holiday[]) { const seen = new Set<string>(); return list.filter((h) => !seen.has(h.date) && seen.add(h.date)); }
 
 /** Gesetzliche Feiertage eines Jahres am Standort, sortiert nach Datum. */
 export function holidaysFor(location: string | null | undefined, year: number): Holiday[] {
   if (!location || !isLocation(location) || year < 2000 || year > 2100) return [];
   const [country, region = ''] = location.split('-');
-  const list = country === 'DE' ? germany(region, year) : country === 'AT' ? austria(region, year) : country === 'CH' ? switzerland(region, year) : [];
+  const list = country === 'DE' ? germany(region, year) : country === 'AT' ? austria(region, year) : country === 'CH' ? switzerland(region, year) : country === 'CN' ? china(year) : [];
   return dedupe(list).sort((a, b) => a.date.localeCompare(b.date));
 }
 /** Feiertage im Zeitraum (inklusive), als Map Datum → Name. */
@@ -193,6 +255,20 @@ export function holidaysBetween(location: string | null | undefined, from: strin
   if (!location || from > to) return result;
   for (let year = Number(from.slice(0, 4)); year <= Number(to.slice(0, 4)); year++) {
     for (const h of holidaysFor(location, year)) if (h.date >= from && h.date <= to) result.set(h.date, h.name);
+  }
+  return result;
+}
+/** Ausgleichs-Arbeitstage eines Jahres am Standort: Wochenendtage, an denen gearbeitet wird. Bisher nur China. */
+export function makeupDaysFor(location: string | null | undefined, year: number): Holiday[] {
+  if (!location || !isLocation(location) || location.split('-')[0] !== 'CN') return [];
+  return (CN_PLANS[year]?.work ?? []).map((day) => ({ date: `${year}-${day}`, name: CN.makeup }));
+}
+/** Ausgleichs-Arbeitstage im Zeitraum (inklusive), als Map Datum → Name. */
+export function makeupDaysBetween(location: string | null | undefined, from: string, to: string): Map<string, string> {
+  const result = new Map<string, string>();
+  if (!location || from > to) return result;
+  for (let year = Number(from.slice(0, 4)); year <= Number(to.slice(0, 4)); year++) {
+    for (const h of makeupDaysFor(location, year)) if (h.date >= from && h.date <= to) result.set(h.date, h.name);
   }
   return result;
 }
