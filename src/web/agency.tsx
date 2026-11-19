@@ -12,16 +12,19 @@ const copy={
  start:['How would you like to start?','Wie möchtest du starten?','你想如何开始？'],
  empty:['Start empty','Leer starten','从空白开始'],
  emptyNote:['Your own projects, people and plans.','Eigene Projekte, Menschen und Planungen.','创建自己的项目、团队与计划。'],
- demo:['Explore with VAVE examples','Mit VAVE-Beispielen erkunden','探索 VAVE 示例'],
- demoNote:['An international agency with 100 employees, freelance specialists and multi-million-euro projects. Explore fictional work, budgets and invoices in a separate EUR workspace.','Eine internationale Agentur mit 100 Mitarbeitenden, freien Spezialisten und Projekten im Millionenbereich. Erkunde fiktive Arbeit, Budgets und Rechnungen in einem eigenen EUR-Workspace.','拥有 100 名员工、自由职业专家和数百万欧元项目的国际工作室。在独立的欧元工作区探索虚构的工作、预算及发票。'],
+ demo:['Explore with sample data','Mit Beispieldaten erkunden','用示例数据探索'],
+ demoNote:['A small studio with 7 people and 5 projects – enough to see every feature at a glance. Everything is fictional and lives in a separate EUR workspace.','Ein kleines Studio mit 7 Personen und 5 Projekten – genug, um jede Funktion auf einen Blick zu sehen. Alles ist fiktiv und liegt in einem eigenen EUR-Workspace.','一个 7 人、5 个项目的小型工作室——足以一眼看清每项功能。全部为虚构数据，位于独立的欧元工作区。'],
  demoBadge:['DEMO WORKSPACE','DEMO-WORKSPACE','示例工作区'],
- disclosure:['Explore a sample agency with team, projects, time, planning and invoices. Names include public VAVE credits and invented people; all operating and billing data is fictional. Sample people have no login. DEMO invoices are not for payment.','Erkunde eine Beispielagentur mit Team, Projekten, Zeiten, Planung und Rechnungen. Namen stammen aus öffentlichen VAVE-Projektcredits oder sind erfunden; alle Arbeits- und Rechnungsdaten sind fiktiv. Beispielpersonen haben keinen Login. DEMO-Rechnungen sind nicht zur Zahlung bestimmt.','探索包含团队、项目、工时、规划及发票的示例工作室。姓名来自 VAVE 公开项目署名或虚构人物；所有工作及账单数据均为虚构。示例人物无法登录，DEMO 发票无需付款。'],
- completeDemo:['Complete demo','Demo vervollständigen','补全示例'],
- completeDemoNote:['Add the 100-person agency scenario, enterprise projects and invoices in the millions. Existing records and your edits are kept.','Ergänze das Szenario einer Agentur mit 100 Mitarbeitenden, Großprojekten und Rechnungen im Millionenbereich. Vorhandene Datensätze und deine Änderungen bleiben erhalten.','添加 100 名员工的工作室场景、大型项目和数百万欧元的发票。现有记录及你的修改均会保留。'],
+ disclosure:['A small sample studio: 7 people, 5 projects, a few weeks of time, a capacity plan and three invoices. Everything is fictional. Sample people have no login. DEMO invoices are not for payment.','Ein kleines Beispielstudio: 7 Personen, 5 Projekte, einige Wochen Zeiten, ein Kapazitätsplan und drei Rechnungen. Alles ist fiktiv. Beispielpersonen haben keinen Login. DEMO-Rechnungen sind nicht zur Zahlung bestimmt.','一个小型示例工作室：7 人、5 个项目、数周工时、一份产能计划和三张发票。全部为虚构。示例人物无法登录，DEMO 发票无需付款。'],
+ completeDemo:['Load compact sample data','Kompakte Beispieldaten laden','加载精简示例数据'],
+ completeDemoNote:['There is a new, compact sample set: 7 people, 5 projects, a few weeks of time. Loading it replaces everything in this demo workspace.','Es gibt einen neuen, kompakten Beispielsatz: 7 Personen, 5 Projekte, einige Wochen Zeiten. Beim Laden wird der Inhalt dieses Demo-Workspace ersetzt.','现在有一套新的精简示例数据：7 人、5 个项目、数周工时。加载后将替换此示例工作区中的全部内容。'],
+ reloadDemo:['Reload sample data','Beispieldaten neu laden','重新加载示例数据'],
+ resetTitle:['Reload sample data?','Beispieldaten neu laden?','重新加载示例数据？'],
+ resetText:['This replaces everything in this demo workspace with the compact sample set – including what you entered here yourself. The workspace, real members and invitations stay. This cannot be undone.','Das ersetzt den gesamten Inhalt dieses Demo-Workspace durch den kompakten Beispielsatz – auch das, was du hier selbst eingetragen hast. Workspace, echte Mitglieder und Einladungen bleiben. Das lässt sich nicht rückgängig machen.','这将用精简示例数据替换此示例工作区中的全部内容——包括你自己在此录入的内容。工作区、真实成员和邀请会保留。此操作无法撤销。'],
+ demoReset:['Sample data reloaded.','Beispieldaten neu geladen.','示例数据已重新加载。'],
  refreshDemo:['Bring up to date','Auf heute bringen','更新到今天'],
  refreshDemoNote:['The sample data has aged. Bring due dates, absences and booked time up to today. Your edits are kept.','Die Beispieldaten sind gealtert. Bringe Termine, Abwesenheiten und gebuchte Zeiten auf den Stand von heute. Deine Änderungen bleiben erhalten.','示例数据已过期。将截止日期、请假和工时更新到今天，您的修改会保留。'],
  demoRefreshed:['The sample data is up to date.','Die Beispieldaten sind auf dem Stand von heute.','示例数据已更新到今天。'],
- demoCompleted:['The full demo agency is ready.','Die vollständige Demo-Agentur ist bereit.','完整的示例工作室已准备就绪。'],
  samplePerson:['DEMO','DEMO','示例'],
  samplePublic:['Public project credit','Öffentlicher Projektcredit','公开项目署名'],
  sampleProfile:['Sample profile','Beispielprofil','示例资料'],
@@ -51,12 +54,13 @@ export function DemoChoice({value,onChange,disabled=false}:{value:WorkspaceStart
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
  return <fieldset className="demo-choice" disabled={disabled}><legend>{t('start')}</legend>{(['empty','demo'] as const).map(kind=><label key={kind} className={value===kind?'selected':''}><input type="radio" name="workspace-start" value={kind} checked={value===kind} onChange={()=>onChange(kind)}/><span><strong>{t(kind)}</strong><small>{t(kind==='empty'?'emptyNote':'demoNote')}</small></span></label>)}</fieldset>;
 }
-export function DemoBanner({demo,canArchive,onArchive,onUpgrade,onRefresh,today,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onUpgrade:()=>void;onRefresh?:()=>void;today?:string;busy:boolean}){
+export function DemoBanner({demo,canArchive,onArchive,onReset,onRefresh,today,busy}:{demo:DemoWorkspace;canArchive:boolean;onArchive:()=>void;onReset:()=>void;onRefresh?:()=>void;today?:string;busy:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);
- const incomplete=(demo.experience_version??1)<DEMO_EXPERIENCE_VERSION;
+ // Ältere Demos (große Beispielagentur) lassen sich auf den kompakten Satz umstellen; die kompakte Demo lässt sich jederzeit neu laden.
+ const older=(demo.experience_version??1)<DEMO_EXPERIENCE_VERSION;
  // Beispieldaten altern: nach einer Woche ohne Auffrischung bietet das Banner an, sie auf heute zu bringen.
- const stale=!incomplete&&!!onRefresh&&!!today&&(!demo.refreshed_on||Date.parse(`${today}T00:00:00Z`)-Date.parse(`${demo.refreshed_on}T00:00:00Z`)>=7*86400000);
- return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{incomplete&&canArchive&&<p>{t('completeDemoNote')}</p>}{stale&&canArchive&&<p>{t('refreshDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{incomplete&&<button className="button primary small" disabled={busy} onClick={onUpgrade}>{t('completeDemo')}</button>}{stale&&<button className="button primary small" disabled={busy} onClick={onRefresh}>{t('refreshDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
+ const stale=!older&&!!onRefresh&&!!today&&(!demo.refreshed_on||Date.parse(`${today}T00:00:00Z`)-Date.parse(`${demo.refreshed_on}T00:00:00Z`)>=7*86400000);
+ return <aside className="demo-banner" aria-label={t('demoBadge')}><div className="demo-banner-top"><div><strong>{t('demoBadge')}</strong><p>{t('disclosure')}</p>{older&&canArchive&&<p>{t('completeDemoNote')}</p>}{stale&&canArchive&&<p>{t('refreshDemoNote')}</p>}</div>{canArchive&&<div className="button-row">{older&&<button className="button primary small" disabled={busy} onClick={onReset}>{t('completeDemo')}</button>}{stale&&<button className="button primary small" disabled={busy} onClick={onRefresh}>{t('refreshDemo')}</button>}{!older&&<button className="button secondary small" disabled={busy} onClick={onReset}>{t('reloadDemo')}</button>}<button className="button secondary small" disabled={busy} onClick={onArchive}>{t('archive')}</button></div>}</div></aside>;
 }
 export function Connections({tasks,projects,manager}:{tasks:Task[];projects:Project[];manager:boolean}){
  const{locale}=useI18n();const t=(key:keyof typeof copy)=>agencyText(locale,key);

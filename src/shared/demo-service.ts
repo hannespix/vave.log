@@ -14,10 +14,10 @@ function parse<T>(schema:z.ZodType<T>,input:unknown):T {
   if(!result.success) throw new DemoError('Check the workspace name, timezone, language and request ID.','validation');
   return result.data;
 }
-function fail(error:{code?:string;message?:string}|null) {
+function fail(error:{code?:string;message?:string}|null,timerMessage='Stop or discard running timers before archiving this demo workspace.') {
   if(!error) return;
   if(error.code==='42501'||error.message?.startsWith('DEMO_FORBIDDEN')) throw new DemoError('A verified account and the required workspace permissions are needed.','forbidden');
-  if(error.message?.startsWith('DEMO_CONFLICT')) throw new DemoError(error.message.toLowerCase().includes('timer')?'Stop or discard running timers before archiving this demo workspace.':'This demo workspace has been archived. Start a new sample with a new request ID.','conflict');
+  if(error.message?.startsWith('DEMO_CONFLICT')) throw new DemoError(error.message.toLowerCase().includes('timer')?timerMessage:'This demo workspace has been archived. Start a new sample with a new request ID.','conflict');
   if(error.message?.startsWith('DEMO_VALIDATION')||['22P02','23514'].includes(error.code??'')) throw new DemoError('Check the workspace name, timezone, language and request ID.','validation');
   throw new DemoError('The demo workspace could not be loaded or saved.','database');
 }
@@ -47,6 +47,12 @@ export function createDemoService(client:SupabaseClient) {
       const id=parse(uuid,workspaceId);
       const {error}=await client.rpc('demo_refresh_workspace',{p_workspace_id:id});
       fail(error);
+    },
+    /** Ersetzt den Inhalt eines Demo-Workspace durch den kompakten Beispielsatz. Workspace, echte Mitglieder und Einladungen bleiben. */
+    async reset(workspaceId:string):Promise<void> {
+      const id=parse(uuid,workspaceId);
+      const {error}=await client.rpc('demo_reset_workspace',{p_workspace_id:id});
+      fail(error,'Stop or discard running timers before reloading the sample data.');
     },
     async archive(workspaceId:string):Promise<void> {
       const id=parse(uuid,workspaceId);

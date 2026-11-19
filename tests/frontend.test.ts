@@ -19,9 +19,9 @@ describe('presentation data safety',()=>{
 
 describe('enterprise demo upgrade',()=>{
  const demo:DemoWorkspace={workspace_id:'sample',created_by:'owner',request_id:'request',locale:'en',manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null,experience_version:2};
- const render=(version:number,canArchive=true)=>renderToStaticMarkup(createElement(I18nProvider,{initialLocale:'en'},createElement(DemoBanner,{demo:{...demo,experience_version:version},canArchive,busy:false,onUpgrade:()=>{},onArchive:()=>{}})));
- it('offers the new scenario to owners of the previous complete demo',()=>{expect(render(2)).toContain('Complete demo');expect(render(DEMO_EXPERIENCE_VERSION)).not.toContain('Complete demo');});
- it('does not offer a creator-owner upgrade to other members',()=>{expect(render(2,false)).not.toContain('Complete demo');});
+ const render=(version:number,canArchive=true)=>renderToStaticMarkup(createElement(I18nProvider,{initialLocale:'en'},createElement(DemoBanner,{demo:{...demo,experience_version:version},canArchive,busy:false,onReset:()=>{},onArchive:()=>{}})));
+ it('offers the new scenario to owners of the previous complete demo',()=>{expect(render(2)).toContain('Load compact sample data');expect(render(DEMO_EXPERIENCE_VERSION)).not.toContain('Load compact sample data');});
+ it('does not offer a creator-owner upgrade to other members',()=>{expect(render(2,false)).not.toContain('Load compact sample data');});
 });
 
 describe('defensive date presentation',()=>{

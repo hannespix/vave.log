@@ -134,7 +134,7 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:seeded?{workspace_id:ws,created_by:user,request_id:input?.p_request_id,locale:'en',experience_version:DEMO_EXPERIENCE_VERSION,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:workspace.created_at,archived_at:null}:null}));
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:'55555555-5555-4555-8555-555555555555',role:'manager',display_name:'Tobias Geisler',email:'sample-1@example.invalid',created_at:'',is_demo:true,demo_title:'Co-Founder & CEO',demo_studio:'',demo_origin:'public'}]}));
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
- await page.getByRole('radio',{name:/Explore with VAVE examples/}).check();
+ await page.getByRole('radio',{name:/Explore with sample data/}).check();
  await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
  await pickOption(page.getByRole('combobox',{name:'Time zone',exact:true}),'Europe/Berlin','Europe/Berlin');
  await page.getByRole('button',{name:'Create workspace',exact:true}).click();
@@ -258,7 +258,7 @@ test('client cards show contacts, remarks and key figures, and the editor manage
  await page.getByRole('dialog').getByRole('button',{name:'Back',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
-test('older demo expands once into team, approvals and usable marked invoices',async({page})=>{
+test('an older demo is replaced by the compact sample after confirmation, with team, approvals and usable marked invoices',async({page})=>{
  const entries=await setup(page,true);let upgraded=0;let issued=0;let refreshed=0;
  const person='55555555-5555-4555-8555-555555555555',customer='66666666-6666-4666-8666-666666666666',draftId='77777777-7777-4777-8777-777777777777';
  const profile={workspace_id:ws,legal_name:'VAVE Demo Studio — fictional',billing_address:'Example street 1',tax_id:'DEMO-NOT-VALID',payment_details:'Do not pay',invoice_prefix:'DEMO',footer:'DEMO — Not for payment'};
@@ -268,7 +268,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?DEMO_EXPERIENCE_VERSION:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null,refreshed_on:refreshed?new Date().toISOString().slice(0,10):null}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_refresh_workspace',r=>{expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});refreshed++;return r.fulfill({json:{people:1,absences:1,tasks_moved:0,tasks_tagged:0,entries:5}})});
  await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},...(upgraded?[{workspace_id:ws,user_id:person,role:'member',display_name:'Elena Weber',email:'elena@example.invalid',created_at:'',is_demo:true,demo_title:'Finance & Operations Lead',demo_studio:'Frankfurt',demo_origin:'fictional'}]:[])]}));
- await page.route('https://test.supabase.co/rest/v1/rpc/demo_upgrade_workspace',r=>{
+ await page.route('https://test.supabase.co/rest/v1/rpc/demo_reset_workspace',r=>{
   expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});upgraded++;
   entries.push({id:'88888888-8888-4888-8888-888888888888',workspace_id:ws,project_id:project,user_id:person,work_date:'2026-10-13',minutes:120,note:'Sample concept workshop',billable:true,status:'submitted',timer_id:null,created_at:''});return r.fulfill({json:null});
  });
@@ -278,10 +278,16 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  await page.route('https://test.supabase.co/rest/v1/finance_billing_profiles*',r=>r.fulfill({json:profile}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:upgraded?[invoice]:[]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_issue_invoice',r=>{issued++;expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws,p_id:draftId});Object.assign(invoice,{status:'issued',number:'DEMO-000001',issued_at:'2026-10-13T09:00:00Z',issuer_snapshot:profile,customer_snapshot:client});return r.fulfill({json:invoice})});
- await page.goto('/');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);
+ await page.goto('/');await expect(page.getByRole('button',{name:'Load compact sample data',exact:true})).toHaveCount(0);
  await goArea(page,'Settings');
- await page.getByRole('button',{name:'Complete demo',exact:true}).click();
- await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await expect(page.getByRole('button',{name:'Reload sample data',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Load compact sample data',exact:true}).click();
+ // Das Laden ersetzt den Inhalt des Demo-Workspace – erst nach ausdrücklicher Bestätigung.
+ const confirm=page.getByRole('dialog');await expect(confirm).toContainText('This cannot be undone.');expect(upgraded).toBe(0);
+ await confirm.getByRole('button',{name:'Reload sample data',exact:true}).click();await expect(confirm).not.toBeVisible();
+ await expect(page.getByText('Sample data reloaded.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Load compact sample data',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await expect(page.getByRole('button',{name:'Reload sample data',exact:true})).toBeVisible();
  // Fertige, aber gealterte Beispieldaten: das Banner bietet an, sie auf heute zu bringen – genau einmal.
  await page.getByRole('button',{name:'Bring up to date',exact:true}).click();
  await expect(page.getByRole('button',{name:'Bring up to date',exact:true})).toHaveCount(0);expect(refreshed).toBe(1);
@@ -296,7 +302,7 @@ test('older demo expands once into team, approvals and usable marked invoices',a
  const dialog=page.getByRole('dialog');await expect(dialog).toContainText('No payment is due.');expect(issued).toBe(0);
  await dialog.getByRole('button',{name:'Issue sample invoice',exact:true}).click();await expect(dialog).not.toBeVisible();expect(issued).toBe(1);
  await expect(page.getByRole('button',{name:'DEMO-000001',exact:true})).toBeVisible();await expect(page.getByText('DEMO — Not for payment',{exact:true}).first()).toBeVisible();
- await page.reload();await goArea(page,'Settings');await expect(page.getByRole('button',{name:'Complete demo',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
+ await page.reload();await goArea(page,'Settings');await expect(page.getByRole('button',{name:'Load compact sample data',exact:true})).toHaveCount(0);expect(upgraded).toBe(1);
  await expect(page.getByRole('button',{name:'Bring up to date',exact:true})).toHaveCount(0);expect(refreshed).toBe(1);
 });
 

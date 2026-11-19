@@ -32,6 +32,13 @@ describe('demo service boundary',()=>{
     await expect(service.refresh('invalid')).rejects.toMatchObject({code:'validation'});
     expect(requests).toHaveLength(1);
   });
+  it('reloads the compact sample only through the authenticated workspace-scoped RPC',async()=>{
+    const {service,requests}=fixture({people:0,absences:0,tasks_moved:0,tasks_tagged:0,entries:0});
+    await service.reset(id);
+    expect(requests).toEqual([{url:'https://example.supabase.co/rest/v1/rpc/demo_reset_workspace',body:{p_workspace_id:id}}]);
+    await expect(service.reset('invalid')).rejects.toMatchObject({code:'validation'});
+    expect(requests).toHaveLength(1);
+  });
   it('returns null for absent or RLS-hidden metadata',async()=>{
     const {service}=fixture([]); expect(await service.get(id)).toBeNull();
   });

@@ -1,5 +1,8 @@
 # Example workspace and agency finance
 
+> **Stand 19.11.2026:** Neue Demo-Workspaces entstehen als kompakter, vollständig fiktiver Satz (7 Personen, 5 Projekte, 16 Aufgaben – Migration `20261119110000_demo_kompakt.sql`, siehe `STATE.md`). Der folgende Text beschreibt die frühere, große Beispielagentur; bestehende Demos dieser Art laufen weiter und lassen sich über „Beispieldaten neu laden“ umstellen.
+
+
 The first-workspace form defaults to **Start empty**. **Explore with VAVE examples** explicitly creates a separate EUR workspace; it never inserts sample rows into another workspace. The same choice remains available under New workspace. An idempotency UUID is reused while a creation attempt is retried.
 
 The public-source manifest contains eight studios, eight portfolio projects and 49 publicly credited people. The enterprise scenario adds invented people to model 100 employees and 12 freelance specialists, plus the signed-in creator. Five smaller projects remain for workflow examples; twelve additional fictional enterprise commissions have EUR 22.55 million in combined project fees and approximately 130,000 planned hours. These are fictional project plans, not a claim about VAVE's actual annual revenue. Public credits are historical context, not a current employment roster; all permissions, assignments, operational and financial information are fictional. Source records remain in [the research document](research/vave-public-research.md) and [the structured people pool](research/vave-demo-people.json); there is no source-gallery UI.

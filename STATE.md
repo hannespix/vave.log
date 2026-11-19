@@ -536,3 +536,21 @@ Feldfall direkt nach dem Einspielen des Kapazitätsplans: Im Demo-Workspace mit 
 - Regel für neue Tabellen: Leseregeln immer mit `workspace_id in (select private.member_workspaces())` bzw. `… workspaces_with(…)` schreiben, nie mit `private.can(workspace_id, …)` je Zeile.
 
 Live-Stand 19.11.2026: Die Migrationen `20261116110000`, `20261117100000` und `20261119100000` sind eingespielt. Die Demo hat 6 Leistungsarten, 92 Phasen, 37 Planzeilen und 592 Wochenwerte.
+
+## Kompakte Beispieldaten (19.11.2026)
+
+Die Demo war über sechs Aufbaustufen auf 112 Personen, 25 Projekte und knapp 6.000 Zeiteinträge gewachsen – zu viel, um das Tool in wenigen Minuten zu erklären. Neue Demos entstehen jetzt in einem Schritt als kleiner, durchdachter Satz. Alles ist fiktiv; öffentliche Namen kommen nicht mehr vor.
+
+**Der Satz** (Migration `20261119110000_demo_kompakt.sql`, `private.demo_seed_compact`):
+
+- **7 Personen** mit Rolle, Arbeitszeitmodell und Stundensatz: Creative Direction, Projektmanagement, 3D (zweimal), Konzept, 2D, Motion. Fünf in Vollzeit, eine mit 32, eine mit 24 Stunden.
+- **5 Projekte:** ein Festpreisprojekt, eines nach Aufwand, ein kleineres Festpreisprojekt, ein Pitch und interne Arbeit – die letzten beiden nicht abrechenbar. Vier Kunden.
+- **16 Aufgaben** in allen Zuständen: drei Meilensteine, eine überfällige, eine ohne Person, eine wöchentlich wiederkehrende, eine für die angemeldete Person.
+- **Zeiten** der letzten vier Wochen bis gestern (rund 120 Einträge): ältere freigegeben, die letzte Woche eingereicht, die laufende als Entwurf. Phase und Leistungsart ergänzt die Datenbank beim Buchen.
+- **Kapazitätsplan:** 6 Leistungsarten, 10 Phasen, 17 Planzeilen. Eine Person ist drei Wochen überbucht, eine 3D-Stelle ist offen, die angemeldete Person ist in einem Projekt eingeplant.
+- **Abwesenheiten:** je eine Art – Urlaub nächste Woche, ein offener Antrag, eine Krankmeldung, ein halber Tag.
+- **Finanzen:** drei Ausgaben, drei Rechnungen (Entwurf, offen, bezahlt), Projektplanung je Projekt.
+
+**Beispieldaten neu laden** (`public.demo_reset_workspace`, Knopf im Demo-Banner unter Einstellungen): ersetzt den gesamten Inhalt eines Demo-Workspace durch den kompakten Satz – nach ausdrücklicher Rückfrage, nur für die Person, die die Demo angelegt hat, und nicht bei laufendem Timer. Workspace, echte Mitglieder und Einladungen bleiben. Bestehende große Demos werden nicht von selbst umgestellt; ihr Banner bietet „Kompakte Beispieldaten laden“ an (ersetzt das frühere „Demo vervollständigen“).
+
+**Aufgeräumt:** `src/shared/demo-data.ts` schrumpft von 1.106 auf 18 Zeilen (das große Manifest mit Projekt-Credits lebt nur noch in den alten Migrationen). Die Tests der früheren Aufbaustufen sind an den Stand vor dieser Migration gebunden; neu ist `tests/demo-compact-database.test.ts`. „Auf heute bringen“ lässt den kompakten Satz klein: Es rückt Termine nach und trägt Zeiten bis gestern nach, legt aber keine zufälligen Abwesenheiten oder Planzeilen mehr an.

@@ -1,3 +1,5 @@
+// Prüft den früheren, großen Beispielsatz (Aufbaustufen 1–5). Neue Demos sind seit 20261119110000 kompakt
+// (tests/demo-compact-database.test.ts); bestehende große Demos laufen mit diesen Funktionen weiter.
 import { PGlite } from '@electric-sql/pglite';
 import { readdirSync,readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +13,7 @@ it('executes the exact v5 rollback-only demo planning smoke and leaves no sample
    create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
    grant usage on schema auth,public to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
    insert into auth.users(id,email,email_confirmed_at)values('00000000-0000-4000-8000-000000000001','existing@example.invalid',now());`);
-  for(const file of readdirSync('supabase/migrations').filter(x=>x.endsWith('.sql')).sort())await db.exec(readFileSync(join('supabase/migrations',file),'utf8'));
+  for(const file of readdirSync('supabase/migrations').filter(x=>x.endsWith('.sql')&&x<'20261119110000').sort())await db.exec(readFileSync(join('supabase/migrations',file),'utf8'));
   const results=await db.exec(readFileSync('tests/live/demo-planning-smoke.sql','utf8'));
   expect(results.flatMap(x=>x.rows)).toContainEqual({new_planned_projects:25,healthy_enterprise_projects:9,existing_planned_projects:24,retry_changed_projects:0,preserved_business_records:true,unchanged_auth_users:true,estimated_tasks:102,milestones:33,automatic_updates_verified:true});
   expect((await db.query('select count(*)::int total from public.workspaces')).rows).toEqual([{total:0}]);
