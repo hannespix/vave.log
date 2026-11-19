@@ -525,3 +525,14 @@ Aus dem Schulterblick vom 16.11.: Die Planung lebt bisher in einer Excel-Matrix 
 **Übergang:** Solange die Migration in der Live-Datenbank fehlt, bleibt der Reiter „Kapazitätsplan“ ausgeblendet und Zeiterfassung wie Projektformular verhalten sich wie zuvor.
 
 **Bewusst noch nicht enthalten:** Stundensätze je Leistungsart (VK/EK) und Auswertung je Phase in Euro – dafür fehlen die Sätze; Phase und Leistungsart direkt am Timer wählen (der Timer bucht nach der Automatik, der Entwurf lässt sich ändern); Abwesenheiten aus dem Urlaubsblock der Excel-Datei; Verschieben von Stunden per Ziehen.
+
+## Leseregeln einmal je Abfrage (19.11.2026)
+
+Feldfall direkt nach dem Einspielen des Kapazitätsplans: Im Demo-Workspace mit 5.827 Zeiteinträgen brachen Zeitenliste, Projektaufwand und Kapazitätsplan mit Fehler 500 ab („statement timeout“). Ursache war nicht die neue Funktion selbst, sondern die Art der Leseregeln: Jede rief je Zeile `private.can(workspace_id, …)` bzw. `private.current_role(workspace_id)` auf – rund 0,75 ms je Zeile, über 4 Sekunden für eine Abfrage über alle Zeiten. Der Kapazitätsplan stellt mehrere solche Abfragen gleichzeitig; zusammen überschritten sie die Grenze von 8 Sekunden.
+
+- Migration `20261119100000_rls_einmal_je_abfrage.sql`: Zwei Funktionen liefern einmal je Abfrage die Workspaces, in denen die Person Mitglied ist (`private.member_workspaces()`) bzw. ein Recht hat (`private.workspaces_with(modul, stufe)`). Alle Leseregeln prüfen je Zeile nur noch, ob der Workspace in dieser Menge liegt. Wer was sehen darf, bleibt gleich – die Funktionen stellen dieselben Fragen wie zuvor.
+- Gemessen in der Live-Datenbank: Zählen aller Zeiten des Demo-Workspace 4,4 s → 7 ms.
+- Neuer Test `tests/rls-performance-database.test.ts`: Keine Leseregel im Schema `public` ruft die Rechteprüfung je Zeile auf; der Abfrageplan nutzt die einmal berechnete Menge; Sichtbarkeit für Eigene, Team, Fremde und Deaktivierte bleibt wie bisher.
+- Regel für neue Tabellen: Leseregeln immer mit `workspace_id in (select private.member_workspaces())` bzw. `… workspaces_with(…)` schreiben, nie mit `private.can(workspace_id, …)` je Zeile.
+
+Live-Stand 19.11.2026: Die Migrationen `20261116110000`, `20261117100000` und `20261119100000` sind eingespielt. Die Demo hat 6 Leistungsarten, 92 Phasen, 37 Planzeilen und 592 Wochenwerte.
