@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chinaPlanKnown, easterSunday, holidaysBetween, holidaysFor, isLocation, LOCATIONS, locationName, makeupDaysBetween, makeupDaysFor } from '../src/shared/holidays';
+import { easterSunday, holidaysBetween, holidaysFor, isLocation, locationChoices, LOCATIONS, locationName, makeupDaysBetween, makeupDaysFor, OFFICES, planKnown } from '../src/shared/holidays';
 
 const dates = (location: string, year: number) => holidaysFor(location, year).map((h) => h.date);
 const has = (location: string, year: number, date: string) => dates(location, year).includes(date);
@@ -89,8 +89,8 @@ describe('China', () => {
     expect(dates('CN', 2027)).toHaveLength(29);
     // 2025: Nationalfeiertag und Mittherbstfest fallen zusammen.
     expect(dates('CN', 2025).filter((d) => d >= '2025-10-01' && d <= '2025-10-31')).toHaveLength(8);
-    expect(chinaPlanKnown(2027)).toBe(true);
-    expect(chinaPlanKnown(2028)).toBe(false);
+    expect(planKnown('CN-SH', 2027)).toBe(true);
+    expect(planKnown('CN', 2028)).toBe(false);
   });
   it('computes the thirteen statutory days for years without a plan', () => {
     // 2028: Frühlingsfest am 26.1., Qingming 4.4., Drachenbootfest 28.5., Mittherbstfest 3.10. (fällt auf den Nationalfeiertag).
@@ -116,9 +116,47 @@ describe('China', () => {
     expect(makeupDaysFor('DE-HE', 2026)).toEqual([]);
     expect(makeupDaysFor(null, 2026)).toEqual([]);
     expect([...makeupDaysBetween('CN', '2026-02-01', '2027-02-01').keys()]).toEqual(['2026-02-14', '2026-02-28', '2026-05-09', '2026-09-20', '2026-10-10', '2027-01-31']);
-    expect(LOCATIONS.filter((l) => l.country === 'CN').length).toBeGreaterThanOrEqual(4);
+    expect(LOCATIONS.filter((l) => l.country === 'CN').map((l) => l.code)).toEqual(['CN', 'CN-SH', 'CN-GD']);
     expect(locationName('CN-SH')).toBe('Shanghai');
     // Jeder Ausgleichs-Arbeitstag liegt am Wochenende und ist kein freier Tag.
     for (const year of [2025, 2026, 2027]) for (const day of makeup(year)) { expect([0, 6]).toContain(new Date(`${day}T12:00:00Z`).getUTCDay()); expect(has('CN', year, day)).toBe(false); }
+  });
+});
+
+describe('Singapore and the Emirates', () => {
+  it('follows the gazetted Singapore holidays including the Monday after a Sunday', () => {
+    expect(dates('SG', 2026)).toEqual(['2026-01-01', '2026-02-17', '2026-02-18', '2026-03-21', '2026-04-03', '2026-05-01', '2026-05-27', '2026-05-31', '2026-06-01', '2026-08-09', '2026-08-10', '2026-11-08', '2026-11-09', '2026-12-25']);
+    expect(dates('SG', 2027)).toEqual(['2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-03-10', '2027-03-26', '2027-05-01', '2027-05-17', '2027-05-20', '2027-08-09', '2027-10-28', '2027-12-25']);
+    expect(holidaysFor('SG', 2027).find((h) => h.date === '2027-10-28')?.name).toBe('Deepavali');
+    expect(planKnown('SG', 2027)).toBe(true);
+    // Ohne amtliche Liste: feste Tage, chinesisches Neujahr, Karfreitag – und die Sonntagsregel.
+    expect(planKnown('SG', 2028)).toBe(false);
+    expect(dates('SG', 2028)).toEqual(['2028-01-01', '2028-01-26', '2028-01-27', '2028-04-14', '2028-05-01', '2028-08-09', '2028-12-25']);
+    expect(dates('SG', 2030)).toContain('2030-02-03'); // Sonntag
+    expect(dates('SG', 2030)).toContain('2030-02-04');
+    expect(dates('SG', 2030)).toContain('2030-02-05'); // Ersatz für den Sonntag, weil der Montag selbst Feiertag ist
+    expect(makeupDaysFor('SG', 2026)).toEqual([]);
+  });
+  it('knows the Emirates plan and marks unconfirmed years as provisional', () => {
+    expect(dates('AE-DU', 2026)).toEqual(['2026-01-01', '2026-03-19', '2026-03-20', '2026-03-21', '2026-03-22', '2026-05-26', '2026-05-27', '2026-05-28', '2026-05-29', '2026-06-16', '2026-08-28', '2026-12-02', '2026-12-03']);
+    expect(dates('AE', 2026)).toEqual(dates('AE-DU', 2026));
+    expect(planKnown('AE-DU', 2026)).toBe(true);
+    expect(dates('AE-DU', 2027)).toContain('2027-03-09'); // Eid al-Fitr nach Kalender
+    expect(planKnown('AE-DU', 2027)).toBe(false); // Mondsichtung steht aus
+    expect(dates('AE-DU', 2030)).toEqual(['2030-01-01', '2030-12-02', '2030-12-03']);
+    expect(planKnown('AE-DU', 2030)).toBe(false);
+    expect(planKnown('DE-HE', 2040)).toBe(true);
+    expect(planKnown(null, 2026)).toBe(true);
+  });
+  it('offers only the company offices, keeping a stored region selectable', () => {
+    expect(OFFICES.map((o) => o.name)).toEqual(['Frankfurt', 'Shanghai', 'Shenzhen', 'Dubai', 'Singapur']);
+    expect(OFFICES.every((o) => LOCATIONS.some((l) => l.code === o.code))).toBe(true);
+    expect(OFFICES.every((o) => holidaysFor(o.code, 2026).length >= 10)).toBe(true);
+    expect(locationName('DE-HE')).toBe('Frankfurt');
+    expect(locationName('CN-GD')).toBe('Shenzhen');
+    expect(locationName('SG')).toBe('Singapur');
+    expect(locationChoices(null)).toEqual(OFFICES);
+    expect(locationChoices('CN-SH')).toEqual(OFFICES);
+    expect(locationChoices('DE-BW').map((o) => o.name)).toEqual(['Frankfurt', 'Shanghai', 'Shenzhen', 'Dubai', 'Singapur', 'Baden-Württemberg']);
   });
 });
