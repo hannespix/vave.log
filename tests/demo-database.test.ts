@@ -1,3 +1,5 @@
+// Prüft den früheren, großen Beispielsatz (Aufbaustufen 1–5). Neue Demos sind seit 20261119110000 kompakt
+// (tests/demo-compact-database.test.ts); bestehende große Demos laufen mit diesen Funktionen weiter.
 import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -38,7 +40,7 @@ beforeAll(async()=>{
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth,public to anon,authenticated;
     grant execute on function auth.uid() to anon,authenticated;`);
-  for(const f of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) await db.exec(readFileSync(join('supabase/migrations',f),'utf8'));
+  for(const f of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')&&f<'20261119110000').sort()) await db.exec(readFileSync(join('supabase/migrations',f),'utf8'));
   await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'owner@example.org',now()),($2,'member@example.org',now()),($3,'other@example.org',now()),($4,'pending@example.org',null)",[owner,member,other,unverified]);
 },60000);
 afterAll(async()=>{await db?.close()});
@@ -54,7 +56,7 @@ describe('researched demo workspaces',()=>{
       expect(await rows(`select * from public.${table} where workspace_id=$1`,[w.id])).toHaveLength(count);
     expect(await rows('select * from public.invitations')).toEqual([]);
     const d=await one<{manifest:any;manifest_version:string;locale:string;archived_at:null;experience_version:number}>('select * from public.workspace_demos where workspace_id=$1',[w.id]);
-    expect(d.manifest.version).toBe(d.manifest_version);expect(d.manifest).toEqual(DEMO_MANIFEST);
+    expect(d.manifest.version).toBe(d.manifest_version);expect(d.manifest.version).toMatch(/^vave-enterprise-/);expect(DEMO_MANIFEST.compact).toBe(true);
     expect(d.manifest.projects).toHaveLength(8);expect(d.manifest.people).toHaveLength(112);expect(d.manifest.studios).toHaveLength(8);
     expect(d.manifest.disclosure.en).toMatch(/fictional/i);expect(d.experience_version).toBe(5);
     expect(d.manifest.projects.every((p:any)=>p.source_url.startsWith('https://www.vave.studio/project/'))).toBe(true);

@@ -1,3 +1,5 @@
+// Prüft den früheren, großen Beispielsatz (Aufbaustufen 1–5). Neue Demos sind seit 20261119110000 kompakt
+// (tests/demo-compact-database.test.ts); bestehende große Demos laufen mit diesen Funktionen weiter.
 import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -34,7 +36,7 @@ beforeAll(async()=>{
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth,public to anon,authenticated;
     grant execute on function auth.uid() to anon,authenticated;`);
-  for(const f of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort()) await db.exec(readFileSync(join('supabase/migrations',f),'utf8'));
+  for(const f of readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')&&f<'20261119110000').sort()) await db.exec(readFileSync(join('supabase/migrations',f),'utf8'));
   await db.query("insert into auth.users(id,email,email_confirmed_at) values($1,'owner@example.org',now()),($2,'member@example.org',now()),($3,'other@example.org',now()),($4,'pending@example.org',null)",[owner,member,other,unverified]);
 },60000);
 afterAll(async()=>{await db?.close()});
@@ -71,7 +73,7 @@ describe('enterprise demo scale',()=>{
   expect(invoices.some(x=>x.status==='issued'&&x.paid&&x.net_minor>10000000)).toBe(true);
   expect(invoices.some(x=>x.status==='issued'&&!x.paid&&!x.cancellation_id&&x.due_date<new Date().toISOString().slice(0,10)&&x.net_minor>10000000)).toBe(true);
   expect(invoices.every(x=>x.is_demo&&(!x.number||x.number.startsWith('DEMO-'))&&x.payment_instructions.includes('DO NOT PAY'))).toBe(true);
-  expect((await one<any>('select manifest from public.workspace_demos')).manifest).toEqual(DEMO_MANIFEST);
+  expect((await one<any>('select manifest from public.workspace_demos')).manifest.version).toMatch(/^vave-enterprise-/);expect(DEMO_MANIFEST.compact).toBe(true);
   await db.exec('reset role');expect(await rows('select * from auth.users')).toHaveLength(4);expect(await rows('select * from private.demo_seed_context')).toEqual([]);
  });
  it('upgrades v2 additively, preserves all edited records and issued snapshots, and retries do nothing',async()=>{

@@ -30,7 +30,7 @@ begin
  insert into public.projects(workspace_id,code,name)values(keep_id,'KEEP','Keep project');
  select jsonb_agg(to_jsonb(p) order by p.id) into before_keep from public.projects p where p.workspace_id=keep_id;
  select value into summary from jsonb_array_elements(public.list_owned_workspaces()) where value->>'id'=demo_id::text;
- if (summary->'counts'->>'projects')::integer<>25 or (summary->'counts'->>'tasks')::integer<>102
+ if (summary->'counts'->>'projects')::integer<>5 or (summary->'counts'->>'tasks')::integer<>16
   or (summary->'counts'->>'invoices')::integer<1 then raise exception 'FAIL: full deletion preview';end if;
  -- Exact name and true confirmation are required, even for an owner.
  denied:=false;begin perform public.delete_workspace(demo_id,'Delete Ä 工作室 rollback fixture ',true);

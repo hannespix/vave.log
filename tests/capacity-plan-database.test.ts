@@ -183,8 +183,12 @@ describe('Ist neben dem Plan und Aufräumen',()=>{
   await db.exec('reset role');
   expect(Number((await one('select (select count(*) from public.capacity_rows where workspace_id=$1)+(select count(*) from public.project_phases where workspace_id=$1)+(select count(*) from public.service_types where workspace_id=$1) n',[workspace])).n)).toBe(0);
  });
- it('die Demo bringt Leistungsarten, Phasen und einen Plan mit freien und überbuchten Wochen mit',async()=>{
-  const demo=await one<{id:string}>("select * from public.demo_create_workspace('Plan demo','Europe/Berlin','de',gen_random_uuid())");
+ it('die große Demo (Stufe 5) bekommt Leistungsarten, Phasen und einen Plan mit freien und überbuchten Wochen',async()=>{
+  // Die große Demo (Stufe 5) entsteht seit der kompakten Demo nicht mehr über demo_create_workspace; bestehende laufen aber weiter.
+  await db.exec('reset role');
+  const demo=await one<{id:string}>("select * from private.demo_create_workspace_base('Plan demo','Europe/Berlin','de',gen_random_uuid())");
+  await db.query('select private.demo_upgrade_workspace($1)',[demo.id]);await db.query('select private.demo_refresh_workspace($1)',[demo.id]);
+  await login();
   expect((await rows('select name from public.service_types where workspace_id=$1 order by position',[demo.id])).map(r=>r.name)).toEqual(['PM','CD','Konzept','3D','2D','Motion']);
   const active=Number((await one("select count(*) n from public.projects where workspace_id=$1 and status='active'",[demo.id])).n);
   expect(Number((await one('select count(distinct project_id) n from public.project_phases where workspace_id=$1',[demo.id])).n)).toBe(active);

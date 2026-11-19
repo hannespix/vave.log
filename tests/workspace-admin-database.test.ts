@@ -31,7 +31,7 @@ describe('permanent workspace administration',()=>{
   const active=await create(),archived=await create('Archived');await db.query('select public.demo_archive_workspace($1)',[archived.id]);
   await login(other);await create('Other private studio');await login();
   const result=await list();expect(result).toHaveLength(2);
-  expect(result.find(w=>w.id===active.id)).toMatchObject({name:active.name,is_demo:true,archived_at:null,running_timers:0,counts:{projects:25,tasks:102}});
+  expect(result.find(w=>w.id===active.id)).toMatchObject({name:active.name,is_demo:true,archived_at:null,running_timers:0,counts:{projects:5,tasks:16}});
   expect(result.find(w=>w.id===archived.id)?.archived_at).toBeTruthy();
   expect(Object.keys(result[0]).sort()).toEqual(['archived_at','counts','created_at','id','is_demo','issued_invoices','name','running_timers']);
   expect(result.find(w=>w.id===active.id)?.issued_invoices).toBe(0);
