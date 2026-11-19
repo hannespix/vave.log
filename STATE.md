@@ -567,3 +567,14 @@ Der Standort-Kalender kannte Deutschland, Österreich und die Schweiz. Neu ist F
 Die Mondkalender-Feste (Frühlingsfest, Drachenbootfest, Mittherbstfest) stehen als Tabelle 2000–2100 im Code. Sie stammt aus dem chinesischen Kalender der ICU und ist gegen eine eigene Neumond-Rechnung in chinesischer Zeit geprüft; 2027 und 2030 lag die ICU einen Tag daneben (Neumond wenige Minuten um Mitternacht) und ist korrigiert. Ab etwa 2050 sind einzelne Tage vorläufig.
 
 **Ausgleichs-Arbeitstage** sind neu im Modell (`makeupDaysFor`, `makeupDaysBetween`): An einem solchen Samstag oder Sonntag gilt das Soll eines normalen Arbeitstags der Person (höchster Wert Mo–Fr; ein eigenes Wochenendmodell bleibt). Das wirkt überall, wo Feiertage wirken: Tagessoll und Gleitzeit, Kapazität und Kapazitätsplan, Ausblick, Berichte, Urlaubszählung (ein Urlaubstag an einem Ausgleichssamstag kostet einen Tag). Im Abwesenheitskalender ist der Tag nicht schraffiert und trägt eine Markierung. MCP: `list_holidays` kennt `CN`, neu ist `list_makeup_workdays`.
+
+## Standorte der Firma: Auswahl, Dubai und Singapur (19.11.2026)
+
+Die Standortauswahl bot bisher alle Bundesländer, österreichischen Länder und Schweizer Kantone an. Jetzt stehen nur noch die **fünf Firmenstandorte** zur Wahl (`OFFICES` in `src/shared/holidays.ts`): Frankfurt (`DE-HE`), Shanghai (`CN-SH`), Shenzhen (`CN-GD`), Dubai (`AE-DU`), Singapur (`SG`). Jeder Ort zeigt auf seine Feiertagsregion. Der Rechenkern kennt weiterhin alle Regionen; ein früher gespeicherter anderer Standort bleibt gültig und erscheint bei dieser Person zusätzlich in der Liste (`locationChoices`). Kommt ein Standort dazu, genügt eine Zeile in `OFFICES`.
+
+Neu im Kalender:
+
+- **Singapur:** die elf gesetzlichen Feiertage laut Arbeitsministerium für 2025–2027, samt freiem Montag nach einem Feiertag am Sonntag. Für andere Jahre nur feste Tage, chinesisches Neujahr und Karfreitag.
+- **Vereinigte Arabische Emirate (Dubai):** Feiertage der Privatwirtschaft für 2025–2027. Die islamischen Tage hängen an der Mondsichtung; 2027 steht nach dem astronomischen Kalender drin und gilt als vorläufig (±1 Tag). Für das islamische Neujahr und den Geburtstag des Propheten 2026 lag keine Mitteilung für die Privatwirtschaft vor – dort steht der Kalendertag bzw. der Tag des öffentlichen Dienstes. Für andere Jahre nur Neujahr und Nationalfeiertag.
+
+`planKnown(standort, jahr)` ersetzt `chinaPlanKnown`: Fehlt der amtliche Plan oder ist er nicht bestätigt, nennt der Abwesenheitskalender die betroffenen Standorte. Die Pläne (`CN_PLANS`, `SG_PLANS`, `AE_PLANS`) werden einmal im Jahr ergänzt: China Anfang November, Singapur im Frühsommer, Emirate je Feiertag kurz vorher.

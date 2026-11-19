@@ -4,6 +4,7 @@
  * Regionen fallen auf die bundesweiten Feiertage des Landes zurück; unbekannte Länder
  * haben keine Feiertage (die Kapazitätsrechnung bleibt dann wie bisher).
  *
+ * Länder mit amtlichem Jahresplan (China, Singapur, Emirate) stehen weiter unten.
  * China (Festland) kennt neben freien Tagen auch Ausgleichs-Arbeitstage: Wochenendtage, an denen
  * gearbeitet wird, damit eine Feiertagswoche am Stück frei ist (调休). Die liefert `makeupDaysFor`.
  */
@@ -67,13 +68,27 @@ export const LOCATIONS: { code: string; country: string; name: string }[] = [
   // Festlandchina: Die gesetzlichen Feiertage gelten landesweit; die Regionen dienen nur der Zuordnung.
   { code: 'CN', country: 'CN', name: 'China (Festland)' },
   { code: 'CN-SH', country: 'CN', name: 'Shanghai' },
-  { code: 'CN-BJ', country: 'CN', name: 'Peking' },
-  { code: 'CN-GD', country: 'CN', name: 'Guangdong (Guangzhou, Shenzhen)' },
-  { code: 'CN-ZJ', country: 'CN', name: 'Zhejiang (Hangzhou)' },
-  { code: 'CN-JS', country: 'CN', name: 'Jiangsu (Suzhou, Nanjing)' },
-  { code: 'CN-SC', country: 'CN', name: 'Sichuan (Chengdu)' },
+  { code: 'CN-GD', country: 'CN', name: 'Guangdong (Shenzhen)' },
+  { code: 'AE', country: 'AE', name: 'Vereinigte Arabische Emirate' },
+  { code: 'AE-DU', country: 'AE', name: 'Dubai' },
+  { code: 'SG', country: 'SG', name: 'Singapur' },
 ];
-export const COUNTRY_NAMES: Record<string, string> = { DE: 'Deutschland', AT: 'Österreich', CH: 'Schweiz', CN: 'China' };
+/**
+ * Die Standorte der Firma: Nur sie stehen zur Auswahl. Jeder Ort zeigt auf die Feiertagsregion, in der er liegt.
+ * Der Rechenkern kennt weiterhin alle Regionen aus `LOCATIONS` – ein früher gespeicherter Standort bleibt gültig.
+ */
+export const OFFICES: { code: string; name: string }[] = [
+  { code: 'DE-HE', name: 'Frankfurt' },
+  { code: 'CN-SH', name: 'Shanghai' },
+  { code: 'CN-GD', name: 'Shenzhen' },
+  { code: 'AE-DU', name: 'Dubai' },
+  { code: 'SG', name: 'Singapur' },
+];
+/** Auswahlliste: die Firmenstandorte, dazu der aktuell gespeicherte Wert, falls er kein Firmenstandort ist. */
+export function locationChoices(current?: string | null): { code: string; name: string }[] {
+  if (!current || OFFICES.some((o) => o.code === current)) return OFFICES;
+  return [...OFFICES, { code: current, name: locationName(current) }];
+}
 export const LOCATION_CODES = new Set(LOCATIONS.map((l) => l.code));
 export const LOCATION_PATTERN = /^[A-Z]{2}(-[A-Z0-9]{1,3})?$/;
 export const isLocation = (code: string) => LOCATION_PATTERN.test(code);
@@ -191,11 +206,19 @@ function switzerland(region: string, year: number): Holiday[] {
   return dedupe(list);
 }
 /**
+ * Länder mit amtlichem Jahresplan: China, Singapur, Vereinigte Arabische Emirate. Dort stehen bewegliche
+ * Feiertage erst fest, wenn die Behörde sie bekannt gibt (Mondkalender, Mondsichtung, Verlegungen).
+ * Je Land und Jahr: freie Tage als [von, bis, Name] und Ausgleichs-Arbeitstage, jeweils MM-TT.
+ * Fehlt ein Jahr, gilt nur, was sich sicher rechnen lässt – `planKnown` sagt, ob der Plan vorliegt.
+ */
+type YearPlan = { off: [from: string, to: string, name: string][]; work?: string[] };
+
+/**
  * China (Festland). Zwei Quellen:
  * 1. Der amtliche Plan des Staatsrats je Jahr (meist Anfang November für das Folgejahr): freie Tage
  *    am Stück und die Ausgleichs-Arbeitstage am Wochenende. Hinterlegt für 2025–2027.
  * 2. Für alle anderen Jahre die 13 gesetzlichen Feiertage, gerechnet – ohne Brückentage und ohne
- *    Ausgleichs-Arbeitstage, weil die erst der amtliche Plan festlegt. `chinaPlanKnown` sagt, was gilt.
+ *    Ausgleichs-Arbeitstage, weil die erst der amtliche Plan festlegt. `planKnown` sagt, was gilt.
  *
  * Mondkalender-Feste (Frühlingsfest, Drachenbootfest, Mittherbstfest) je Jahr 2000–2100 als MMTT·3.
  * Erzeugt aus dem chinesischen Kalender der ICU und gegen die Neumond-Rechnung nach Meeus in
@@ -215,22 +238,20 @@ function qingming(year: number): string {
   return iso(year, 4, year >= 2100 ? 5 : Math.floor(y * 0.2422 + 4.81) - Math.floor(y / 4));
 }
 const CN = { newYear: 'Neujahr (元旦)', spring: 'Frühlingsfest (春节)', qingming: 'Qingming-Fest (清明节)', labour: 'Tag der Arbeit (劳动节)', dragonBoat: 'Drachenbootfest (端午节)', midAutumn: 'Mittherbstfest (中秋节)', national: 'Nationalfeiertag (国庆节)', makeup: 'Ausgleichs-Arbeitstag (调休)' };
-type ChinaPlan = { off: [from: string, to: string, name: string][]; work: string[] };
 /** Amtliche Pläne (Mitteilungen des Staatsrats). Daten als MM-TT im jeweiligen Jahr. */
-const CN_PLANS: Record<number, ChinaPlan> = {
+const CN_PLANS: Record<number, YearPlan> = {
   2025: { off: [['01-01', '01-01', CN.newYear], ['01-28', '02-04', CN.spring], ['04-04', '04-06', CN.qingming], ['05-01', '05-05', CN.labour], ['05-31', '06-02', CN.dragonBoat], ['10-01', '10-08', `${CN.national} · ${CN.midAutumn}`]], work: ['01-26', '02-08', '04-27', '09-28', '10-11'] },
   2026: { off: [['01-01', '01-03', CN.newYear], ['02-15', '02-23', CN.spring], ['04-04', '04-06', CN.qingming], ['05-01', '05-05', CN.labour], ['06-19', '06-21', CN.dragonBoat], ['09-25', '09-27', CN.midAutumn], ['10-01', '10-07', CN.national]], work: ['01-04', '02-14', '02-28', '05-09', '09-20', '10-10'] },
   2027: { off: [['01-01', '01-03', CN.newYear], ['02-05', '02-13', CN.spring], ['04-03', '04-05', CN.qingming], ['05-01', '05-05', CN.labour], ['06-09', '06-09', CN.dragonBoat], ['09-15', '09-15', CN.midAutumn], ['10-01', '10-07', CN.national]], work: ['01-31', '02-14', '05-08', '09-26', '10-09'] },
 };
-/** Liegt für das Jahr der amtliche Plan vor? Sonst gelten nur die gerechneten gesetzlichen Feiertage. */
-export const chinaPlanKnown = (year: number) => year in CN_PLANS;
+const planDays = (plan: YearPlan, year: number): Holiday[] => {
+  const list: Holiday[] = [];
+  for (const [from, to, name] of plan.off) for (let day = `${year}-${from}`; day <= `${year}-${to}`; day = shiftDate(day, 1)) list.push({ date: day, name });
+  return list;
+};
 function china(year: number): Holiday[] {
   const plan = CN_PLANS[year];
-  if (plan) {
-    const list: Holiday[] = [];
-    for (const [from, to, name] of plan.off) for (let day = `${year}-${from}`; day <= `${year}-${to}`; day = shiftDate(day, 1)) list.push({ date: day, name });
-    return list;
-  }
+  if (plan) return planDays(plan, year);
   const lunar = chinaLunar(year);
   const list: Holiday[] = [{ date: iso(year, 1, 1), name: CN.newYear }, { date: qingming(year), name: CN.qingming }, { date: iso(year, 5, 1), name: CN.labour }, { date: iso(year, 5, 2), name: CN.labour },
     { date: iso(year, 10, 1), name: CN.national }, { date: iso(year, 10, 2), name: CN.national }, { date: iso(year, 10, 3), name: CN.national }];
@@ -240,13 +261,74 @@ function china(year: number): Holiday[] {
   }
   return list;
 }
+
+/**
+ * Singapur: elf gesetzliche Feiertage laut Arbeitsministerium (MOM), hinterlegt für 2025–2027. Fällt ein
+ * Feiertag auf einen Sonntag, ist der Montag danach frei (steht in den Plänen schon drin). Für andere Jahre
+ * werden nur die festen Tage, das chinesische Neujahr und Karfreitag gerechnet; Hari Raya Puasa, Hari Raya
+ * Haji, Vesak und Deepavali fehlen dann, bis das Ministerium sie veröffentlicht (meist im Frühsommer davor).
+ */
+const SG = { newYear: 'Neujahr', cny: 'Chinesisches Neujahr', puasa: 'Hari Raya Puasa', goodFriday: 'Karfreitag', labour: 'Tag der Arbeit', haji: 'Hari Raya Haji', vesak: 'Vesak', national: 'Nationalfeiertag', deepavali: 'Deepavali', christmas: 'Weihnachten' };
+const one = (day: string, name: string): [string, string, string] => [day, day, name];
+const SG_PLANS: Record<number, YearPlan> = {
+  2025: { off: [one('01-01', SG.newYear), ['01-29', '01-30', SG.cny], one('03-31', SG.puasa), one('04-18', SG.goodFriday), one('05-01', SG.labour), one('05-12', SG.vesak), one('06-07', SG.haji), one('08-09', SG.national), one('10-20', SG.deepavali), one('12-25', SG.christmas)] },
+  2026: { off: [one('01-01', SG.newYear), ['02-17', '02-18', SG.cny], one('03-21', SG.puasa), one('04-03', SG.goodFriday), one('05-01', SG.labour), one('05-27', SG.haji), ['05-31', '06-01', SG.vesak], ['08-09', '08-10', SG.national], ['11-08', '11-09', SG.deepavali], one('12-25', SG.christmas)] },
+  2027: { off: [one('01-01', SG.newYear), ['02-06', '02-08', SG.cny], one('03-10', SG.puasa), one('03-26', SG.goodFriday), one('05-01', SG.labour), one('05-17', SG.haji), one('05-20', SG.vesak), one('08-09', SG.national), one('10-28', SG.deepavali), one('12-25', SG.christmas)] },
+};
+function singapore(year: number): Holiday[] {
+  const plan = SG_PLANS[year];
+  if (plan) return planDays(plan, year);
+  const lunar = chinaLunar(year);
+  const list: Holiday[] = [{ date: iso(year, 1, 1), name: SG.newYear }, { date: shiftDate(easterSunday(year), -2), name: SG.goodFriday }, { date: iso(year, 5, 1), name: SG.labour }, { date: iso(year, 8, 9), name: SG.national }, { date: iso(year, 12, 25), name: SG.christmas }];
+  if (lunar) list.push({ date: lunar.spring, name: SG.cny }, { date: shiftDate(lunar.spring, 1), name: SG.cny });
+  // Sonntagsregel: Der nächste Tag, der nicht selbst Feiertag ist, wird frei.
+  const taken = new Set(list.map((h) => h.date));
+  for (const h of [...list].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (new Date(`${h.date}T12:00:00Z`).getUTCDay() !== 0) continue;
+    let day = shiftDate(h.date, 1); while (taken.has(day)) day = shiftDate(day, 1);
+    if (day.startsWith(String(year))) { taken.add(day); list.push({ date: day, name: h.name }); }
+  }
+  return list;
+}
+
+/**
+ * Vereinigte Arabische Emirate (Privatwirtschaft, Kabinettsbeschluss 27/2024): Neujahr, Eid al-Fitr, Arafat-Tag,
+ * Eid al-Adha, islamisches Neujahr, Geburtstag des Propheten, Nationalfeiertag. Die islamischen Tage hängen an
+ * der Mondsichtung und werden erst kurz vorher bestätigt; einzelne Tage verlegt das Kabinett auf den Wochenrand.
+ * 2025 und 2026 wie begangen bzw. angekündigt; 2027 nach dem astronomischen Kalender – vorläufig, ±1 Tag.
+ * Für andere Jahre nur Neujahr und Nationalfeiertag.
+ */
+const AE = { newYear: 'Neujahr', fitr: 'Eid al-Fitr', arafat: 'Arafat-Tag', adha: 'Eid al-Adha', hijri: 'Islamisches Neujahr', mawlid: 'Geburtstag des Propheten', national: 'Nationalfeiertag (Eid Al Etihad)' };
+const AE_PLANS: Record<number, YearPlan> = {
+  2025: { off: [one('01-01', AE.newYear), ['03-30', '04-01', AE.fitr], one('06-05', AE.arafat), ['06-06', '06-08', AE.adha], one('06-27', AE.hijri), one('09-05', AE.mawlid), ['12-01', '12-02', AE.national]] },
+  2026: { off: [one('01-01', AE.newYear), ['03-19', '03-22', AE.fitr], one('05-26', AE.arafat), ['05-27', '05-29', AE.adha], one('06-16', AE.hijri), one('08-28', AE.mawlid), ['12-02', '12-03', AE.national]] },
+  2027: { off: [one('01-01', AE.newYear), ['03-09', '03-11', AE.fitr], one('05-15', AE.arafat), ['05-16', '05-18', AE.adha], one('06-06', AE.hijri), one('08-14', AE.mawlid), ['12-02', '12-03', AE.national]] },
+};
+/** Jahre, deren Plan zwar hinterlegt, aber noch nicht amtlich bestätigt ist (Mondsichtung). */
+const AE_PROVISIONAL = new Set([2027]);
+function emirates(year: number): Holiday[] {
+  const plan = AE_PLANS[year];
+  if (plan) return planDays(plan, year);
+  return [{ date: iso(year, 1, 1), name: AE.newYear }, { date: iso(year, 12, 2), name: AE.national }, { date: iso(year, 12, 3), name: AE.national }];
+}
+const PLANS: Record<string, Record<number, YearPlan>> = { CN: CN_PLANS, SG: SG_PLANS, AE: AE_PLANS };
+/**
+ * Liegt für Standort und Jahr der amtliche Feiertagsplan vor? `true` auch für Länder, deren Feiertage sich
+ * vollständig rechnen lassen. `false` heißt: Es gelten vorerst nur die sicher rechenbaren Tage.
+ */
+export function planKnown(location: string | null | undefined, year: number): boolean {
+  const country = (location ?? '').split('-')[0];
+  const plans = PLANS[country];
+  if (!plans) return true;
+  return year in plans && !(country === 'AE' && AE_PROVISIONAL.has(year));
+}
 function dedupe(list: Holiday[]) { const seen = new Set<string>(); return list.filter((h) => !seen.has(h.date) && seen.add(h.date)); }
 
 /** Gesetzliche Feiertage eines Jahres am Standort, sortiert nach Datum. */
 export function holidaysFor(location: string | null | undefined, year: number): Holiday[] {
   if (!location || !isLocation(location) || year < 2000 || year > 2100) return [];
   const [country, region = ''] = location.split('-');
-  const list = country === 'DE' ? germany(region, year) : country === 'AT' ? austria(region, year) : country === 'CH' ? switzerland(region, year) : country === 'CN' ? china(year) : [];
+  const list = country === 'DE' ? germany(region, year) : country === 'AT' ? austria(region, year) : country === 'CH' ? switzerland(region, year) : country === 'CN' ? china(year) : country === 'SG' ? singapore(year) : country === 'AE' ? emirates(year) : [];
   return dedupe(list).sort((a, b) => a.date.localeCompare(b.date));
 }
 /** Feiertage im Zeitraum (inklusive), als Map Datum → Name. */
@@ -260,8 +342,8 @@ export function holidaysBetween(location: string | null | undefined, from: strin
 }
 /** Ausgleichs-Arbeitstage eines Jahres am Standort: Wochenendtage, an denen gearbeitet wird. Bisher nur China. */
 export function makeupDaysFor(location: string | null | undefined, year: number): Holiday[] {
-  if (!location || !isLocation(location) || location.split('-')[0] !== 'CN') return [];
-  return (CN_PLANS[year]?.work ?? []).map((day) => ({ date: `${year}-${day}`, name: CN.makeup }));
+  if (!location || !isLocation(location)) return [];
+  return (PLANS[location.split('-')[0]]?.[year]?.work ?? []).map((day) => ({ date: `${year}-${day}`, name: CN.makeup }));
 }
 /** Ausgleichs-Arbeitstage im Zeitraum (inklusive), als Map Datum → Name. */
 export function makeupDaysBetween(location: string | null | undefined, from: string, to: string): Map<string, string> {
@@ -272,4 +354,5 @@ export function makeupDaysBetween(location: string | null | undefined, from: str
   }
   return result;
 }
-export const locationName = (code: string | null | undefined) => LOCATIONS.find((l) => l.code === code)?.name ?? code ?? '';
+/** Name eines Standorts: der Firmenstandort, sonst die Region. */
+export function locationName(code: string | null | undefined): string { return OFFICES.find((o) => o.code === code)?.name ?? LOCATIONS.find((l) => l.code === code)?.name ?? code ?? ''; }

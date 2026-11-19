@@ -711,14 +711,14 @@ test('holiday locations are set per person and as workspace default, and the uti
  await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Team');
  const cell=page.getByLabel('Location of Studio Owner',{exact:true});await expect(cell).toContainText('Default: no location');
- await pickOption(cell,/^Baden-Württemberg/,'Baden');
+ await pickOption(cell,/^Frankfurt/,'Frank');
  await expect(page.getByText('Location saved.',{exact:true})).toBeVisible();
- expect(calls).toEqual([{fn:'member',body:{p_workspace_id:ws,p_user_id:user,p_location:'DE-BW'}}]);
- await expect(page.getByLabel('Location of Studio Owner',{exact:true})).toContainText('Baden-Württemberg');
+ expect(calls).toEqual([{fn:'member',body:{p_workspace_id:ws,p_user_id:user,p_location:'DE-HE'}}]);
+ await expect(page.getByLabel('Location of Studio Owner',{exact:true})).toContainText('Frankfurt');
  await goArea(page,'Settings');
- await pickOption(page.getByLabel('Default location (public holidays)',{exact:true}),/^Bayern/,'Bay');
+ await pickOption(page.getByLabel('Default location (public holidays)',{exact:true}),/^Shanghai/,'Shang');
  await expect(page.getByText('Location saved.',{exact:true}).first()).toBeVisible();
- expect(calls[1]).toEqual({fn:'workspace',body:{p_workspace_id:ws,p_location:'DE-BY'}});
+ expect(calls[1]).toEqual({fn:'workspace',body:{p_workspace_id:ws,p_location:'CN-SH'}});
  // Mai 2026: Tag der Arbeit (Fr 1.5.), Christi Himmelfahrt (Do 14.5.), Pfingstmontag (25.5.), Fronleichnam (Do 4.6.) liegt außerhalb.
  await page.goto(`/#w=${ws}&view=reports`);await page.getByRole('button',{name:/10\/12 – 10\/18/}).click();await page.getByLabel('From',{exact:true}).fill('2026-05-01');await page.getByLabel('To',{exact:true}).fill('2026-05-31');await page.getByRole('button',{name:'Apply',exact:true}).click();
  await expect(page.getByRole('columnheader',{name:'Public holidays'})).toBeVisible();
