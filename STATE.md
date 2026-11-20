@@ -608,3 +608,13 @@ Phasen ließen sich bisher nur in einem Dialog mit Datumsfeldern pflegen. Neu is
 - **Rechte:** Ziehen darf, wer Projekte oder die Planung bearbeiten darf; Meilensteine, wer Aufgaben bearbeiten darf. Sonst ist der Zeitstrahl eine reine Ansicht.
 
 Eigenes Ziehen mit Zeigerereignissen statt einer Gantt-Bibliothek: gleiche Technik wie beim Aufgaben-Board, kein zusätzliches Paket, volle Kontrolle über Tastatur und Touch.
+
+## Firmenkarte mit React Flow (20.11.2026)
+
+Der Firmenverbund war eine Liste und ein Dialog. Neu ist die **Firmenkarte** über der Projektliste (`src/web/company-map.tsx`): die eigene Firma mit ihren aktiven Projekten als Knoten, die Schwesterfirmen daneben, Verbindungslinien dazwischen.
+
+- **Übergeben per Ziehen:** Ein Projekt auf eine Schwesterfirma ziehen öffnet die Übergabe mit dieser Firma als Ziel. Ein Klick auf das Projekt öffnet sie ebenfalls (Tastatur, Touch).
+- **Die Linien** zeigen, was zwischen zwei Firmen läuft: „1 angeboten“, „2 für euch“, „3 übergeben“; offene Angebote sind violett und animiert.
+- Die Firmen lassen sich auf der Karte verschieben, die Karte lässt sich zoomen. Sie erscheint nur, wenn es eine Schwesterfirma gibt.
+
+Technik: `@xyflow/react` 12.12.1 (React Flow), fest gepinnt. Das Paket wird nur nachgeladen, wenn die Karte gebraucht wird (eigener Chunk, rund 60 kB gepackt); die Startseite wird dadurch nicht schwerer.

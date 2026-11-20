@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ArrowRightLeft, Building2, Check, Link2, Undo2, Unlink, X } from 'lucide-react';
 import type { Project, ProjectHandover, SisterWorkspace, Workspace } from '../shared/types';
 import type { Service } from '../shared/service';
@@ -7,6 +7,9 @@ import { SelectMenu } from './select-menu';
 import { useI18n } from './i18n';
 import { errorMessage, minutesLabel, shortDate } from './helpers';
 import './company-group.css';
+
+// React Flow wird nur geladen, wenn es eine Schwesterfirma gibt.
+const CompanyMap = lazy(() => import('./company-map'));
 
 /**
  * Firmenverbund. Jede Firma ist ein eigener Workspace; verknüpfte Workspaces sind Schwesterfirmen und
@@ -52,10 +55,10 @@ function SummaryList({ h }: { h: ProjectHandover }) {
  * `children` bekommt die Funktion, die den Dialog für ein Projekt öffnet – oder `undefined`, wenn es
  * keine Schwesterfirma gibt oder das Recht fehlt.
  */
-export function HandoverSection({ workspace, service, canEdit, reload, children }: { workspace: Workspace; service: Service; canEdit: boolean; reload: () => Promise<unknown> | void; children: (offer: ((project: Project) => void) | undefined) => ReactNode }) {
+export function HandoverSection({ workspace, service, canEdit, projects, reload, children }: { workspace: Workspace; service: Service; canEdit: boolean; projects: Project[]; reload: () => Promise<unknown> | void; children: (offer: ((project: Project) => void) | undefined) => ReactNode }) {
   const { t } = useI18n();
   const [sisters, setSisters] = useState<SisterWorkspace[]>([]); const [handovers, setHandovers] = useState<ProjectHandover[]>([]);
-  const [target, setTarget] = useState<Project | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  const [target, setTarget] = useState<{ project: Project; sisterId?: string } | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
   const load = useCallback(async () => {
     // Fehlen die Tabellen noch (Migration nicht eingespielt), bleibt der Bereich einfach leer.
     const list = await service.listSisters(workspace.id).catch(() => [] as SisterWorkspace[]);
@@ -64,6 +67,7 @@ export function HandoverSection({ workspace, service, canEdit, reload, children 
   }, [service, workspace.id]);
   useEffect(() => { setSisters([]); setHandovers([]); setTarget(null); setError(''); setMessage(''); void load(); }, [load]);
   async function act(action: () => Promise<unknown>, success: string, reloadProjects = false) { setBusy(true); setError(''); setMessage(''); try { await action(); setTarget(null); await load(); if (reloadProjects) await reload(); setMessage(success); return true; } catch (e) { setError(errorMessage(e)); return false; } finally { setBusy(false); } }
+  const offer = useCallback((project: Project, sisterId?: string) => { setError(''); setMessage(''); setTarget({ project, sisterId }); }, []);
   const incoming = handovers.filter(h => h.status === 'offered' && h.target_workspace_id === workspace.id);
   const outgoing = handovers.filter(h => h.status === 'offered' && h.source_workspace_id === workspace.id);
   const canAcceptHere = canEdit;
@@ -77,15 +81,17 @@ export function HandoverSection({ workspace, service, canEdit, reload, children 
         {outgoing.map(h => <li key={h.id} className="handover-item"><div className="handover-head"><ArrowRightLeft size={17} aria-hidden="true"/><div><strong>{h.summary.code} · {h.summary.name}</strong><small className="muted">{t('Angeboten an {firm}', { firm: h.summary.target_name })} · {shortDate(h.offered_at.slice(0, 10))}</small></div></div>
           {canEdit && <div className="button-row"><button className="button secondary small" disabled={busy} onClick={() => void act(() => service.withdrawHandover(h.id), t('Angebot zurückgezogen.'))}><Undo2 size={15}/> {t('Zurückziehen')}</button></div>}</li>)}
       </ul></section>}
-    {children(canEdit && sisters.length ? (project => { setError(''); setMessage(''); setTarget(project); }) : undefined)}
-    {target && <OfferDialog project={target} sisters={sisters} pending={outgoing.some(h => h.source_project_id === target.id)} busy={busy} onClose={() => setTarget(null)}
-      onOffer={(sister, note, takeNow) => act(async () => { const h = await service.offerHandover({ project_id: target.id, target_workspace_id: sister.workspace_id, note }); if (takeNow) await service.acceptHandover(h.id); }, takeNow ? t('Projekt übergeben.') : t('Angebot gesendet.'), takeNow)}/>}
+    {sisters.length > 0 && <section className="panel company-map-panel"><div className="panel-heading"><div><p className="eyebrow">{t('FIRMENVERBUND')}</p><h2>{t('Firmenkarte.')}</h2><p className="muted">{canEdit ? t('Zieh ein Projekt auf eine Schwesterfirma, um es zu übergeben.') : t('Eure Firmen und was zwischen ihnen unterwegs ist.')}</p></div></div>
+      <Suspense fallback={<div className="company-map company-map-loading" aria-hidden="true"/>}><CompanyMap workspace={workspace} sisters={sisters} projects={projects} handovers={handovers} canOffer={canEdit} onOffer={offer}/></Suspense></section>}
+    {children(canEdit && sisters.length ? (project => offer(project)) : undefined)}
+    {target && <OfferDialog key={`${target.project.id}-${target.sisterId ?? ''}`} project={target.project} sisters={sisters} initialSister={target.sisterId} pending={outgoing.some(h => h.source_project_id === target.project.id)} busy={busy} onClose={() => setTarget(null)}
+      onOffer={(sister, note, takeNow) => act(async () => { const h = await service.offerHandover({ project_id: target.project.id, target_workspace_id: sister.workspace_id, note }); if (takeNow) await service.acceptHandover(h.id); }, takeNow ? t('Projekt übergeben.') : t('Angebot gesendet.'), takeNow)}/>}
   </>;
 }
 
-function OfferDialog({ project, sisters, pending, busy, onClose, onOffer }: { project: Project; sisters: SisterWorkspace[]; pending: boolean; busy: boolean; onClose: () => void; onOffer: (sister: SisterWorkspace, note: string, takeNow: boolean) => Promise<boolean> }) {
+function OfferDialog({ project, sisters, initialSister, pending, busy, onClose, onOffer }: { project: Project; sisters: SisterWorkspace[]; initialSister?: string; pending: boolean; busy: boolean; onClose: () => void; onOffer: (sister: SisterWorkspace, note: string, takeNow: boolean) => Promise<boolean> }) {
   const { t } = useI18n();
-  const [sisterId, setSisterId] = useState(sisters[0]?.workspace_id ?? ''); const [note, setNote] = useState(''); const [takeNow, setTakeNow] = useState(false);
+  const [sisterId, setSisterId] = useState(initialSister && sisters.some(s => s.workspace_id === initialSister) ? initialSister : sisters[0]?.workspace_id ?? ''); const [note, setNote] = useState(''); const [takeNow, setTakeNow] = useState(false);
   const sister = sisters.find(s => s.workspace_id === sisterId);
   function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (sister) void onOffer(sister, note.trim(), takeNow && sister.can_accept); }
   return <Dialog title="Projekt an Schwesterfirma übergeben" description={`${project.code} · ${project.name}`} onClose={onClose} busy={busy}>

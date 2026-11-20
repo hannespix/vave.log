@@ -1195,6 +1195,21 @@ const catalog: Record<string, Record<Locale, string>> = {
   "12 Monate": {"en": "12 months", "de": "12 Monate", "zh": "12 个月"},
   "Phase bearbeiten": {"en": "Edit phase", "de": "Phase bearbeiten", "zh": "编辑阶段"},
   "Phase anlegen": {"en": "Create phase", "de": "Phase anlegen", "zh": "创建阶段"},
+  "{count} aktive Projekte": {"en": "{count} active projects", "de": "{count} aktive Projekte", "zh": "{count} 个进行中的项目"},
+  "{count} aktive Projekte#one": {"en": "{count} active project", "de": "{count} aktives Projekt", "zh": "{count} 个进行中的项目"},
+  "+ {count} weitere in der Liste unten": {"en": "+ {count} more in the list below", "de": "+ {count} weitere in der Liste unten", "zh": "+ 另有 {count} 个见下方列表"},
+  "Auf eine Schwesterfirma ziehen oder anklicken": {"en": "Drag onto a sister company or click", "de": "Auf eine Schwesterfirma ziehen oder anklicken", "zh": "拖到姊妹公司上，或直接点击"},
+  "Noch kein aktives Projekt.": {"en": "No active project yet.", "de": "Noch kein aktives Projekt.", "zh": "还没有进行中的项目。"},
+  "Projekt hierher ziehen": {"en": "Drag a project here", "de": "Projekt hierher ziehen", "zh": "把项目拖到这里"},
+  "Schwesterfirma": {"en": "Sister company", "de": "Schwesterfirma", "zh": "姊妹公司"},
+  "Loslassen, um zu übergeben": {"en": "Release to hand over", "de": "Loslassen, um zu übergeben", "zh": "松开即可移交"},
+  "{count} angeboten": {"en": "{count} offered", "de": "{count} angeboten", "zh": "已提出 {count} 个"},
+  "{count} für euch": {"en": "{count} for you", "de": "{count} für euch", "zh": "{count} 个待你方处理"},
+  "{count} übergeben": {"en": "{count} handed over", "de": "{count} übergeben", "zh": "已移交 {count} 个"},
+  "Firmenkarte": {"en": "Company map", "de": "Firmenkarte", "zh": "公司地图"},
+  "Firmenkarte.": {"en": "Company map.", "de": "Firmenkarte.", "zh": "公司地图。"},
+  "Zieh ein Projekt auf eine Schwesterfirma, um es zu übergeben.": {"en": "Drag a project onto a sister company to hand it over.", "de": "Zieh ein Projekt auf eine Schwesterfirma, um es zu übergeben.", "zh": "把项目拖到姊妹公司上即可移交。"},
+  "Eure Firmen und was zwischen ihnen unterwegs ist.": {"en": "Your companies and what is on its way between them.", "de": "Eure Firmen und was zwischen ihnen unterwegs ist.", "zh": "你们的公司以及彼此之间正在流转的项目。"},
 };
 const messages = new Map<string, Record<Locale, string>>();
 for (const [key, translations] of Object.entries(catalog)) {

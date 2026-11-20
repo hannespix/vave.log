@@ -117,3 +117,24 @@ test('without a sister company there is no handover entry and no panel',async({p
  await expect(card.getByRole('button',{name:'Hand over to sister company …'})).toHaveCount(0);
  await expect(page.locator('.handover-panel')).toHaveCount(0);
 });
+
+test('the company map shows both firms and hands a project over by dragging it onto the sister company',async({page})=>{
+ const state=await setup(page,{linked:true});
+ await page.goto(`/#w=${ffm}&view=projects`);
+ const map=page.getByRole('group',{name:'Company map'});
+ await expect(map.locator('.firm-own')).toContainText('VAVE Frankfurt');await expect(map.locator('.firm-own')).toContainText('1 active project');
+ await expect(map.locator('.firm-sister')).toContainText('VAVE Shanghai');await expect(map.locator('.firm-sister')).toContainText('Drag a project here');
+ const chip=map.getByRole('button',{name:/EXP-002\s*Expo Pavilion/});
+ await chip.dragTo(map.locator('.firm-sister'));
+ const dialog=page.getByRole('dialog',{name:'Hand project over to a sister company'});
+ await expect(dialog).toContainText('EXP-002 · Expo Pavilion');
+ await dialog.getByRole('button',{name:'Send offer'}).click();
+ await expect(page.getByText('Offer sent.',{exact:true})).toBeVisible();
+ expect(state.calls).toEqual([{fn:'offer',body:{p_project_id:expo,p_target_workspace_id:sha,p_note:''}}]);
+ // Die Kante zwischen den Firmen zeigt das offene Angebot.
+ await expect(map.locator('.react-flow__edge')).toContainText('1 offered');
+ if(process.env.SHOTS)await page.screenshot({path:`${process.env.SHOTS}/${test.info().project.name}-firmenkarte.png`,fullPage:true});
+ // Ein Klick auf das Projekt öffnet die Übergabe ebenfalls – für Tastatur und Touch.
+ await chip.click();
+ await expect(page.getByRole('dialog',{name:'Hand project over to a sister company'})).toContainText('There is already an open offer for this project.');
+});
