@@ -144,16 +144,16 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await expect(page.getByText('Explore the public sources',{exact:true})).toHaveCount(0);
  await goArea(page,'Team');
  await expect(page.getByText('DEMO WORKSPACE',{exact:true})).toHaveCount(0);
- await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
+ await expect(page.locator('.person-card').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  const teamSearch=page.getByRole('searchbox',{name:'Search team',exact:true});
  await teamSearch.fill('tobias geisler');
- await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
+ await expect(page.locator('.person-card').filter({hasText:'Tobias Geisler'})).toBeVisible();
  await teamSearch.fill('niemand-heisst-so');
  await expect(page.getByText('No one found.',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Reset filters',exact:true}).click();
  await expect(teamSearch).toHaveValue('');
- await expect(page.getByRole('row').filter({hasText:'Tobias Geisler'})).toBeVisible();
+ await expect(page.locator('.person-card').filter({hasText:'Tobias Geisler'})).toBeVisible();
  expect(input).toMatchObject({p_name:'VAVE · Demo',p_timezone:'Europe/Berlin',p_locale:'en'});expect(input?.p_request_id).toMatch(/^[0-9a-f-]{36}$/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
@@ -292,7 +292,7 @@ test('an older demo is replaced by the compact sample after confirmation, with t
  await page.getByRole('button',{name:'Bring up to date',exact:true}).click();
  await expect(page.getByRole('button',{name:'Bring up to date',exact:true})).toHaveCount(0);expect(refreshed).toBe(1);
  const nav=page.getByRole('navigation');await goArea(page,'Team');
- await expect(page.getByRole('row').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
+ await expect(page.locator('.person-card').filter({hasText:'Elena Weber'})).toBeVisible();await expect(page.getByText('Sample profile · no login',{exact:true})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
  await nav.getByRole('button',{name:/^Time/}).click();await page.getByRole('button',{name:'Team time',exact:true}).click();
  await page.getByRole('button',{name:/Approve.*Elena Weber/}).click();await expect(page.getByRole('row').filter({hasText:'Sample concept workshop'}).getByText('Approved',{exact:true})).toBeVisible();
@@ -721,10 +721,10 @@ test('holiday locations are set per person and as workspace default, and the uti
  expect(calls[1]).toEqual({fn:'workspace',body:{p_workspace_id:ws,p_location:'CN-SH'}});
  // Mai 2026: Tag der Arbeit (Fr 1.5.), Christi Himmelfahrt (Do 14.5.), Pfingstmontag (25.5.), Fronleichnam (Do 4.6.) liegt außerhalb.
  await page.goto(`/#w=${ws}&view=reports`);await page.getByRole('button',{name:/10\/12 – 10\/18/}).click();await page.getByLabel('From',{exact:true}).fill('2026-05-01');await page.getByLabel('To',{exact:true}).fill('2026-05-31');await page.getByRole('button',{name:'Apply',exact:true}).click();
- await expect(page.getByRole('columnheader',{name:'Public holidays'})).toBeVisible();
- const row=page.locator('table').filter({hasText:'Public holidays'}).locator('tbody tr').first();
+ const row=page.locator('.util-row').first();
  await expect(row).toContainText('Studio Owner');
- await expect(row.locator('td').nth(3)).toHaveText('3');
+ await expect(row.locator('.util-holidays dt')).toHaveText('Public holidays');
+ await expect(row.locator('.util-holidays dd')).toHaveText('3');
 });
 
 test('absences: dragging across days in the calendar opens the form with person and period',async({page})=>{
@@ -840,7 +840,7 @@ test('work schedule dialog saves the model and the time account shows target, ac
  await dialog.getByLabel('Time account from (start date)',{exact:true}).fill('2026-10-05');await dialog.getByLabel('Opening balance on the start date (hours)',{exact:true}).fill('2');
  await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByText('Work schedule saved.',{exact:true})).toBeVisible();
  expect(calls).toEqual([{p_workspace_id:ws,p_user_id:user,p_schedule:[480,480,480,480,0,0,0],p_balance_start_on:'2026-10-05',p_balance_start_minutes:120}]);
- await expect(page.getByRole('button',{name:'Work schedule of Studio Owner',exact:true})).toHaveText('Schedule');
+ await expect(page.getByRole('button',{name:'Work schedule of Studio Owner',exact:true})).toHaveText('Work schedule');
  // Zeiten: Woche 12.–18.10. Soll 4×8 h = 32 h, Ist 9 h; Saldo seit 5.10. bis heute (13.10.): 2 h + (14 h Ist − 48 h Soll) = −32 h.
  await page.goto(`/#w=${ws}&view=time`);
  await expect(page.getByText('YOUR TIME ACCOUNT',{exact:true})).toBeVisible();
@@ -1007,4 +1007,28 @@ test('team list on a phone shows role and rights per person without sideways scr
  await rights.click();const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Rights of Pia Planer'})).toBeVisible();
  await expect(dialog.getByRole('radio',{name:'Finance: Edit'})).toBeChecked();
  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(rights).toBeFocused();
+});
+
+test('time: the day strip beside the timer shows each day and adds time for the clicked one',async({page})=>{
+ const entries=await setup(page,true);await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:/^Time/}).filter({visible:true}).first().click();
+ const strip=page.locator('.week-strip');await expect(strip.locator('.week-day')).toHaveCount(7);
+ await expect(strip.locator('.week-day-today')).toContainText('Tue');
+ await strip.locator('.week-day').nth(3).getByRole('button',{name:/^Track time for/}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Date',{exact:true})).toHaveValue('2026-10-15');
+ await dialog.getByLabel('Hours',{exact:true}).fill('2');await dialog.getByLabel('Minutes',{exact:true}).fill('30');await dialog.getByLabel('Description',{exact:true}).fill('Workshop');
+ await dialog.getByRole('button',{name:'Save',exact:true}).click();await expect(dialog).not.toBeVisible();
+ expect(entries).toHaveLength(1);expect(entries[0]).toMatchObject({work_date:'2026-10-15',minutes:150});
+ const day=strip.locator('.week-day').nth(3);await expect(day.locator('.week-day-sum')).toHaveText('2:30 h');await expect(day.locator('.week-day-bar i')).toHaveCount(1);
+ await expect(strip.locator('.week-strip-total strong')).toHaveText('2:30 h');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
+test('team: people are cards with role, capacity, location and rights in one place',async({page})=>{
+ await connectedSetup(page);await page.goto('/');await goArea(page,'Team');
+ const card=page.locator('.person-card').filter({hasText:'Studio Owner'});await expect(card).toBeVisible();
+ await expect(card.locator('.person-facts dt').first()).toHaveText('Role');
+ await expect(card.getByLabel('Capacity of Studio Owner in hours per week',{exact:true})).toBeVisible();
+ await expect(card.getByLabel('Location of Studio Owner',{exact:true})).toBeVisible();
+ await expect(card.getByRole('button',{name:'Work schedule of Studio Owner',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
