@@ -11,13 +11,14 @@ import { errorMessage, initials, minutesLabel, shortDate } from './helpers';
 import { shiftDate } from '../shared/holidays';
 import { SelectMenu } from './select-menu';
 import { CapacityPlanArea } from './capacity-plan';
+import { TimelineArea } from './timeline';
 import './planning.css';
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>;
-interface Props { members: Membership[]; projects: Project[]; tasks: Task[]; phases: ProjectPhase[]; serviceTypes: ServiceType[]; planRows: PlanRow[]; planReady: boolean; canPlan: boolean; canProjects: boolean; workspace: Workspace; service: Service; finance: FinanceService; run: Run; busy: boolean; today: string; reloadKey: unknown; onEdit: (task: Task) => void; onOpenProject: (id: string) => void }
-type Mode = 'plan' | 'short' | 'long';
+interface Props { members: Membership[]; projects: Project[]; tasks: Task[]; phases: ProjectPhase[]; serviceTypes: ServiceType[]; planRows: PlanRow[]; planReady: boolean; canPlan: boolean; canProjects: boolean; canTasks?: boolean; workspace: Workspace; service: Service; finance: FinanceService; run: Run; busy: boolean; today: string; reloadKey: unknown; onEdit: (task: Task) => void; onOpenProject: (id: string) => void }
+type Mode = 'plan' | 'timeline' | 'short' | 'long';
 const MODE_KEY = 'vave-log.planning-mode';
-const readMode = (): Mode => { try { const v = localStorage.getItem(MODE_KEY); return v === 'short' || v === 'long' ? v : 'plan'; } catch { return 'plan'; } };
+const readMode = (): Mode => { try { const v = localStorage.getItem(MODE_KEY); return v === 'short' || v === 'long' || v === 'timeline' ? v : 'plan'; } catch { return 'plan'; } };
 const WEEK_OPTIONS = [4, 6, 8, 12];
 const UNASSIGNED = '__unassigned__';
 
@@ -26,12 +27,13 @@ export function PlanningArea(props: Props) {
   const { t } = useI18n();
   const [stored, setMode] = useState<Mode>(readMode);
   // Kennt die Datenbank den Kapazitätsplan noch nicht (Migration steht aus), bleibt es bei den bisherigen zwei Ansichten.
-  const mode: Mode = stored === 'plan' && !props.planReady ? 'short' : stored;
+  const mode: Mode = (stored === 'plan' || stored === 'timeline') && !props.planReady ? 'short' : stored;
   const choose = (next: Mode) => { setMode(next); try { localStorage.setItem(MODE_KEY, next); } catch { /* ohne Speicher gilt die Wahl bis zum Neuladen */ } };
   const tab = (id: Mode, label: string) => <button className={mode === id ? 'selected' : ''} aria-pressed={mode === id} onClick={() => choose(id)}>{t(label)}</button>;
   return <>
-    <div className="segmented planning-mode" aria-label={t('Planungshorizont')}>{props.planReady && tab('plan', 'Kapazitätsplan')}{tab('short', 'Kurzfristig')}{tab('long', 'Langfristig')}</div>
-    {mode === 'plan' ? <CapacityPlanArea members={props.members} projects={props.projects} phases={props.phases} serviceTypes={props.serviceTypes} planRows={props.planRows} workspace={props.workspace} service={props.service} run={props.run} busy={props.busy} today={props.today} reloadKey={props.reloadKey} canEdit={props.canPlan} canProjects={props.canProjects} onOpenProject={props.onOpenProject}/> : mode === 'short' ? <ShortTerm {...props}/> : <LongTerm {...props}/>}
+    <div className="segmented planning-mode" aria-label={t('Planungshorizont')}>{props.planReady && tab('plan', 'Kapazitätsplan')}{props.planReady && tab('timeline', 'Zeitstrahl')}{tab('short', 'Kurzfristig')}{tab('long', 'Langfristig')}</div>
+    {mode === 'timeline' ? <TimelineArea projects={props.projects} phases={props.phases} tasks={props.tasks} workspace={props.workspace} service={props.service} run={props.run} busy={props.busy} today={props.today} canEdit={props.canPlan || props.canProjects} canTasks={props.canTasks ?? false} onOpenProject={props.onOpenProject}/>
+    : mode === 'plan' ? <CapacityPlanArea members={props.members} projects={props.projects} phases={props.phases} serviceTypes={props.serviceTypes} planRows={props.planRows} workspace={props.workspace} service={props.service} run={props.run} busy={props.busy} today={props.today} reloadKey={props.reloadKey} canEdit={props.canPlan} canProjects={props.canProjects} onOpenProject={props.onOpenProject}/> : mode === 'short' ? <ShortTerm {...props}/> : <LongTerm {...props}/>}
   </>;
 }
 

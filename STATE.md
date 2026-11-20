@@ -593,3 +593,18 @@ Neu im Kalender:
 **Technik:** Tabellen `workspace_links` (ein Paar je Verknüpfung) und `project_handovers` (Angebot mit Kurzfassung als JSON, damit die Zielfirma nichts aus den Tabellen der Quelle lesen muss). Geschrieben wird nur über Funktionen, die die Rechte in der jeweils richtigen Firma prüfen: `link_workspaces`, `unlink_workspaces`, `sister_workspaces`, `offer_project_handover`, `accept_project_handover`, `decline_project_handover`, `withdraw_project_handover`. Beide Firmen protokollieren die Übergabe. Fehlen die Tabellen noch, bleibt der Bereich in der Oberfläche leer.
 
 **Noch offen:** Mitarbeit über Firmengrenzen (Personen aus Firma B buchen auf ein Projekt von Firma A, mit interner Verrechnung), ein gemeinsamer Kapazitätsblick für die Gruppenleitung, ein Hilfe-Artikel und MCP-Werkzeuge für den Verbund.
+
+## Zeitstrahl: Phasen direkt ziehen (20.11.2026)
+
+Phasen ließen sich bisher nur in einem Dialog mit Datumsfeldern pflegen. Neu ist der Reiter **Planung → Zeitstrahl** (`src/web/timeline.tsx`, Rechenkern `src/shared/timeline.ts`): Projekte als Zeilen, Phasen als Balken über Kalenderwochen.
+
+- **Verschieben:** Balken ziehen. **Dehnen:** am linken oder rechten Rand ziehen. Gespeichert wird beim Loslassen; bis dahin ist der Balken gestrichelt und zeigt den neuen Zeitraum.
+- **Neue Phase:** auf freier Fläche aufziehen – oder über „+ Phase“ (für Touch und Tastatur). Danach Name und Stundenbudget eintragen.
+- **Bearbeiten und löschen:** Klick auf den Balken öffnet Name, Zeitraum und Budget.
+- **Meilensteine** (Aufgaben mit Meilenstein-Haken) sind Rauten und lassen sich ebenfalls ziehen; das ändert den Termin der Aufgabe. Rot heißt überfällig, grün erledigt.
+- **Überlappende Phasen** liegen untereinander. Phasen ohne Zeitraum stehen als Chip in der Projektspalte und werden per Klick eingeplant. Projekttermin als gestrichelte Linie, heute als violette Linie.
+- **Zoom:** 3, 6 oder 12 Monate; bei 12 Monaten rastet das Ziehen auf ganze Wochen.
+- **Tastatur:** Pfeiltasten verschieben um einen Tag, mit Umschalt um eine Woche; Alt + Pfeil ändert das Ende; Eingabe öffnet die Phase.
+- **Rechte:** Ziehen darf, wer Projekte oder die Planung bearbeiten darf; Meilensteine, wer Aufgaben bearbeiten darf. Sonst ist der Zeitstrahl eine reine Ansicht.
+
+Eigenes Ziehen mit Zeigerereignissen statt einer Gantt-Bibliothek: gleiche Technik wie beim Aufgaben-Board, kein zusätzliches Paket, volle Kontrolle über Tastatur und Touch.
