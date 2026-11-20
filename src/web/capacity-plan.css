@@ -119,3 +119,8 @@
 @media(min-width:901px){.phase-row+.phase-row .field>span{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}}
 @media(max-width:900px){.phase-row{grid-template-columns:1fr 1fr;padding-bottom:10px;border-bottom:1px solid var(--border)}.phase-row .field:first-child{grid-column:1 / -1}.plan-import-columns{grid-template-columns:1fr}.plan-import-summary{grid-template-columns:1fr 1fr}.plan-import-summary>div:first-child{grid-column:1 / -1}}
 @media(max-width:700px){.plan-grid{--label-col:150px;--sum-col:62px;--week-col:50px}.plan-grid .plan-label{padding-left:10px;padding-right:6px}.plan-panel .table-scroll{max-height:max(460px,calc(100dvh - 190px))}.plan-actions{margin-left:0;width:100%}.plan-actions .button{flex:1}.plan-legend{display:none}.plan-fill-grid{grid-template-columns:1fr}.plan-row .plan-icon{opacity:1}.plan-role{max-width:54px}.plan-save{margin-left:0}}
+/* Ausfüllen: Griff unten rechts an gefüllten Zellen, sichtbar beim Überfahren oder wenn die Zelle den Fokus hat. */
+.plan-fill-handle{position:absolute;right:1px;bottom:1px;width:9px;height:9px;border-radius:2px;background:#641dff;cursor:crosshair;opacity:0;touch-action:none;z-index:1}
+.plan-cell:hover .plan-fill-handle,.plan-cell:focus-within .plan-fill-handle,.plan-cell-fill .plan-fill-handle{opacity:1}
+.plan-cell.plan-cell-fill{box-shadow:inset 0 0 0 2px #641dff;background:#ece4ff}
+@media(hover:none){.plan-fill-handle{opacity:.55;width:12px;height:12px}}
