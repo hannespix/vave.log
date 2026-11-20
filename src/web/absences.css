@@ -10,3 +10,5 @@
 /* Schmale Bildschirme: Antrag und Entscheidungs-Knöpfe untereinander statt gequetscht nebeneinander. */
 @media(max-width:700px){.absence-request{flex-wrap:wrap}.absence-request>.button-row{width:100%}}
 .absence-note{margin:10px 16px 14px;font-size:13px}
+.cal-cell.cal-pickable{cursor:cell}.cal-cell.cal-pick{box-shadow:inset 0 0 0 2px #641dff;background-color:#ece4ff}.absence-grid tbody{user-select:none}
+.absence-drag-hint{font-size:12px;margin-left:auto}@media(max-width:700px){.absence-drag-hint{display:none}}

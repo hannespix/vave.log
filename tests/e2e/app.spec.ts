@@ -727,6 +727,30 @@ test('holiday locations are set per person and as workspace default, and the uti
  await expect(row.locator('td').nth(3)).toHaveText('3');
 });
 
+test('absences: dragging across days in the calendar opens the form with person and period',async({page})=>{
+ await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';const posted:Record<string,unknown>[]=[];
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'approved',created_at:''}});}return r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Absences');
+ const row=page.locator('.absence-grid tbody tr').filter({hasText:'Mara Lenz'});
+ const from=row.locator('td[data-day="2026-10-20"]'),to=row.locator('td[data-day="2026-10-23"]');
+ await from.evaluate(e=>e.scrollIntoView({inline:'center',block:'center'}));
+ const a=(await from.boundingBox())!,b=(await to.boundingBox())!;
+ await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move((a.x+b.x)/2,a.y+a.height/2,{steps:3});
+ await expect(row.locator('td.cal-pick')).not.toHaveCount(0);
+ await page.mouse.move(b.x+b.width/2,b.y+b.height/2,{steps:3});
+ await expect(row.locator('td.cal-pick')).toHaveCount(4);
+ await page.mouse.up();
+ const form=page.locator('.absence-form');
+ await expect(form.getByLabel('From',{exact:true})).toHaveValue('2026-10-20');await expect(form.getByLabel('To',{exact:true})).toHaveValue('2026-10-23');
+ await expect(form.getByLabel('Person',{exact:true})).toContainText('Mara Lenz');
+ await expect(row.locator('td.cal-pick')).toHaveCount(0);
+ await form.getByRole('button',{name:'Save',exact:true}).click();
+ await expect.poll(()=>posted.length).toBe(1);
+ expect(posted[0]).toMatchObject({user_id:other,starts_on:'2026-10-20',ends_on:'2026-10-23',kind:'vacation'});
+});
+
 test('absences: calendar, request with preview, approval and the yearly account',async({page})=>{
  await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';
  let absences:Record<string,unknown>[]=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-19',ends_on:'2026-10-23',kind:'vacation',note:'Herbst',status:'requested',half_day:'',created_at:''}];
