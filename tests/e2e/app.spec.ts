@@ -751,6 +751,44 @@ test('absences: dragging across days in the calendar opens the form with person 
  expect(posted[0]).toMatchObject({user_id:other,starts_on:'2026-10-20',ends_on:'2026-10-23',kind:'vacation'});
 });
 
+test('absences: the request is composed with kind pills, a range calendar and a live summary',async({page})=>{
+ await connectedSetup(page,'member');const other='20000000-0000-4000-8000-000000000002';const posted:Record<string,unknown>[]=[];
+ await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'member',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ const absences=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-21',ends_on:'2026-10-22',kind:'vacation',note:'',status:'approved',half_day:'',created_at:''}];
+ await page.route('https://test.supabase.co/rest/v1/absences*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'requested',created_at:''}});}return r.fulfill({json:absences,headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.goto('/');await goArea(page,'Absences');
+ // Eigene Karte: 30 Tage frei; daneben, wer bald weg ist.
+ await expect(page.locator('.vac-figure strong')).toHaveText('30');await expect(page.locator('.upcoming-list')).toContainText('Mara Lenz');
+ await page.getByRole('button',{name:'Request vacation',exact:true}).click();
+ const form=page.locator('.absence-form');
+ await expect(form.getByRole('radio',{name:'Vacation'})).toHaveAttribute('aria-checked','true');
+ await expect(form.getByRole('radio',{name:'Public holiday'})).toHaveCount(0); // nur für die Leitung
+ // Beginn und Ende im Kalender anklicken: Mo 19.10. bis Fr 23.10.
+ const cal=form.getByRole('group',{name:'Choose the period'});
+ await cal.locator('[data-range-day="2026-10-19"]').click();
+ await expect(form.getByLabel('From',{exact:true})).toHaveValue('2026-10-19');await expect(form.getByLabel('To',{exact:true})).toHaveValue('2026-10-19');
+ await expect(form.getByRole('radiogroup',{name:'Half day'})).toBeVisible();
+ await cal.locator('[data-range-day="2026-10-23"]').click();
+ await expect(form.getByLabel('To',{exact:true})).toHaveValue('2026-10-23');
+ await expect(cal.locator('.range-in')).toHaveCount(5);
+ await expect(form.getByRole('radiogroup',{name:'Half day'})).toHaveCount(0);
+ await expect(form.locator('.absence-preview')).toContainText('Counts 5 workdays');await expect(form.locator('.absence-preview')).toContainText('Remaining afterwards: 25 days');
+ await expect(form.locator('.composer-away')).toContainText('Mara Lenz');
+ await form.getByRole('button',{name:'Send request'}).click();
+ await expect.poll(()=>posted.length).toBe(1);
+ expect(posted[0]).toMatchObject({user_id:user,starts_on:'2026-10-19',ends_on:'2026-10-23',kind:'vacation',half_day:''});
+ // Krank melden: ein Klick stellt heute und „Krank“ ein, mit halbem Tag als Schalter.
+ await page.getByRole('button',{name:'Report sick',exact:true}).click();
+ await expect(form.getByRole('radio',{name:'Sick'})).toHaveAttribute('aria-checked','true');
+ await expect(form.getByLabel('From',{exact:true})).toHaveValue('2026-10-13');
+ await form.getByRole('radio',{name:'Afternoon'}).click();
+ await form.getByRole('button',{name:'Save',exact:true}).click();
+ await expect.poll(()=>posted.length).toBe(2);
+ expect(posted[1]).toMatchObject({kind:'sick',starts_on:'2026-10-13',ends_on:'2026-10-13',half_day:'pm'});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+});
+
 test('absences: calendar, request with preview, approval and the yearly account',async({page})=>{
  await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';
  let absences:Record<string,unknown>[]=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-19',ends_on:'2026-10-23',kind:'vacation',note:'Herbst',status:'requested',half_day:'',created_at:''}];
@@ -775,8 +813,14 @@ test('absences: calendar, request with preview, approval and the yearly account'
  await page.getByRole('button',{name:'Save',exact:true}).click();await expect(page.getByText('Absence recorded.',{exact:true})).toBeVisible();
  expect(posted[0]).toMatchObject({workspace_id:ws,user_id:user,starts_on:'2026-10-30',ends_on:'2026-11-06',kind:'vacation',note:'Herbstferien',half_day:''});
  // Urlaubskonto: 30 + 3 Übertrag − 6 genommen = 27.
- const account=page.locator('table').filter({hasText:'Carry-over'});const own=account.locator('tbody tr').filter({hasText:'Studio Owner'});
- await expect(own.locator('td').last()).toHaveText('27');
+ const own=page.locator('.account-row').filter({hasText:'Studio Owner'});
+ await expect(own.locator('.account-rest dd')).toHaveText('27');
+ // Die eigene Urlaubskarte zeigt dasselbe Konto groß.
+ await expect(page.locator('.vac-figure strong')).toHaveText('27');await expect(page.locator('.vac-card')).toContainText('Entitlement 33 days');
+ // Anspruch und Übertrag bearbeitet die Leitung je Person über den Stift.
+ await own.getByRole('button',{name:'Edit vacation account of Studio Owner'}).click();
+ await expect(own.getByLabel('Vacation entitlement of Studio Owner in days per year')).toHaveValue('30');await expect(own.getByLabel('Carry-over of Studio Owner')).toHaveValue('3');
+ await own.getByRole('button',{name:'Cancel'}).click();
  await expect(page.locator('.absence-grid tbody tr').first().locator('td.cal-vacation')).toHaveCount(2); // 30. und 31.10. im Oktoberraster (Sa 31. ist Wochenende, bleibt markiert)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
