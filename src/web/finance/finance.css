@@ -1149,3 +1149,9 @@
     grid-template-columns: 1fr;
   }
 }
+.finance-empty-row {
+  text-align: center;
+  padding: 26px 16px;
+  color: #686c65;
+  font-size: 12px;
+}

@@ -660,5 +660,6 @@ Zweiter Durchgang des Auftrags „überall einfacher und hübscher“.
 - **Rechnungsübersicht:** Zahlungsstand als Balken (bezahlt, offen, überfällig); die Kachel „Überfällig“ steht in derselben Reihe.
 - Unvollständige Kennzahlen erscheinen leiser statt als riesiges „Unvollständig“.
 - **Übersicht:** Das Wochendiagramm füllt seine Karte bis zur Höhe des Timers.
+- **Finanzen · Planung & Kosten:** Die Tabelle „Gültige Personensätze“ zeigt ohne Einträge einen Hinweis statt nur der Kopfzeile.
 
 Noch offen im selben Auftrag: Projekte, Aufgaben, Hilfe, übrige Finanz-Reiter.

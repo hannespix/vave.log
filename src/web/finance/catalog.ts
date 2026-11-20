@@ -176,6 +176,11 @@ const catalog = {
     "添加项目以开始规划。",
   ],
   rates: ["Effective staff rates", "Gültige Personensätze", "人员有效费率"],
+  noRates: [
+    "No rates yet. Add a rate so costs and billable value can be calculated.",
+    "Noch keine Sätze. Lege einen Satz an, damit Kosten und abrechenbarer Wert berechnet werden.",
+    "尚无费率。添加费率后才能计算成本和可计费金额。",
+  ],
   newRate: ["Add rate", "Satz hinzufügen", "添加费率"],
   person: ["Person", "Person", "人员"],
   kind: ["Worker type", "Beschäftigungsart", "人员类型"],
