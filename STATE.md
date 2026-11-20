@@ -622,3 +622,7 @@ Technik: `@xyflow/react` 12.12.1 (React Flow), fest gepinnt. Das Paket wird nur 
 ## Abwesenheiten per Ziehen (20.11.2026)
 
 Im Abwesenheitskalender wählt man den Zeitraum jetzt direkt: **über Tage ziehen** markiert sie, beim Loslassen öffnet sich das Formular mit Person, Von und Bis. Ein einzelner Klick (oder Tipp auf dem Telefon) wählt einen Tag. Ziehen geht in der eigenen Zeile; wer Abwesenheiten des Teams bearbeiten darf, in jeder. Art, halber Tag und Notiz trägt man wie bisher im Formular ein – dort stehen auch weiterhin die Arbeitstage und der Resturlaub als Vorschau.
+
+## Kapazitätsplan: Werte ausfüllen wie in der Tabellenkalkulation (20.11.2026)
+
+Jede gefüllte Zelle im Kapazitätsplan hat unten rechts einen kleinen **Griff**. Wer ihn über weitere Wochen derselben Zeile zieht, übernimmt den Wert dorthin – nach rechts wie nach links, gespeichert in einem Schritt. Mit der Tastatur: **Alt + Pfeil rechts** kopiert den Wert in die nächste Woche und springt dorthin. Bisher musste jede Woche einzeln getippt werden.

@@ -183,3 +183,26 @@ test('the plan stays readable on a phone: first column sticks, weeks scroll side
  const label=await grid.locator('tr.plan-person .plan-label').first().boundingBox(),region=await grid.boundingBox();
  expect(Math.round(label!.x)).toBe(Math.round(region!.x));
 });
+
+test('a value is dragged across further weeks with the fill handle, and copied with Alt and arrow',async({page})=>{
+ const rec=await setup(page);await page.goto('/');await goArea(page,'Planning');
+ const source=cell(page,'Studio Owner','Brand Experience',42),target=cell(page,'Studio Owner','Brand Experience',45);
+ await expect(source).toHaveValue('16');
+ await source.evaluate(e=>e.scrollIntoView({inline:'center',block:'center'}));
+ const handle=source.locator('xpath=..').locator('.plan-fill-handle');
+ await source.hover();
+ const h=(await handle.boundingBox())!,goal=(await target.boundingBox())!;
+ await page.mouse.move(h.x+h.width/2,h.y+h.height/2);await page.mouse.down();
+ await page.mouse.move((h.x+goal.x)/2,goal.y+goal.height/2,{steps:4});await page.mouse.move(goal.x+goal.width/2,goal.y+goal.height/2,{steps:4});
+ await expect(page.locator('td.plan-cell-fill')).toHaveCount(4);
+ await page.mouse.up();
+ await expect(page.locator('td.plan-cell-fill')).toHaveCount(0);
+ await expect(target).toHaveValue('16');await expect(cell(page,'Studio Owner','Brand Experience',43)).toHaveValue('16');
+ await expect.poll(()=>rec.cells.length).toBe(3);
+ expect(rec.cells.map(c=>[c.week_start,c.minutes])).toEqual([['2026-10-19',960],['2026-10-26',960],['2026-11-02',960]]);
+ // Tastatur: Alt + Pfeil rechts übernimmt den Wert in die nächste Woche und springt dorthin.
+ await target.focus();await page.keyboard.press('Alt+ArrowRight');
+ await expect(cell(page,'Studio Owner','Brand Experience',46)).toBeFocused();await expect(cell(page,'Studio Owner','Brand Experience',46)).toHaveValue('16');
+ await expect.poll(()=>rec.cells.length).toBe(4);
+ expect(rec.cells[3]).toMatchObject({week_start:'2026-11-09',minutes:960});
+});

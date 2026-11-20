@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ArrowUpRight, ChevronLeft, ChevronRight, FileSpreadsheet, Layers, Pencil, Plus, Tags, Trash2 } from 'lucide-react';
 import type { Absence, Membership, PhaseEffort, PlanActual, PlanCell, PlanRow, Project, ProjectPhase, ServiceType, Workspace } from '../shared/types';
 import type { Service } from '../shared/service';
@@ -86,6 +86,39 @@ export function CapacityPlanArea({ members, projects, phases, serviceTypes, plan
       .then(() => setSaveState((s) => ({ pending: s.pending - 1, error: s.error, saved: !s.error })))
       .catch((error: unknown) => { put(before); setSaveState((s) => ({ pending: s.pending - 1, error: errorMessage(error), saved: false })); });
   };
+  // Ausfüllen wie in der Tabellenkalkulation: Der Griff an einer Zelle zieht ihren Wert über weitere Wochen derselben Zeile.
+  const [fill, setFill] = useState<{ r: number; from: number; to: number } | null>(null);
+  const filling = useRef<{ r: number; from: number; to: number } | null>(null);
+  const saveCells = (row: MatrixRow, weekStartsToSet: string[], minutes: number) => {
+    if (!loaded) return;
+    const changes = weekStartsToSet.map((week) => ({ week, key: cellKey(row.id, week), before: loaded.cells.get(cellKey(row.id, week)) ?? 0 })).filter((c) => c.before !== minutes);
+    if (!changes.length) return;
+    const put = (value: (c: typeof changes[number]) => number) => setLoaded((l) => { if (!l) return l; const cells = new Map(l.cells); for (const c of changes) { const v = value(c); if (v > 0) cells.set(c.key, v); else cells.delete(c.key); } return { ...l, cells }; });
+    put(() => minutes); setSaveState((st) => ({ pending: st.pending + 1, error: '', saved: false }));
+    service.setPlanCells(changes.map((c) => ({ workspace_id: workspace.id, row_id: row.id, week_start: c.week, minutes })))
+      .then(() => setSaveState((st) => ({ pending: st.pending - 1, error: st.error, saved: !st.error })))
+      .catch((error: unknown) => { put((c) => c.before); setSaveState((st) => ({ pending: st.pending - 1, error: errorMessage(error), saved: false })); });
+  };
+  const fillStart = (e: ReactPointerEvent<HTMLElement>, r: number, c: number) => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation(); e.currentTarget.setPointerCapture(e.pointerId);
+    filling.current = { r, from: c, to: c }; setFill(filling.current);
+  };
+  const fillMove = (e: ReactPointerEvent<HTMLElement>) => {
+    const f = filling.current; if (!f) return;
+    const cell = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('td[data-fill-row]');
+    if (!cell || Number(cell.dataset.fillRow) !== f.r) return;
+    const to = Number(cell.dataset.fillCol);
+    if (to !== f.to) { filling.current = { ...f, to }; setFill(filling.current); }
+  };
+  const fillEnd = (e: ReactPointerEvent<HTMLElement>, row: MatrixRow) => {
+    const f = filling.current; filling.current = null; setFill(null);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!f || f.to === f.from) return;
+    const lo = Math.min(f.from, f.to), hi = Math.max(f.from, f.to);
+    saveCells(row, weeks.slice(lo, hi + 1).filter((_, i) => lo + i !== f.from).map((w) => w.start), row.cells[f.from]);
+  };
+  const copyRight = (row: MatrixRow, r: number, c: number, minutes: number) => { if (c + 1 >= weeks.length) return; saveCells(row, [weeks[c + 1].start], minutes); focusCell(r, c + 1); };
   const focusCell = (r: number, c: number) => { const el = document.querySelector<HTMLInputElement>(`[data-plan-cell="${r}:${c}"]`); if (el) { el.focus(); el.select(); } };
 
   const freeTotal = weeks.map((_, i) => people.reduce((a, p) => a + (p.free[i] ?? 0), 0));
@@ -158,7 +191,7 @@ export function CapacityPlanArea({ members, projects, phases, serviceTypes, plan
               return <tr key={row.id} className={row.user_id ? 'plan-row' : 'plan-row plan-row-open'}>
                 <th scope="row" className="plan-label"><div className="plan-row-label">{row.service_type_id && <span className="plan-role">{typeName(row.service_type_id)}</span>}<span className="plan-row-name">{name}</span>{canEdit && <button type="button" className="icon-button plan-icon" aria-label={t('Zeile {name} bearbeiten', { name })} title={t('Zeile bearbeiten')} onClick={() => setModal({ type: 'row', row: planRows.find((x) => x.id === row.id) })}><Pencil size={13}/></button>}</div></th>
                 <td className="plan-sum" title={row.offered_minutes != null ? t('{planned} von {offered} h geplant', { planned: h(row.total), offered: h(row.offered_minutes) }) : undefined}><span className={row.offered_minutes != null && row.total > row.offered_minutes ? 'plan-negative' : ''}>{h(row.total)}</span>{row.offered_minutes != null && <small> / {h(row.offered_minutes)}</small>}</td>
-                {weeks.map((w, c) => <HourCell key={w.start} minutes={row.cells[c]} actual={row.actual[c]} editable={canEdit} locale={locale} current={w.current} label={t('{name}, {project}, KW {week}: Stunden', { name, project: project.name, week: w.week })} actualLabel={t('{hours} h gebucht', { hours: h(row.actual[c]) })} coords={`${r}:${c}`} onCommit={(m) => saveCell(row, w.start, m)} onMove={(dr) => focusCell(r + dr, c)}/>)}
+                {weeks.map((w, c) => <HourCell key={w.start} minutes={row.cells[c]} actual={row.actual[c]} editable={canEdit} locale={locale} current={w.current} label={t('{name}, {project}, KW {week}: Stunden', { name, project: project.name, week: w.week })} actualLabel={t('{hours} h gebucht', { hours: h(row.actual[c]) })} coords={`${r}:${c}`} row={r} col={c} inFill={!!fill && fill.r === r && c >= Math.min(fill.from, fill.to) && c <= Math.max(fill.from, fill.to)} onCommit={(m) => saveCell(row, w.start, m)} onMove={(dr) => focusCell(r + dr, c)} onCopyRight={(m) => copyRight(row, r, c, m)} onFillStart={(e) => fillStart(e, r, c)} onFillMove={fillMove} onFillEnd={(e) => fillEnd(e, row)} fillLabel={t('Wert in weitere Wochen ziehen')}/>)}
               </tr>; })}
             <tr className="plan-total"><th scope="row" className="plan-label">{t('Summe {name}', { name: project.code })}</th><td className="plan-sum">{h(block.total)}</td>{block.planned.map((m, i) => <td key={i}>{m ? h(m) : ''}{block.actual[i] > 0 && <small className="plan-actual" title={t('{hours} h gebucht', { hours: h(block.actual[i]) })}>{h(block.actual[i])}</small>}</td>)}</tr>
           </tbody>; })}
@@ -185,7 +218,7 @@ function Budget({ planned, offered, booked }: { planned: number; offered: number
   return <span className="plan-budget" aria-hidden="true"><span className={planned > offered ? 'plan-budget-plan over' : 'plan-budget-plan'} style={{ width: `${planned / scale * 100}%` }}/><span className="plan-budget-booked" style={{ width: `${booked / scale * 100}%` }}/><span className="plan-budget-mark" style={{ left: `${offered / scale * 100}%` }}/></span>;
 }
 
-function HourCell({ minutes, actual, editable, locale, current, label, actualLabel, coords, onCommit, onMove }: { minutes: number; actual: number; editable: boolean; locale: string; current: boolean; label: string; actualLabel: string; coords: string; onCommit: (minutes: number) => void; onMove: (rows: number) => void }) {
+function HourCell({ minutes, actual, editable, locale, current, label, actualLabel, coords, row, col, inFill, onCommit, onMove, onCopyRight, onFillStart, onFillMove, onFillEnd, fillLabel }: { minutes: number; actual: number; editable: boolean; locale: string; current: boolean; label: string; actualLabel: string; coords: string; row: number; col: number; inFill: boolean; onCommit: (minutes: number) => void; onMove: (rows: number) => void; onCopyRight: (minutes: number) => void; onFillStart: (e: ReactPointerEvent<HTMLElement>) => void; onFillMove: (e: ReactPointerEvent<HTMLElement>) => void; onFillEnd: (e: ReactPointerEvent<HTMLElement>) => void; fillLabel: string }) {
   const [text, setTextState] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
   // Der Entwurf liegt zusätzlich in einem Ref: Enter speichert und springt weiter, das folgende „blur“ darf nicht noch einmal speichern.
@@ -194,13 +227,16 @@ function HourCell({ minutes, actual, editable, locale, current, label, actualLab
   const shown = text ?? (minutes ? hoursText(minutes, locale) : '');
   const commit = () => { const current = draft.current; if (current == null) return true; const value = parseHours(current); if (value == null) { setInvalid(true); return false; } setInvalid(false); setText(null); onCommit(value); return true; };
   const key = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); if (commit()) onMove(1); }
+    // Alt + Pfeil rechts übernimmt den Wert in die nächste Woche – das Ziehen am Griff, nur mit der Tastatur.
+    if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); const value = draft.current == null ? minutes : parseHours(draft.current); if (value != null && commit()) onCopyRight(value); }
+    else if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); if (commit()) onMove(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); if (commit()) onMove(-1); }
     else if (e.key === 'Escape' && text != null) { e.preventDefault(); e.stopPropagation(); setText(null); setInvalid(false); }
   };
-  return <td className={`plan-cell${minutes ? ' plan-cell-set' : ''}${current ? ' week-current' : ''}`}>
+  return <td className={`plan-cell${minutes ? ' plan-cell-set' : ''}${current ? ' week-current' : ''}${inFill ? ' plan-cell-fill' : ''}`} data-fill-row={editable ? row : undefined} data-fill-col={editable ? col : undefined}>
     {editable ? <input className="plan-input" inputMode="decimal" autoComplete="off" value={shown} aria-label={label} aria-invalid={invalid || undefined} data-plan-cell={coords} onChange={(e) => { setText(e.target.value); setInvalid(false); }} onBlur={commit} onKeyDown={key} onFocus={(e) => e.target.select()}/> : <span className="plan-value">{shown}</span>}
     {actual > 0 && <small className="plan-actual" title={actualLabel}>{hoursText(actual, locale)}</small>}
+    {editable && minutes > 0 && <span className="plan-fill-handle" title={fillLabel} aria-hidden="true" onPointerDown={onFillStart} onPointerMove={onFillMove} onPointerUp={onFillEnd} onPointerCancel={onFillEnd}/>}
   </td>;
 }
 
