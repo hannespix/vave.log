@@ -1149,7 +1149,7 @@ const catalog: Record<string, Record<Locale, string>> = {
   "An Schwesterfirma übergeben …": {"en": "Hand over to sister company …", "de": "An Schwesterfirma übergeben …", "zh": "移交给姊妹公司…"},
   "Zwei verschiedene Firmen wählen.": {"en": "Choose two different companies.", "de": "Zwei verschiedene Firmen wählen.", "zh": "请选择两家不同的公司。"},
   "Dafür fehlt die Berechtigung: Einstellungen bearbeiten in beiden Firmen.": {"en": "You lack the permission: edit settings in both companies.", "de": "Dafür fehlt die Berechtigung: Einstellungen bearbeiten in beiden Firmen.", "zh": "权限不足：需要在两家公司都能编辑设置。"},
-  "Ein Demo-Workspace lässt sich nicht mit einer Firma verknüpfen.": {"en": "A demo workspace cannot be linked to a company.", "de": "Ein Demo-Workspace lässt sich nicht mit einer Firma verknüpfen.", "zh": "演示工作区不能与公司关联。"},
+  "Eine Demo lässt sich nur mit einer anderen Demo verknüpfen, nicht mit einer echten Firma.": {"en": "A demo can only be linked to another demo, not to a real company.", "de": "Eine Demo lässt sich nur mit einer anderen Demo verknüpfen, nicht mit einer echten Firma.", "zh": "演示只能与另一个演示关联，不能与真实公司关联。"},
   "Dafür fehlt die Berechtigung: Einstellungen bearbeiten.": {"en": "You lack the permission: edit settings.", "de": "Dafür fehlt die Berechtigung: Einstellungen bearbeiten.", "zh": "权限不足：需要编辑设置的权限。"},
   "Dafür fehlt die Berechtigung: Projekte bearbeiten.": {"en": "You lack the permission: edit projects.", "de": "Dafür fehlt die Berechtigung: Projekte bearbeiten.", "zh": "权限不足：需要编辑项目的权限。"},
   "Diese Firma ist nicht verknüpft.": {"en": "This company is not linked.", "de": "Diese Firma ist nicht verknüpft.", "zh": "该公司尚未关联。"},

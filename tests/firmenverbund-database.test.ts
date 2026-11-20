@@ -70,9 +70,29 @@ describe('Firmen verknüpfen',()=>{
   expect(await rows('select * from public.sister_workspaces($1)',[ffm])).toHaveLength(0);
   expect(await rows('select * from public.workspace_links')).toHaveLength(0);
  });
- it('lässt Demo-Workspaces außen vor',async()=>{
-  const demo=await one<{id:string}>("select * from public.demo_create_workspace('Demo','Europe/Berlin','de',gen_random_uuid())");
-  await expect(attempt('select * from public.link_workspaces($1,$2)',[ffm,demo.id])).rejects.toThrow(/Demo/);
+ it('verknüpft Demo mit Demo, aber keine Demo mit einer echten Firma',async()=>{
+  const demo=await one<{id:string}>("select * from public.demo_create_workspace('Demo Deutschland','Europe/Berlin','de',gen_random_uuid())");
+  const china=await one<{id:string}>("select * from public.demo_create_workspace('Demo China','Asia/Shanghai','de',gen_random_uuid())");
+  await expect(attempt('select * from public.link_workspaces($1,$2)',[ffm,demo.id])).rejects.toThrow(/nur mit einer anderen Demo/);
+  await expect(attempt('select * from public.link_workspaces($1,$2)',[demo.id,ffm])).rejects.toThrow(/nur mit einer anderen Demo/);
+  await db.query('select public.link_workspaces($1,$2)',[demo.id,china.id]);
+  expect((await one('select * from public.sister_workspaces($1)',[demo.id]))).toMatchObject({workspace_id:china.id,name:'Demo China',can_accept:true});
+  // Ein Beispielprojekt wandert in die andere Demo: Die Beispielpersonen gibt es dort nicht, also werden Planzeilen zu offenen Stellen.
+  const p=await one<{id:string;code:string}>("select id,code from public.projects where workspace_id=$1 and code='MUS-03'",[demo.id]);
+  const h=await one<{id:string}>('select * from public.offer_project_handover($1,$2,$3)',[p.id,china.id,'']);
+  const done=await one<{status:string;target_project_id:string}>('select * from public.accept_project_handover($1)',[h.id]);
+  expect(done.status).toBe('accepted');
+  expect((await one('select code,status from public.projects where id=$1',[done.target_project_id]))).toEqual({code:'MUS-03-2',status:'active'});
+  expect((await one('select status from public.projects where id=$1',[p.id])).status).toBe('archived');
+  const plan=await rows('select user_id,note from public.capacity_rows where workspace_id=$1 and project_id=$2',[china.id,done.target_project_id]);
+  expect(plan.length).toBeGreaterThan(0);expect(plan.filter(r=>r.user_id===null).every(r=>r.note.length>0)).toBe(true);
+  // Neu laden zieht offene Angebote aus dieser Demo zurück – ihre Projekte gibt es dann nicht mehr.
+  const other=await one<{id:string}>("select id from public.projects where workspace_id=$1 and code='AUR-02'",[demo.id]);
+  const open=await one<{id:string}>('select * from public.offer_project_handover($1,$2,$3)',[other.id,china.id,'']);
+  await db.query('select public.demo_reset_workspace($1)',[demo.id]);
+  expect((await one('select status from public.project_handovers where id=$1',[open.id])).status).toBe('withdrawn');
+  expect((await one('select status from public.project_handovers where id=$1',[h.id])).status).toBe('accepted');
+  expect(await rows('select * from public.sister_workspaces($1)',[demo.id])).toHaveLength(1);
  });
  it('trennt von jeder Seite und zieht offene Angebote zurück',async()=>{
   await link();const h=await offer();
