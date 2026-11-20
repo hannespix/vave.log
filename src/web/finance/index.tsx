@@ -7,7 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ArrowUpRight, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { createFinanceService } from "../../shared/finance-service";
 import type { Membership, Project, Role, Workspace } from "../../shared/types";
 import { useI18n } from "../i18n";
@@ -202,14 +202,6 @@ function AuthorizedFinance({
   }
   return (
     <div className="finance-area">
-      <div className="finance-hero">
-        <div>
-          <p className="eyebrow">VAVE.LOG / {t("overview")}</p>
-          <h2>{t("title")}</h2>
-          <p>{t("intro")}</p>
-        </div>
-        <ArrowUpRight size={48} aria-hidden="true" />
-      </div>
       {access === "view" && <Notice kind="info">{t("readOnly")}</Notice>}
       <div className="finance-tabs">
       <div className="finance-tablist" role="tablist" aria-label={t("title")}>

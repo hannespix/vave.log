@@ -1,28 +1,9 @@
 .finance-area {
   min-width: 0;
 }
-.finance-hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 25px;
-  background: var(--lime);
-  border-radius: 16px;
-  padding: 30px 34px;
-  margin-bottom: 22px;
-}
-.finance-hero h2 {
-  font-size: clamp(26px, 3vw, 39px);
-  margin: 0 0 10px;
-}
-.finance-hero p:not(.eyebrow) {
-  font-size: 13px;
-  margin: 0;
-  color: #536740;
-}
-.finance-hero > svg {
-  color: var(--purple);
-}
+
+
+
 .finance-tabs {
   display: flex;
   gap: 6px;
@@ -493,12 +474,7 @@
   }
 }
 @media (max-width: 700px) {
-  .finance-hero {
-    padding: 24px;
-  }
-  .finance-hero > svg {
-    display: none;
-  }
+
   .finance-tablist > [role="tab"] {
     padding: 12px;
     font-size: 12px;
@@ -955,5 +931,221 @@
   .finance-grid-3,
   .finance-grid-4 {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Übersicht: kompakte Plan-Karten und Zahlungsstand als Balken. */
+.finance-metric-missing > strong {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #686c65;
+  margin: 22px 0 12px;
+}
+.finance-paybar {
+  margin: 4px 0 6px;
+}
+.finance-paybar-track {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef0e8;
+}
+.finance-paybar-track i {
+  display: block;
+  height: 100%;
+}
+.finance-paybar-track i + i {
+  border-left: 2px solid #fff;
+}
+.finance-paybar .pay-paid {
+  background: #2f8f5b;
+}
+.finance-paybar .pay-open {
+  background: #bda1fc;
+}
+.finance-paybar .pay-overdue {
+  background: #a33d32;
+}
+.finance-paybar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.finance-paybar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.finance-paybar-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.finance-plans {
+  margin-top: 30px;
+}
+.finance-plans .finance-projects {
+  margin-top: 0;
+}
+.finance-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.plan-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.plan-card-head .finance-project-name {
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+.plan-card-warning {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: #fff7e8;
+  border: 1px solid #f3e2bd;
+  font-size: 12px;
+  color: #6b4a08;
+  line-height: 1.5;
+}
+.plan-card-warning svg {
+  flex-shrink: 0;
+  color: #96690f;
+}
+.plan-card-warning .text-button {
+  margin-left: auto;
+  font-size: 12px;
+  color: #4a13c9;
+}
+.plan-card-figures {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.plan-card-figures > div {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8f3;
+}
+.plan-card-figures dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 7px;
+  line-height: 1.35;
+}
+.plan-card-figures dd {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.plan-card-missing {
+  color: #686c65;
+  font-weight: 400;
+}
+.plan-card-figures dd.plan-card-missing {
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.plan-card-pos {
+  color: #1f6b43;
+}
+.plan-card-neg {
+  color: #a33d32;
+}
+.plan-card-bar-text {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.plan-card-bar-text strong {
+  color: #1b1b1b;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.plan-card-bar-text strong.plan-card-missing {
+  color: #686c65;
+  font-weight: 400;
+}
+.plan-card-hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.plan-card-hours strong {
+  color: #1b1b1b;
+  font-weight: 500;
+}
+.plan-card-all summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #4a13c9;
+  width: fit-content;
+  padding: 4px 0;
+}
+.plan-card-all .finance-details {
+  margin-top: 8px;
+}
+.finance-plan-card .finance-project-actions {
+  margin-top: auto;
+  padding-top: 4px;
+}
+@media (max-width: 700px) {
+  .plan-card-figures {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .plan-card-figures > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .plan-card-figures dt {
+    margin: 0;
+  }
+}
+.finance-metrics-invoices:has(.finance-metric-overdue) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.plan-card-warning > span {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.plan-card-warning .text-button {
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .finance-metrics-invoices:has(.finance-metric-overdue) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .finance-metrics-invoices:has(.finance-metric-overdue) {
+    grid-template-columns: 1fr;
   }
 }

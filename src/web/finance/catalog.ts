@@ -148,6 +148,13 @@ const catalog = {
     "剩余预计工时",
   ],
   unknown: ["Not complete", "Unvollständig", "数据不完整"],
+  allFigures: ["All figures", "Alle Zahlen", "全部数据"],
+  fixRates: ["Add rates", "Sätze ergänzen", "补充费率"],
+  ratesMissingShort: [
+    "Rates are missing – totals are incomplete.",
+    "Sätze fehlen – die Summen sind unvollständig.",
+    "缺少费率，合计不完整。",
+  ],
   missingRates: [
     "Missing cost rates: totals are incomplete. Add effective rates and estimate costs.",
     "Kostensätze fehlen: Summen sind unvollständig. Ergänze gültige Sätze und Schätzkosten.",
