@@ -1241,6 +1241,12 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Über Tage ziehen oder Beginn und Ende anklicken.": {"en": "Drag across days or click start and end.", "de": "Über Tage ziehen oder Beginn und Ende anklicken.", "zh": "拖过几天，或依次点击开始和结束日期。"},
   "Andere sind weg": {"en": "Others are away", "de": "Andere sind weg", "zh": "其他人缺勤"},
   "Schon eingetragen": {"en": "Already entered", "de": "Schon eingetragen", "zh": "已登记"},
+  "Arbeitszeit festlegen": {"en": "Set work schedule", "de": "Arbeitszeit festlegen", "zh": "设置工时"},
+  "Arbeitszeitmodell": {"en": "Work schedule", "de": "Arbeitszeitmodell", "zh": "工时模型"},
+  "DEIN ZEITRAUM": {"en": "YOUR PERIOD", "de": "DEIN ZEITRAUM", "zh": "你的时间段"},
+  "Tag für Tag.": {"en": "Day by day.", "de": "Tag für Tag.", "zh": "逐日一览。"},
+  "erfasst": {"en": "tracked", "de": "erfasst", "zh": "已记录"},
+  "Zeit für {date} erfassen": {"en": "Track time for {date}", "de": "Zeit für {date} erfassen", "zh": "为 {date} 记录工时"},
 };
 const messages = new Map<string, Record<Locale, string>>();
 for (const [key, translations] of Object.entries(catalog)) {

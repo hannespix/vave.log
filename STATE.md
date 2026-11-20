@@ -639,3 +639,15 @@ Rückmeldung: Der Urlaubsantrag war „sehr hässlich“ – eine lose Reihe von
 - **Eigene Einträge** mit Symbol je Art.
 
 `RangeCalendar` ist ein eigener Baustein und lässt sich für andere Zeiträume wiederverwenden.
+
+## Team, Einstellungen, Auswertung und Zeiten aufgeräumt (20.11.2026)
+
+Auftrag: das ganze Tool Bereich für Bereich einfacher und hübscher machen. Erster Durchgang nach frischen Aufnahmen aller Bereiche – die vier schwächsten zuerst.
+
+- **Team:** Personenkarten statt Tabelle (`.people-grid`, `.person-card`, `src/web/team.css`). Je Karte Kopf mit Name und E-Mail, darunter Rolle, Kapazität, Standort und Rechte als Zeilen mit Symbol; die Rechte-Vorlage ist selbst der Knopf zum Ändern. Arbeitszeitmodell und Stärken als runde Knöpfe. Alle Beschriftungen für Screenreader und Tests sind unverändert.
+- **Einstellungen:** zwei Spalten, die jede für sich fließen (`.settings-col`) – keine Lücken mehr unter kurzen Karten. Links Arbeitsort, Verwaltung und Firmenverbund, rechts Account, App, verbundene Apps und MCP. Im Arbeitsort steht die Freigabe-Regel als abgesetzter Kasten. Auf dem Handy bleibt die Reihenfolge Arbeitsort, Account, Rest.
+- **Auswertung · Auslastung:** je Person eine Zeile mit Balken (Ist von Soll, Prozent) und vier Kennzahlen statt einer neunspaltigen Tabelle, die rechts abgeschnitten war (`.util-row`).
+- **Zeiten:** neben dem Timer steht „Tag für Tag“ (`src/web/week-strip.tsx`): je Tag ein Balken, eingefärbt nach Projekt, mit Summe; das Plus trägt Zeit für genau diesen Tag nach (der Dialog öffnet mit dem Datum). Lange Zeiträume werden zusammengefasst.
+- Leerzustand im Kapazitätsplan: Knöpfe mittig.
+
+Noch offen im selben Auftrag: Übersicht, Projekte, Aufgaben, Finanzen, Hilfe.
