@@ -66,6 +66,8 @@
 /* Zeiten: neben dem Timer steht der Zeitraum Tag für Tag, eingefärbt nach Projekt. */
 @media(min-width:951px){.times-timer{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);gap:23px;align-items:stretch}}
 @media(max-width:950px){.times-timer{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}}
+/* Die Übersicht setzt den Timer in ihrem Raster fest in Spalte 2 – hier nicht: sonst entsteht auf schmalen Schirmen eine zweite, gequetschte Spalte. */
+.times-timer>.timer-panel,.times-timer>.week-strip{grid-column:auto;grid-row:auto;min-width:0}
 .week-strip{display:flex;flex-direction:column;min-width:0}
 .week-strip-total{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
 .week-strip-total strong{font-size:24px;font-weight:400;letter-spacing:-.03em;line-height:1}
