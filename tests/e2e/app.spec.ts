@@ -1013,6 +1013,12 @@ test('time: the day strip beside the timer shows each day and adds time for the 
  const entries=await setup(page,true);await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:/^Time/}).filter({visible:true}).first().click();
  const strip=page.locator('.week-strip');await expect(strip.locator('.week-day')).toHaveCount(7);
  await expect(strip.locator('.week-day-today')).toContainText('Tue');
+ // Timer und Tagesleiste stehen nebeneinander (breit) oder untereinander in voller Breite (schmal) – nie gequetscht.
+ const wrap=await page.locator('.times-timer').boundingBox(),timer=await page.locator('.times-timer .timer-panel').boundingBox(),box=await strip.boundingBox();
+ if(page.viewportSize()!.width<=950){expect(Math.abs(box!.width-wrap!.width),'day strip spans the full width').toBeLessThanOrEqual(2);expect(Math.abs(timer!.width-wrap!.width),'timer spans the full width').toBeLessThanOrEqual(2);expect(box!.y).toBeGreaterThan(timer!.y+timer!.height-1);}
+ else{expect(box!.x).toBeGreaterThan(timer!.x+timer!.width-1);expect(box!.width).toBeGreaterThan(300);}
+ const bar=await strip.locator('.week-day-bar').first().boundingBox();expect(bar!.width,'bars have room').toBeGreaterThan(80);
+ const add=await strip.locator('.week-day-add').first().boundingBox();expect(add!.x+add!.width,'plus button stays inside the card').toBeLessThanOrEqual(box!.x+box!.width);
  await strip.locator('.week-day').nth(3).getByRole('button',{name:/^Track time for/}).click();
  const dialog=page.getByRole('dialog');await expect(dialog.getByLabel('Date',{exact:true})).toHaveValue('2026-10-15');
  await dialog.getByLabel('Hours',{exact:true}).fill('2');await dialog.getByLabel('Minutes',{exact:true}).fill('30');await dialog.getByLabel('Description',{exact:true}).fill('Workshop');

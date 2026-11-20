@@ -663,3 +663,7 @@ Zweiter Durchgang des Auftrags „überall einfacher und hübscher“.
 - **Finanzen · Planung & Kosten:** Die Tabelle „Gültige Personensätze“ zeigt ohne Einträge einen Hinweis statt nur der Kopfzeile.
 
 Noch offen im selben Auftrag: Projekte, Aufgaben, Hilfe, übrige Finanz-Reiter.
+
+## Zeiten auf dem Handy: Timer und Tagesleiste wieder in voller Breite (20.11.2026)
+
+Fehler aus #89, gemeldet per Bildschirmfoto: Auf schmalen Schirmen standen Tagesleiste und Timer in zwei gequetschten Spalten, die Balken fehlten, das Plus ragte aus der Karte. Ursache: Die Regel der Übersicht `.timer-panel{grid-column:2;grid-row:2/4}` (bis 950 px) griff auch im neuen Raster `.times-timer`. Dort ist die Platzierung jetzt zurückgesetzt. Der Browser-Test zur Tagesleiste prüft nun Breite, Reihenfolge, Balkenbreite und dass das Plus in der Karte bleibt – auf Desktop und Mobil. Lehre: nach Layout-Änderungen die mobile Aufnahme jedes geänderten Bereichs ansehen, nicht nur den Desktop.
