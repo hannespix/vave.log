@@ -626,3 +626,16 @@ Im Abwesenheitskalender wählt man den Zeitraum jetzt direkt: **über Tage ziehe
 ## Kapazitätsplan: Werte ausfüllen wie in der Tabellenkalkulation (20.11.2026)
 
 Jede gefüllte Zelle im Kapazitätsplan hat unten rechts einen kleinen **Griff**. Wer ihn über weitere Wochen derselben Zeile zieht, übernimmt den Wert dorthin – nach rechts wie nach links, gespeichert in einem Schritt. Mit der Tastatur: **Alt + Pfeil rechts** kopiert den Wert in die nächste Woche und springt dorthin. Bisher musste jede Woche einzeln getippt werden.
+
+## Abwesenheiten neu gestaltet (20.11.2026)
+
+Rückmeldung: Der Urlaubsantrag war „sehr hässlich“ – eine lose Reihe von Feldern ohne Bezug zum Kalender, ein riesiges Auswahlfeld für den halben Tag, eckige Klötze im Teamkalender, Karten ohne Abstand, das Urlaubskonto als Tabelle voller Eingabefelder. Der Bereich ist neu aufgebaut (`src/web/absences-area.tsx`, `src/web/range-calendar.tsx`, `absences.css`):
+
+- **Eigene Urlaubskarte** ganz oben: große Zahl „Tage frei“, ein Balken aus genommen / beantragt / frei, darunter Anspruch und Übertrag. Zwei Knöpfe: „Urlaub beantragen“ (Leitung: „Abwesenheit eintragen“) und „Krank melden“ – der stellt heute und „Krank“ gleich ein.
+- **Daneben:** für die Leitung die offenen Anträge als Karten (Person, Zeitraum, Arbeitstage, Rest danach, Warnung bei Überschneidung, Genehmigen / Ablehnen); für alle anderen „Wer ist bald weg“.
+- **Antrag als geführte Karte:** Art als Knöpfe mit Symbol statt Auswahlfeld; der Zeitraum wird in einem **Zwei-Monats-Kalender** gewählt – über Tage ziehen oder Beginn und Ende anklicken. Feiertage des Standorts, eigene Einträge und Tage, an denen andere weg sind, sind markiert. Rechts die Zusammenfassung: Zeitraum, Arbeitstage groß, Rest danach als Balken mit dem neuen Antrag in Orange, halber Tag als Umschalter (nur bei einem einzelnen Tag), wer gleichzeitig weg ist – mit Namen –, Notiz und der Knopf zum Senden. Die Datumsfelder bleiben für Tastatur und Screenreader.
+- **Teamkalender:** runde Balken statt Klötze, heute als getönte Spalte, Wochenenden und Feiertage ruhig hinterlegt, Monatswahl, Legende und Kalender-Export im Kopf der Karte.
+- **Urlaubskonten** (Leitung und Sehrecht): je Person eine Zeile mit Balken und vier Zahlen. Bearbeitet wird über den Stift – Anspruch, Übertrag und Korrektur mit einem Speichern – statt über drei Dauer-Eingabefelder je Zeile.
+- **Eigene Einträge** mit Symbol je Art.
+
+`RangeCalendar` ist ein eigener Baustein und lässt sich für andere Zeiträume wiederverwenden.
