@@ -618,3 +618,7 @@ Der Firmenverbund war eine Liste und ein Dialog. Neu ist die **Firmenkarte** üb
 - Die Firmen lassen sich auf der Karte verschieben, die Karte lässt sich zoomen. Sie erscheint nur, wenn es eine Schwesterfirma gibt.
 
 Technik: `@xyflow/react` 12.12.1 (React Flow), fest gepinnt. Das Paket wird nur nachgeladen, wenn die Karte gebraucht wird (eigener Chunk, rund 60 kB gepackt); die Startseite wird dadurch nicht schwerer.
+
+## Abwesenheiten per Ziehen (20.11.2026)
+
+Im Abwesenheitskalender wählt man den Zeitraum jetzt direkt: **über Tage ziehen** markiert sie, beim Loslassen öffnet sich das Formular mit Person, Von und Bis. Ein einzelner Klick (oder Tipp auf dem Telefon) wählt einen Tag. Ziehen geht in der eigenen Zeile; wer Abwesenheiten des Teams bearbeiten darf, in jeder. Art, halber Tag und Notiz trägt man wie bisher im Formular ein – dort stehen auch weiterhin die Arbeitstage und der Resturlaub als Vorschau.

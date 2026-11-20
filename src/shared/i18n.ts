@@ -1210,6 +1210,8 @@ const catalog: Record<string, Record<Locale, string>> = {
   "Firmenkarte.": {"en": "Company map.", "de": "Firmenkarte.", "zh": "公司地图。"},
   "Zieh ein Projekt auf eine Schwesterfirma, um es zu übergeben.": {"en": "Drag a project onto a sister company to hand it over.", "de": "Zieh ein Projekt auf eine Schwesterfirma, um es zu übergeben.", "zh": "把项目拖到姊妹公司上即可移交。"},
   "Eure Firmen und was zwischen ihnen unterwegs ist.": {"en": "Your companies and what is on its way between them.", "de": "Eure Firmen und was zwischen ihnen unterwegs ist.", "zh": "你们的公司以及彼此之间正在流转的项目。"},
+  "Tipp: im Kalender über Tage ziehen, um eine Abwesenheit einzutragen.": {"en": "Tip: drag across days in the calendar to enter an absence.", "de": "Tipp: im Kalender über Tage ziehen, um eine Abwesenheit einzutragen.", "zh": "提示：在日历中拖过几天即可登记缺勤。"},
+  "Tipp: in deiner Zeile über Tage ziehen, um Urlaub zu beantragen.": {"en": "Tip: drag across days in your row to request vacation.", "de": "Tipp: in deiner Zeile über Tage ziehen, um Urlaub zu beantragen.", "zh": "提示：在你自己的那一行拖过几天即可申请休假。"},
 };
 const messages = new Map<string, Record<Locale, string>>();
 for (const [key, translations] of Object.entries(catalog)) {
