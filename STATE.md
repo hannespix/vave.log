@@ -651,3 +651,15 @@ Auftrag: das ganze Tool Bereich für Bereich einfacher und hübscher machen. Ers
 - Leerzustand im Kapazitätsplan: Knöpfe mittig.
 
 Noch offen im selben Auftrag: Übersicht, Projekte, Aufgaben, Finanzen, Hilfe.
+
+## Finanz-Übersicht und Übersicht aufgeräumt (20.11.2026)
+
+Zweiter Durchgang des Auftrags „überall einfacher und hübscher“.
+
+- **Finanzen · Übersicht:** Das grüne Banner über den Reitern ist weg (die Seite hat schon eine Überschrift). Je Projekt eine kompakte Plan-Karte: Umsatz, Kostenprognose und Deckungsbeitrag als drei Kacheln, darunter ein Balken „Istkosten gegen geplante Kosten“ und die Stunden; alle elf Zahlen stehen aufklappbar unter „Alle Zahlen“. Fehlende Sätze sind ein einziger gelber Hinweis mit dem Knopf „Sätze ergänzen“ statt zwei Kästen. „Kaufmännischer Plan“ steht einmal als Abschnittstitel, nicht auf jeder Karte.
+- **Rechnungsübersicht:** Zahlungsstand als Balken (bezahlt, offen, überfällig); die Kachel „Überfällig“ steht in derselben Reihe.
+- Unvollständige Kennzahlen erscheinen leiser statt als riesiges „Unvollständig“.
+- **Übersicht:** Das Wochendiagramm füllt seine Karte bis zur Höhe des Timers.
+- **Finanzen · Planung & Kosten:** Die Tabelle „Gültige Personensätze“ zeigt ohne Einträge einen Hinweis statt nur der Kopfzeile.
+
+Noch offen im selben Auftrag: Projekte, Aufgaben, Hilfe, übrige Finanz-Reiter.

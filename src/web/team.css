@@ -93,3 +93,5 @@
 @media(max-width:400px){.week-day{grid-template-columns:auto minmax(0,1fr) auto 30px;gap:6px;padding:5px 2px}.week-day-name{flex-direction:column;gap:0}.week-strip .panel-heading{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.week-day-bar i{transition:none}}
 .empty-state .plan-actions,.empty-state .button-row{justify-content:center}
+/* Übersicht: das Diagramm füllt die Karte bis zur Höhe des Timers, statt unten Luft zu lassen. */
+@media(min-width:951px){.overview-grid .time-chart{display:flex;flex-direction:column}.overview-grid .time-chart .chart{flex:1;height:auto;min-height:220px}.overview-grid .time-chart .chart-bar-track{height:auto}}

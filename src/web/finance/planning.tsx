@@ -278,6 +278,11 @@ function Rates() {
             </tr>
           </thead>
           <tbody>
+            {data.rates.length === 0 && (
+              <tr>
+                <td colSpan={6} className="finance-empty-row">{t("noRates")}</td>
+              </tr>
+            )}
             {data.rates.map((rate) => (
               <tr key={rate.id}>
                 <td>
