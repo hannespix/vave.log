@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const owner='00000000-0000-4000-8000-000000000001',other='00000000-0000-4000-8000-000000000002';
+const workspaceToday = "(now() at time zone 'Europe/Berlin')::date";
 let db:PGlite;
 const files=readdirSync('supabase/migrations').filter(f=>f.endsWith('.sql')).sort();
 const migration=files.find(f=>f.endsWith('_demo_aktueller_stand.sql'))!;
@@ -58,9 +59,9 @@ describe('Beispieldaten auf dem aktuellen Stand',()=>{
   expect(abs.filter(a=>a.status==='approved').every(a=>a.decided_by===owner)).toBe(true);
   expect(await count(`select count(*) n from public.absences a join public.absences b on a.workspace_id=b.workspace_id and a.user_id=b.user_id and a.id<b.id
    and a.starts_on<=b.ends_on and b.starts_on<=a.ends_on where a.workspace_id=$1`,[w.id])).toBe(0);
-  const running=await count("select count(*) n from public.absences where workspace_id=$1 and status='approved' and starts_on<=current_date and ends_on>=current_date",[w.id]);
+  const running=await count(`select count(*) n from public.absences where workspace_id=$1 and status='approved' and starts_on<=${workspaceToday} and ends_on>=${workspaceToday}`,[w.id]);
   expect(running).toBeGreaterThan(0);
-  expect(await count('select count(*) n from public.vacation_balances where workspace_id=$1 and year=extract(year from current_date)::int and carried_over>0',[w.id])).toBeGreaterThan(20);
+  expect(await count(`select count(*) n from public.vacation_balances where workspace_id=$1 and year=extract(year from ${workspaceToday})::int and carried_over>0`,[w.id])).toBeGreaterThan(20);
  });
  it('versieht Aufgaben mit Kategorien, Bewertungen sowie Beginn und Abschluss',async()=>{
   await install();const w=await create();
@@ -77,15 +78,15 @@ describe('Beispieldaten auf dem aktuellen Stand',()=>{
   const result=(await one<{r:any}>('select public.demo_refresh_workspace($1) r',[w.id])).r;
   expect(result.entries).toBeGreaterThan(500);expect(result.tasks_moved).toBeGreaterThan(0);
   expect(await count('select count(*) n from public.time_entries where workspace_id=$1',[w.id])).toBe(before+result.entries);
-  const span=await one("select (current_date-max(work_date)) gap from public.time_entries where workspace_id=$1",[w.id]);
+  const span=await one(`select (${workspaceToday}-max(work_date)) gap from public.time_entries where workspace_id=$1`,[w.id]);
   expect(Number(span.gap)).toBeGreaterThanOrEqual(1);expect(Number(span.gap)).toBeLessThanOrEqual(3);
   expect(await count(`select count(*) n from public.time_entries e join public.absences a on a.workspace_id=e.workspace_id and a.user_id=e.user_id
-   and a.status='approved' and a.half_day='' and e.work_date between a.starts_on and a.ends_on where e.workspace_id=$1 and e.work_date>=current_date-34`,[w.id])).toBe(0);
+   and a.status='approved' and a.half_day='' and e.work_date between a.starts_on and a.ends_on where e.workspace_id=$1 and e.work_date>=${workspaceToday}-34`,[w.id])).toBe(0);
   expect(await count(`select count(*) n from public.time_entries e join public.memberships m on m.workspace_id=e.workspace_id and m.user_id=e.user_id
-   where e.workspace_id=$1 and e.work_date>=current_date-34 and m.is_demo and (m.work_schedule->>(extract(isodow from e.work_date)::int-1))::int=0`,[w.id])).toBe(0);
-  const states=new Set((await rows('select distinct status from public.time_entries where workspace_id=$1 and work_date>=current_date-34',[w.id])).map(r=>r.status));
+   where e.workspace_id=$1 and e.work_date>=${workspaceToday}-34 and m.is_demo and (m.work_schedule->>(extract(isodow from e.work_date)::int-1))::int=0`,[w.id])).toBe(0);
+  const states=new Set((await rows(`select distinct status from public.time_entries where workspace_id=$1 and work_date>=${workspaceToday}-34`,[w.id])).map(r=>r.status));
   expect(states).toContain('approved');
-  const due=await one("select (max(due_date)-current_date) d from public.tasks where workspace_id=$1 and status<>'done'",[w.id]);
+  const due=await one(`select (max(due_date)-${workspaceToday}) d from public.tasks where workspace_id=$1 and status<>'done'`,[w.id]);
   expect(Number(due.d)).toBeGreaterThanOrEqual(20);expect(Number(due.d)).toBeLessThanOrEqual(22);
   await db.exec('reset role');expect(await count('select count(*) n from private.demo_seed_context',[])).toBe(0);await login();
   const snapshot=async()=>({entries:await rows('select * from public.time_entries where workspace_id=$1 order by id',[w.id]),tasks:await rows('select * from public.tasks where workspace_id=$1 order by id',[w.id]),
