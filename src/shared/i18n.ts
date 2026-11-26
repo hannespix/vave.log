@@ -6,6 +6,11 @@ export function resolveLocale(language: string): Locale {
 export function localeTag(locale: Locale): string { return { en: 'en-US', de: 'de-DE', zh: 'zh-CN' }[locale]; }
 // Only product copy is sent through this catalog. User data is interpolated verbatim.
 const catalog: Record<string, Record<Locale, string>> = {
+  "Darstellung": {"en": "Appearance", "de": "Darstellung", "zh": "外观"},
+  "Farbschema": {"en": "Color scheme", "de": "Farbschema", "zh": "配色模式"},
+  "System": {"en": "System", "de": "System", "zh": "跟随系统"},
+  "Hell": {"en": "Light", "de": "Hell", "zh": "浅色"},
+  "Dunkel": {"en": "Dark", "de": "Dunkel", "zh": "深色"},
   "Dein Workspace wird vorbereitet …": {"en": "Preparing your workspace …", "de": "Dein Workspace wird vorbereitet …", "zh": "正在准备工作区…"},
   "Dein Workspace wird geladen …": {"en": "Loading your workspace …", "de": "Dein Workspace wird geladen …", "zh": "正在加载工作区…"},
   "Die Server-Konfiguration konnte nicht geladen werden.": {"en": "The server configuration could not be loaded.", "de": "Die Server-Konfiguration konnte nicht geladen werden.", "zh": "无法加载服务器配置。"},
