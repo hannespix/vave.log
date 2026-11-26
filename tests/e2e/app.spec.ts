@@ -1038,3 +1038,33 @@ test('team: people are cards with role, capacity, location and rights in one pla
  await expect(card.getByRole('button',{name:'Work schedule of Studio Owner',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
 });
+
+test('appearance follows the system and remembers an explicit choice', async ({ page }) => {
+ await setup(page, true);
+ await page.emulateMedia({ colorScheme: 'dark' });
+ await page.goto('/');
+ const root = page.locator('html');
+ const background = () => root.evaluate(node => getComputedStyle(node).backgroundColor);
+ const dark = await background();
+ await page.emulateMedia({ colorScheme: 'light' });
+ await expect.poll(background).not.toBe(dark);
+ const light = await background();
+
+ await goArea(page, 'Settings');
+ const appearance = page.getByRole('combobox', { name: 'Color scheme', exact: true });
+ await expect(appearance).toHaveAttribute('data-value', 'system');
+ await pickOption(appearance, 'Dark');
+ await expect(root).toHaveCSS('background-color', dark);
+ await page.reload();
+ await goArea(page, 'Settings');
+ await expect(appearance).toHaveAttribute('data-value', 'dark');
+ await expect(root).toHaveCSS('background-color', dark);
+
+ await page.emulateMedia({ colorScheme: 'dark' });
+ await pickOption(appearance, 'Light');
+ await expect(root).toHaveCSS('background-color', light);
+ await pickOption(appearance, 'System');
+ await expect(root).toHaveCSS('background-color', dark);
+ await page.emulateMedia({ colorScheme: 'light' });
+ await expect(root).toHaveCSS('background-color', light);
+});

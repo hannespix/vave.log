@@ -53,7 +53,28 @@ describe('Lesbarkeit der Oberfläche', () => {
         .map(m => `${name}: ${selector.trim()} ${m[1]} (${contrast(m[1], bg).toFixed(2)})`);
     }));
     expect(weak).toEqual([]);
-    const muted = files.find(f => f.name === 'styles.css')!.css.match(/--muted:(#[0-9a-f]{6})/)![1];
-    expect(contrast(muted, '#f1f2ed')).toBeGreaterThanOrEqual(4.5);
   });
+});
+
+describe('Kontrast der Anzeigemodi', () => {
+  const theme = files.find(file => file.name === 'theme.css')!.css;
+  const palettes = [...theme.matchAll(/:root(\[data-appearance="dark"\])?\s*\{([^{}]*)\}/g)].map(([, , body]) =>
+    new Map([...body.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [name, value])));
+  const [light, dark] = palettes;
+
+  it.each([['Hell', light], ['Dunkel', new Map([...light, ...dark])]] as const)(
+    'hält Text und Fokusrahmen im Modus %s lesbar', (_mode, palette) => {
+      const color = (name: string): string => {
+        const value = palette.get(name);
+        expect(value, name).toBeDefined();
+        const reference = value?.match(/^var\(--([\w-]+)\)$/)?.[1];
+        return reference ? color(reference) : value!;
+      };
+      for (const surface of ['canvas', 'surface', 'surface-soft', 'surface-hover', 'surface-strong', 'highlight-surface']) {
+        expect(contrast(color('focus-ring'), color(surface)), `Fokus auf ${surface}`).toBeGreaterThanOrEqual(3);
+        for (const text of ['text', 'muted']) {
+          expect(contrast(color(text), color(surface)), `${text} auf ${surface}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
 });

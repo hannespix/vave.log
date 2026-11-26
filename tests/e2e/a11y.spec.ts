@@ -60,52 +60,58 @@ async function area(page:Page,name:string){
  await nav.getByRole('button',{name:label}).first().click();
 }
 
-test('sign-in and onboarding meet WCAG 2.2 AA',async({page})=>{
- await mock(page,{loggedIn:false});await page.goto('/');await expect(page.getByLabel('Email address',{exact:true})).toBeVisible();
- const issues=await audit(page,'sign-in');
- await page.getByRole('button',{name:/Create account|Register/i}).first().click().catch(()=>undefined);
- issues.push(...await audit(page,'register'));
- expect(issues).toEqual([]);
-});
-test('onboarding without a workspace meets WCAG 2.2 AA',async({page})=>{
- await mock(page,{workspaces:false});await page.goto('/');await expect(page.getByRole('button',{name:'Create workspace',exact:true})).toBeVisible();
- expect(await audit(page,'onboarding')).toEqual([]);
-});
-test('every main area meets WCAG 2.2 AA',async({page})=>{
- test.setTimeout(90000);
- await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
- const issues=await audit(page,'overview');
- for(const name of ['Projects','Tasks','Time','Absences','Planning','Reports','Team','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();issues.push(...await audit(page,name));}
- expect(issues).toEqual([]);
-});
-test('every finance tab meets WCAG 2.2 AA',async({page})=>{
- test.setTimeout(90000);
- await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
- await area(page,'Finance');const issues:string[]=[];
- for(const tab of ['Overview','Clients','Planning & costs','Invoices','Offers','Company']){await page.getByRole('tab',{name:tab,exact:true}).click();issues.push(...await audit(page,`finance/${tab}`));}
- expect(issues).toEqual([]);
-});
-test('dialogs, palette and the opened invoice meet WCAG 2.2 AA',async({page})=>{
- test.setTimeout(90000);
- await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
- const issues:string[]=[];
- await page.getByRole('button',{name:'Add time',exact:true}).first().click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/time'));await page.keyboard.press('Escape');
- await area(page,'Tasks');await page.getByRole('button',{name:'New task',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/task'));await page.keyboard.press('Escape');
- await area(page,'Projects');await page.getByRole('button',{name:'New project',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/project'));await page.keyboard.press('Escape');
- await page.keyboard.press('Control+k');await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'palette'));await page.keyboard.press('Escape');
- await area(page,'Finance');await page.getByRole('tab',{name:'Clients',exact:true}).click();await page.getByRole('button',{name:/^Edit: /}).first().click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/client'));await page.keyboard.press('Escape');
- await page.getByRole('tab',{name:'Invoices',exact:true}).click();await page.getByRole('button',{name:'RE-2026-0001',exact:true}).click();issues.push(...await audit(page,'invoice detail'));
- await page.getByRole('button',{name:'Match bank statement',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/bank'));await page.keyboard.press('Escape');
- expect(issues).toEqual([]);
-});
-test('open dropdowns and the mobile More sheet meet WCAG 2.2 AA',async({page,isMobile})=>{
- await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();await area(page,'Tasks');await expect(page.getByRole('button',{name:'More filters',exact:true})).toBeVisible();
- const issues:string[]=[];
- await page.getByRole('button',{name:'More filters',exact:true}).click();
- await page.getByRole('combobox',{name:'Status',exact:true}).click();await expect(page.getByRole('listbox')).toBeVisible();issues.push(...await audit(page,'select open'));await page.keyboard.press('Escape');
- if(isMobile){await page.evaluate(()=>window.scrollTo(0,0));await page.locator('.nav-more').dispatchEvent('click');await expect(page.locator('.nav-more-sheet')).toBeVisible();issues.push(...await audit(page,'more sheet'));}
- expect(issues).toEqual([]);
-});
+for (const colorScheme of ['light', 'dark'] as const) {
+ test.describe(colorScheme, () => {
+  test.use({ colorScheme });
+  test('sign-in and onboarding meet WCAG 2.2 AA',async({page})=>{
+   await mock(page,{loggedIn:false});await page.goto('/');await expect(page.getByLabel('Email address',{exact:true})).toBeVisible();
+   const issues=await audit(page,'sign-in');
+   await page.getByRole('button',{name:/Create account|Register/i}).first().click().catch(()=>undefined);
+   issues.push(...await audit(page,'register'));
+   expect(issues).toEqual([]);
+  });
+  test('onboarding without a workspace meets WCAG 2.2 AA',async({page})=>{
+   await mock(page,{workspaces:false});await page.goto('/');await expect(page.getByRole('button',{name:'Create workspace',exact:true})).toBeVisible();
+   expect(await audit(page,'onboarding')).toEqual([]);
+  });
+  test('every main area meets WCAG 2.2 AA',async({page})=>{
+   test.setTimeout(90000);
+   await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
+   const issues=await audit(page,'overview');
+   for(const name of ['Projects','Tasks','Time','Absences','Planning','Reports','Team','Settings','Help']){await area(page,name);await expect(page.getByRole('heading',{level:1})).toBeVisible();issues.push(...await audit(page,name));}
+   expect(issues).toEqual([]);
+  });
+  test('every finance tab meets WCAG 2.2 AA',async({page})=>{
+   test.setTimeout(90000);
+   await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
+   await area(page,'Finance');const issues:string[]=[];
+   for(const tab of ['Overview','Clients','Planning & costs','Invoices','Offers','Company']){await page.getByRole('tab',{name:tab,exact:true}).click();issues.push(...await audit(page,`finance/${tab}`));}
+   expect(issues).toEqual([]);
+  });
+  test('dialogs, palette and the opened invoice meet WCAG 2.2 AA',async({page})=>{
+   test.setTimeout(90000);
+   await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();
+   const issues:string[]=[];
+   await page.getByRole('button',{name:'Add time',exact:true}).first().click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/time'));await page.keyboard.press('Escape');
+   await area(page,'Tasks');await page.getByRole('button',{name:'New task',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/task'));await page.keyboard.press('Escape');
+   await area(page,'Projects');await page.getByRole('button',{name:'New project',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/project'));await page.keyboard.press('Escape');
+   await page.keyboard.press('Control+k');await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'palette'));await page.keyboard.press('Escape');
+   await area(page,'Finance');await page.getByRole('tab',{name:'Clients',exact:true}).click();await page.getByRole('button',{name:/^Edit: /}).first().click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/client'));await page.keyboard.press('Escape');
+   await page.getByRole('tab',{name:'Invoices',exact:true}).click();await page.getByRole('button',{name:'RE-2026-0001',exact:true}).click();issues.push(...await audit(page,'invoice detail'));
+   await page.getByRole('button',{name:'Match bank statement',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();issues.push(...await audit(page,'dialog/bank'));await page.keyboard.press('Escape');
+   expect(issues).toEqual([]);
+  });
+  test('open dropdowns and the mobile More sheet meet WCAG 2.2 AA',async({page,isMobile})=>{
+   await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();await area(page,'Tasks');await expect(page.getByRole('button',{name:'More filters',exact:true})).toBeVisible();
+   const issues:string[]=[];
+   await page.getByRole('button',{name:'More filters',exact:true}).click();
+   await page.getByRole('combobox',{name:'Status',exact:true}).click();await expect(page.getByRole('listbox')).toBeVisible();issues.push(...await audit(page,'select open'));await page.keyboard.press('Escape');
+   if(isMobile){await page.evaluate(()=>window.scrollTo(0,0));await page.locator('.nav-more').dispatchEvent('click');await expect(page.locator('.nav-more-sheet')).toBeVisible();issues.push(...await audit(page,'more sheet'));}
+   expect(issues).toEqual([]);
+  });
+ });
+}
+
 test('keyboard users reach the content first, see focus and can operate the board',async({page,isMobile})=>{
  test.skip(isMobile,'Tastaturbedienung auf dem Desktop');
  await mock(page);await page.goto('/');await expect(page.getByRole('heading',{level:1})).toBeVisible();

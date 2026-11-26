@@ -42,7 +42,7 @@
   gap: 12px;
   margin: 0 0 25px;
   padding: 17px 20px;
-  background: #f0f1eb;
+  background: var(--surface-hover);
   border-radius: 12px;
 }
 .finance-range > .field {
@@ -112,18 +112,18 @@
   display: flex;
   flex-direction: column;
   padding: 24px;
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   min-width: 0;
 }
 .finance-metric:first-child {
-  background: #f1ebff;
-  border-color: #e7dbff;
+  background: var(--accent-surface);
+  border-color: var(--border);
 }
 .finance-metric > span {
   font-size: 12px;
-  color: #656b5e;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .finance-metric > strong {
@@ -166,7 +166,7 @@
 }
 .finance-metrics-invoices .finance-metric {
   padding: 18px 24px;
-  background: #f7f9f2;
+  background: var(--surface-soft);
   border-color: var(--border);
 }
 .finance-metrics-invoices .finance-metric > strong {
@@ -207,7 +207,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 11px 0;
-  border-bottom: 1px solid #eef0e9;
+  border-bottom: 1px solid var(--border);
 }
 .finance-details dt {
   font-size: 12px;
@@ -292,7 +292,7 @@
 .finance-export-chips > span {
   padding: 9px 17px;
   border-radius: 7px;
-  background: #f0ebff;
+  background: var(--accent-surface);
   color: var(--purple);
   font-size: 13px;
 }
@@ -303,7 +303,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 18px;
-  background: #fafbf7;
+  background: var(--surface-soft);
   min-width: 0;
 }
 .finance-line legend {
@@ -334,7 +334,7 @@
 }
 .finance-helper {
   padding: 18px;
-  background: #f2eeff;
+  background: var(--accent-surface);
   border-radius: 10px;
 }
 .finance-helper summary {
@@ -349,7 +349,7 @@
   font-size: 13px;
   letter-spacing: 0.13em;
   font-weight: 600;
-  background: var(--lime);
+  background: var(--highlight-surface);
   border-radius: 6px;
   padding: 12px 15px;
   margin-bottom: 16px;
@@ -403,23 +403,23 @@
   display: inline-block;
   border-radius: 5px;
   padding: 5px 8px;
-  background: #edf0e6;
+  background: var(--surface-hover);
   white-space: nowrap;
 }
 .finance-status-draft {
-  background: var(--lime);
-  color: #416028;
+  background: var(--highlight-surface);
+  color: var(--muted);
 }
 .finance-status-issued {
-  background: #efe8ff;
+  background: var(--accent-surface);
   color: var(--purple);
 }
 .finance-status-cancellation {
-  background: #fff0ee;
-  color: #a33d32;
+  background: var(--negative-surface);
+  color: var(--negative-text);
 }
 .finance-selected {
-  background: #faf7ff;
+  background: var(--accent-surface);
 }
 .finance-invoice-line-values {
   display: grid;
@@ -545,12 +545,12 @@
   }
 }
 .finance-overdue {
-  color: #a33d32;
+  color: var(--negative-text);
   font-weight: 600;
 }
 .finance-metric-overdue strong,
 .finance-metric-overdue span {
-  color: #a33d32;
+  color: var(--negative-text);
 }
 .finance-logo-field input[type="file"] {
   position: absolute;
@@ -575,7 +575,7 @@
   max-height: 64px;
   max-width: 240px;
   object-fit: contain;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px;
@@ -677,10 +677,10 @@
   border-bottom: 0;
 }
 .bank-row-use {
-  background: #faf8ff;
+  background: var(--accent-surface);
 }
 .bank-row-booked {
-  background: #f8f9f6;
+  background: var(--canvas);
 }
 .bank-use {
   padding-top: 2px;
@@ -762,8 +762,8 @@
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: var(--lime);
-  color: #2b3a12;
+  background: var(--highlight-surface);
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -791,7 +791,7 @@
   overflow: hidden;
 }
 .finance-client-facts > div {
-  background: #fafbf7;
+  background: var(--surface-soft);
   padding: 9px 11px;
   min-width: 0;
 }
@@ -808,7 +808,7 @@
   text-overflow: ellipsis;
 }
 .finance-client-facts dd.finance-client-open {
-  color: #8a4a22;
+  color: var(--warning-text);
 }
 .finance-client-body {
   display: grid;
@@ -854,8 +854,8 @@
   margin: 0;
   min-height: 0;
   padding: 10px 12px;
-  background: #fbf8ec;
-  border: 1px solid #efe6c5;
+  background: var(--warning-surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
   white-space: pre-wrap;
@@ -868,7 +868,7 @@
   overflow-wrap: anywhere;
 }
 .finance-client-notes > svg {
-  color: #8a7a3a;
+  color: var(--warning-text);
   margin-top: 2px;
 }
 .finance-client .finance-client-meta {
@@ -939,7 +939,7 @@
   font-size: 18px;
   font-weight: 400;
   letter-spacing: -0.01em;
-  color: #686c65;
+  color: var(--muted);
   margin: 22px 0 12px;
 }
 .finance-paybar {
@@ -950,20 +950,20 @@
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  background: #eef0e8;
+  background: var(--surface-hover);
 }
 .finance-paybar-track i {
   display: block;
   height: 100%;
 }
 .finance-paybar-track i + i {
-  border-left: 2px solid #fff;
+  border-left: 2px solid var(--border);
 }
 .finance-paybar .pay-paid {
   background: #2f8f5b;
 }
 .finance-paybar .pay-open {
-  background: #bda1fc;
+  background: var(--accent-surface-strong);
 }
 .finance-paybar .pay-overdue {
   background: #a33d32;
@@ -1016,20 +1016,20 @@
   margin: 0;
   padding: 10px 13px;
   border-radius: 10px;
-  background: #fff7e8;
-  border: 1px solid #f3e2bd;
+  background: var(--warning-surface);
+  border: 1px solid var(--border);
   font-size: 12px;
-  color: #6b4a08;
+  color: var(--warning-text);
   line-height: 1.5;
 }
 .plan-card-warning svg {
   flex-shrink: 0;
-  color: #96690f;
+  color: var(--warning-text);
 }
 .plan-card-warning .text-button {
   margin-left: auto;
   font-size: 12px;
-  color: #4a13c9;
+  color: var(--purple);
 }
 .plan-card-figures {
   margin: 0;
@@ -1041,7 +1041,7 @@
   min-width: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f7f8f3;
+  background: var(--surface-soft);
 }
 .plan-card-figures dt {
   font-size: 11px;
@@ -1057,7 +1057,7 @@
   overflow-wrap: anywhere;
 }
 .plan-card-missing {
-  color: #686c65;
+  color: var(--muted);
   font-weight: 400;
 }
 .plan-card-figures dd.plan-card-missing {
@@ -1065,10 +1065,10 @@
   letter-spacing: 0;
 }
 .plan-card-pos {
-  color: #1f6b43;
+  color: var(--positive-text);
 }
 .plan-card-neg {
-  color: #a33d32;
+  color: var(--negative-text);
 }
 .plan-card-bar-text {
   display: flex;
@@ -1080,12 +1080,12 @@
   margin-bottom: 8px;
 }
 .plan-card-bar-text strong {
-  color: #1b1b1b;
+  color: var(--text);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 .plan-card-bar-text strong.plan-card-missing {
-  color: #686c65;
+  color: var(--muted);
   font-weight: 400;
 }
 .plan-card-hours {
@@ -1097,13 +1097,13 @@
   color: var(--muted);
 }
 .plan-card-hours strong {
-  color: #1b1b1b;
+  color: var(--text);
   font-weight: 500;
 }
 .plan-card-all summary {
   cursor: pointer;
   font-size: 12px;
-  color: #4a13c9;
+  color: var(--purple);
   width: fit-content;
   padding: 4px 0;
 }
@@ -1152,6 +1152,6 @@
 .finance-empty-row {
   text-align: center;
   padding: 26px 16px;
-  color: #686c65;
+  color: var(--muted);
   font-size: 12px;
 }
