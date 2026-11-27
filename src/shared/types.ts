@@ -16,7 +16,7 @@ export interface RunningTimer { id:string; workspace_id:string; project_id:strin
 export type SuggestionSource = 'chatgpt'|'claude'|'calendar'|'fireflies'|'box'|'other';
 export interface SuggestionEvidence { title:string; url?:string|null; snippet?:string|null }
 export interface TimeSuggestionInput { workspace_id:string; source?:SuggestionSource; external_id?:string|null; project_id:string|null; task_id?:string|null; work_date:string; minutes:number; note:string; billable?:boolean; confidence?:number|null; evidence?:SuggestionEvidence[] }
-export interface TimeSuggestion extends TimeSuggestionInput { id:string; user_id:string; source:SuggestionSource; status:'pending'|'accepted'|'dismissed'; entry_id:string|null; created_at:string; decided_at:string|null; evidence:SuggestionEvidence[] }
+export interface TimeSuggestion extends TimeSuggestionInput { id:string; user_id:string; oauth_client_id?:string|null; source:SuggestionSource; status:'pending'|'accepted'|'dismissed'; entry_id:string|null; created_at:string; decided_at:string|null; evidence:SuggestionEvidence[] }
 export interface AppNotification { id:string; workspace_id:string; user_id:string; kind:'entries_approved'|'entries_returned'|'absence_requested'|'absence_approved'|'absence_declined'; entry_count:number; created_at:string; read_at:string|null }
 export interface TimerInput { workspace_id:string; project_id:string; note:string; billable:boolean; task_id?:string|null }
 /** Phase eines Projekts: die Ebene zwischen Projekt und Aufgabe, mit Zeitraum und Stundenbudget. */
@@ -36,6 +36,6 @@ export interface PlanImport { replace:boolean; service_types:string[]; projects:
 export interface PlanImportResult { projects:number; created_projects:number; rows:number; cells:number; phases:number; service_types:number }
 /** Schwesterfirma: ein verknüpfter Workspace. `can_accept`: die angemeldete Person darf dort Projekte annehmen. */
 export interface SisterWorkspace { workspace_id:string; name:string; currency:string; timezone:string; can_accept:boolean; can_unlink:boolean }
-export interface HandoverSummary { code:string; name:string; client:string; due_date:string|null; budget_minutes:number; booked_minutes:number; phases:number; open_tasks:number; plan_rows:number; planned_minutes:number; source_name:string; target_name:string; offered_by_name?:string|null }
+export interface HandoverSummary { code:string; name:string; client:string; due_date:string|null; budget_minutes?:number; booked_minutes?:number; phases:number; open_tasks?:number; plan_rows?:number; planned_minutes?:number; source_name:string; target_name:string; offered_by_name?:string|null }
 /** Angebot, ein Projekt an eine Schwesterfirma zu übergeben. */
 export interface ProjectHandover { id:string; source_workspace_id:string; source_project_id:string; target_workspace_id:string; target_project_id:string|null; status:'offered'|'accepted'|'declined'|'withdrawn'; note:string; summary:HandoverSummary; offered_by:string; offered_at:string; decided_by:string|null; decided_at:string|null }

@@ -1,12 +1,13 @@
-import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import type { Membership, Project, Workspace } from '../shared/types';
 import type { Service } from '../shared/service';
-import { buildPlanImport, parseCapacityGrid, PlanParseError, suggestPeople, suggestProjects, type ParsedPlan } from '../shared/capacity-import';
-import { gridFromText, readXlsx, XlsxError, type Sheet } from '../shared/xlsx-read';
+import { buildPlanImport, suggestPeople, suggestProjects, type ParsedPlan } from '../shared/capacity-import';
+import { assertPlanFileSize, XlsxError } from '../shared/xlsx-read';
+import type { ImportRequest, ImportResponse } from './capacity-import-worker';
 import { Dialog, Notice } from './components';
 import { useI18n } from './i18n';
-import { errorMessage, shortDate } from './helpers';
+import { shortDate } from './helpers';
 import { SelectMenu, memberOption, projectOption } from './select-menu';
 
 type Run = (action: () => Promise<unknown>, success?: string) => Promise<boolean>;
@@ -29,7 +30,9 @@ export function PlanImportDialog({ members, projects, workspace, service, run, b
   const [pasted, setPasted] = useState('');
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const reader = useRef<Worker | null>(null);
   const year = Number(today.slice(0, 4));
+  useEffect(() => () => { reader.current?.terminate(); reader.current = null; }, []);
 
   const accept = (parsed: ParsedPlan, name: string) => {
     const known = remembered(workspace.id), guess = suggestPeople(parsed.persons, members.map((m) => ({ user_id: m.user_id, display_name: m.display_name, email: m.email })));
@@ -38,21 +41,38 @@ export function PlanImportDialog({ members, projects, workspace, service, run, b
     setTargets(Object.fromEntries(parsed.projects.map((p) => [p.name, match[p.name] ?? (canProjects ? NEW : SKIP)])));
     setPlan(parsed); setSource(name); setError('');
   };
-  const fail = (e: unknown) => { setPlan(null); setError(e instanceof PlanParseError || e instanceof XlsxError ? t(e.message) : errorMessage(e)); };
-  const fromSheets = (sheets: Sheet[], name: string) => {
-    let first: unknown = null;
-    for (const sheet of sheets) { try { accept(parseCapacityGrid(sheet.rows, { merges: sheet.merges, year }), sheets.length > 1 ? `${name} · ${sheet.name}` : name); return; } catch (e) { first ??= e; } }
-    fail(first);
-  };
-  const readFile = async (file: File | undefined) => {
-    if (!file) return; setReading(true); setError('');
+  const fail = (message: string) => { setPlan(null); setError(t(message)); };
+  const read = (source: File | string) => {
+    reader.current?.terminate();
+    reader.current = null;
+    if (input.current) input.current.value = '';
+    setReading(true); setError(''); setPlan(null);
     try {
-      if (/\.(csv|tsv|txt)$/i.test(file.name)) { const text = await file.text(); accept(parseCapacityGrid(gridFromText(text.includes('\t') ? text : text.replace(/;/g, '\t')), { year }), file.name); }
-      else fromSheets(await readXlsx(await file.arrayBuffer()), file.name);
-    } catch (e) { fail(e); } finally { setReading(false); if (input.current) input.current.value = ''; }
+      assertPlanFileSize(typeof source === 'string' ? source.length : source.size);
+      const worker = new Worker(new URL('./capacity-import-worker.ts', import.meta.url), { type: 'module' });
+      reader.current = worker;
+      const finish = (result: ImportResponse) => {
+        if (reader.current !== worker) return;
+        worker.terminate(); reader.current = null; setReading(false);
+        if (result.ok) accept(result.plan, result.name || t('Eingefügte Tabelle'));
+        else fail(result.message);
+      };
+      worker.addEventListener('message', ({ data }: MessageEvent<ImportResponse>) => finish(data));
+      worker.addEventListener('messageerror', () => finish({ ok: false, message: 'Die Tabelle konnte nicht gelesen werden.' }));
+      worker.addEventListener('error', (event) => { event.preventDefault(); finish({ ok: false, message: 'Die Tabelle konnte nicht gelesen werden.' }); });
+      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated Worker messages have no target origin.
+      worker.postMessage({ input: source, year } satisfies ImportRequest);
+    } catch (error) {
+      reader.current?.terminate(); reader.current = null; setReading(false);
+      fail(error instanceof XlsxError ? error.message : 'Die Tabelle konnte nicht gelesen werden.');
+    }
   };
-  const readPaste = () => { try { accept(parseCapacityGrid(gridFromText(pasted), { year }), t('Eingefügte Tabelle')); } catch (e) { fail(e); } };
-  const drop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setOver(false); void readFile(e.dataTransfer.files[0]); };
+  const readFile = (file: File | undefined) => { if (file) read(file); };
+  const drop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setOver(false); readFile(e.dataTransfer.files[0]); };
+  const changePaste = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    try { assertPlanFileSize(event.target.value.length); setPasted(event.target.value); }
+    catch (error) { if (error instanceof XlsxError) fail(error.message); }
+  };
 
   const submit = async () => {
     if (!plan) return;
@@ -78,10 +98,10 @@ export function PlanImportDialog({ members, projects, workspace, service, run, b
           <FileSpreadsheet size={26} aria-hidden="true"/>
           <p><strong>{t('Excel-Datei hierher ziehen')}</strong><br/><span className="muted">{t('.xlsx, .csv oder .tsv, bis 8 MB')}</span></p>
           <button type="button" className="button secondary small" disabled={reading} onClick={() => input.current?.click()}><Upload size={14}/> {reading ? t('Wird gelesen …') : t('Datei wählen')}</button>
-          <input ref={input} type="file" hidden accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label={t('Excel-Datei wählen')} onChange={(e: ChangeEvent<HTMLInputElement>) => void readFile(e.target.files?.[0])}/>
+          <input ref={input} type="file" hidden accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label={t('Excel-Datei wählen')} onChange={(e) => readFile(e.target.files?.[0])}/>
         </div>
-        <label className="field"><span>{t('Oder Zellen aus Excel kopieren und hier einfügen')}</span><textarea rows={4} value={pasted} placeholder={t('Bereich in Excel markieren, kopieren, hier einfügen')} onChange={(e) => setPasted(e.target.value)}/></label>
-        <div className="form-actions"><button type="button" className="button secondary" onClick={onClose}>{t('Abbrechen')}</button><button type="button" className="button primary" disabled={!pasted.trim()} onClick={readPaste}>{t('Eingefügte Tabelle lesen')}</button></div>
+        <label className="field"><span>{t('Oder Zellen aus Excel kopieren und hier einfügen')}</span><textarea rows={4} value={pasted} placeholder={t('Bereich in Excel markieren, kopieren, hier einfügen')} onChange={changePaste}/></label>
+        <div className="form-actions"><button type="button" className="button secondary" onClick={onClose}>{t('Abbrechen')}</button><button type="button" className="button primary" disabled={reading || !pasted.trim()} onClick={() => read(pasted)}>{t('Eingefügte Tabelle lesen')}</button></div>
       </>}
       {plan && <>
         <div className="plan-import-summary"><div><span>{t('Quelle')}</span><strong>{source}</strong></div><div><span>{t('Zeitraum')}</span><strong>{t('KW {week}', { week: plan.weeks[0].week })} – {t('KW {week}', { week: plan.weeks[plan.weeks.length - 1].week })}</strong><small className="muted">{shortDate(plan.weeks[0].start)} – {shortDate(plan.weeks[plan.weeks.length - 1].start)}</small></div><div><span>{t('Projekte')}</span><strong>{plan.projects.length}</strong></div><div><span>{t('Zeilen')}</span><strong>{rowCount}</strong></div><div><span>{t('Stunden')}</span><strong>{hours(plan.hours)}</strong></div></div>

@@ -66,4 +66,12 @@ describe("DATEV posting batch (EXTF)", () => {
     expect(odd.trimEnd().split("\r\n")[2]!.split(";")[7]).toBe("8120");
     expect(DATEV_DEFAULT_REVENUE[1900]).toBe("8400");
   });
+  it.each(["=", "+", "-", "@"])("exports a booking text starting with %s as a literal cell", (prefix) => {
+    const customer_snapshot = { ...base.customer_snapshot!, name: '\t"' + prefix + "Studio" };
+    const [, , booking] = datevCsv([{ ...base, customer_snapshot }], options).split("\r\n");
+    const fields = booking!.split(";");
+    expect(fields).toHaveLength(125);
+    expect(fields[10]).toBe('"INV-2026-0042"');
+    expect(fields[13]).toBe(`"'${prefix}Studio INV-2026-0042"`);
+  });
 });

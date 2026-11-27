@@ -19,15 +19,19 @@ async function setupProgress(page:Page){
  ];
  const saved:Record<string,unknown>[]=[];let insightRequests=0;
  await page.route('https://test.supabase.co/**',async route=>{
-  const req=route.request(),path=new URL(req.url()).pathname;let data:unknown=[];
+  const req=route.request(),url=new URL(req.url()),path=url.pathname;let data:unknown=[];
   if(path==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:''};
   else if(path==='/rest/v1/rpc/accept_invitations')data=0;
   else if(path==='/rest/v1/workspaces')data=[{id:ws,name:'Progress Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:''}];
-  else if(path==='/rest/v1/memberships')data=[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
+  else if(path==='/rest/v1/rpc/list_workspace_members')data=[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
   else if(path==='/rest/v1/projects')data=[project];
   else if(path==='/rest/v1/running_timers'||path==='/rest/v1/workspace_demos')data=null;
+  else if(path==='/rest/v1/rpc/list_workspace_tasks')data=tasks;
   else if(path==='/rest/v1/tasks'){
-   if(req.method()==='POST'){const body=req.postDataJSON();saved.push(body);Object.assign(tasks.find(t=>t.id===body.id)!,body);data=tasks.find(t=>t.id===body.id);}else data=tasks;
+   if(req.method()==='PATCH'){
+    const body=req.postDataJSON(),task=tasks.find(t=>`eq.${t.id}`===url.searchParams.get('id'))!;
+    saved.push(body);Object.assign(task,body);data=url.searchParams.get('select')==='status'?{status:task.status}:[task];
+   }else if(req.method()==='POST'){const body=req.postDataJSON();saved.push(body);Object.assign(tasks.find(t=>t.id===body.id)!,body);data=tasks.find(t=>t.id===body.id);}else data=tasks;
   }
   else if(path==='/rest/v1/rpc/project_insight'){
    insightRequests++;const milestones=tasks.filter(t=>t.is_milestone);
@@ -57,7 +61,8 @@ test('task estimates and milestones drive automatic card progress and scoped det
  await page.screenshot({path:detailScreenshot,fullPage:true,animations:'disabled'});
  await testInfo.attach('Milestones and missing data actions',{path:detailScreenshot,contentType:'image/png'});
  await missing.getByRole('button',{name:'Tasks without a due date: 1'}).click();await expect(dialog).not.toBeVisible();await expect(page.getByRole('button',{name:'Design handoff',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Discovery complete',exact:true})).toHaveCount(0);
- await pickOption(page.getByRole('combobox',{name:'Status for Design handoff',exact:true}),'Done');await expect(page.getByRole('combobox',{name:'Status for Design handoff',exact:true})).toBeEnabled();expect(state.saved.at(-1)).toMatchObject({status:'done',estimated_minutes:180,is_milestone:true});
+ await pickOption(page.getByRole('combobox',{name:'Status for Design handoff',exact:true}),'Done');await expect(page.getByRole('combobox',{name:'Status for Design handoff',exact:true})).toBeEnabled();expect(state.saved.at(-1)).toEqual({status:'done'});
+ expect(state.tasks[1]).toMatchObject({estimated_minutes:180,is_milestone:true});
  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Projects',exact:true}).click();await expect(card.locator('.project-card-progress strong')).toHaveText('100%');await card.getByRole('button',{name:'Project outlook: Automatic Project',exact:true}).click();
  await expect(dialog.getByText('All tracked tasks complete',{exact:true})).toBeVisible();await expect(dialog.getByText('No completion date is recorded.').first()).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);

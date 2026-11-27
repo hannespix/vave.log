@@ -20,6 +20,25 @@ import { Planning } from "./planning";
 import { Invoices } from "./invoices";
 import { Offers } from "./offers";
 import "./finance.css";
+
+type FinanceSource = keyof FinanceData;
+type FinanceReads = {
+  rangeKey: string;
+  values: Partial<FinanceData>;
+  errors: Partial<Record<FinanceSource, unknown>>;
+};
+const TAB_SOURCES: Record<FinanceTab, readonly FinanceSource[]> = {
+  overview: ["overview", "invoices"],
+  clients: ["clients", "plans", "invoices"],
+  planning: ["clients", "plans", "rates", "expenses"],
+  offers: ["clients", "offers"],
+  invoices: ["clients", "profile", "invoices"],
+  company: ["profile"],
+};
+function financeAccessLost(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "forbidden";
+}
+
 export interface FinanceAreaProps {
   client: SupabaseClient;
   workspace: Workspace;
@@ -99,7 +118,8 @@ function AuthorizedFinance({
     }
     onNavigate?.(target);
   }
-  const [data, setData] = useState<FinanceData | null>(null),
+  const rangeKey = range.from + ":" + range.to;
+  const [reads, setReads] = useState<FinanceReads>({ rangeKey, values: {}, errors: {} }),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(null),
@@ -116,43 +136,64 @@ function AuthorizedFinance({
       // oxlint-enable react-hooks/exhaustive-deps
     };
   }, []);
+  const hideFinanceData = useCallback(() => {
+    generation.current++;
+    setReads((before) => ({ rangeKey: before.rangeKey, values: {}, errors: {} }));
+    setLoading(false);
+  }, []);
   const load = useCallback(async () => {
     const request = ++generation.current;
+    const isCurrent = () => mounted.current && request === generation.current;
     setLoading(true);
-    try {
-      const [clients, profile, rates, plans, expenses, invoices, offers, overview] =
-        await Promise.all([
-          service.listClients(workspace.id),
-          service.getProfile(workspace.id),
-          service.listRates(workspace.id),
-          service.listProjectPlans(workspace.id),
-          service.listExpenses(workspace.id, range.from, range.to),
-          service.listInvoices(workspace.id),
-          service.listOffers(workspace.id),
-          service.overview(workspace.id, range.from, range.to),
-        ]);
-      if (mounted.current && request === generation.current) {
-        setData({
-          clients,
-          profile,
-          rates,
-          plans,
-          expenses,
-          invoices,
-          offers,
-          overview,
+    setError(null);
+    setReads((before) => {
+      if (before.rangeKey === rangeKey) return before;
+      const values = { ...before.values }, errors = { ...before.errors };
+      delete values.overview;
+      delete values.expenses;
+      delete errors.overview;
+      delete errors.expenses;
+      return { rangeKey, values, errors };
+    });
+
+    async function read<K extends FinanceSource>(name: K, get: () => Promise<FinanceData[K]>) {
+      try {
+        const value = await get();
+        if (!isCurrent()) return;
+        setReads((before) => {
+          const errors = { ...before.errors };
+          delete errors[name];
+          return { ...before, values: { ...before.values, [name]: value }, errors };
         });
-        setError(null);
+      } catch (e) {
+        if (!isCurrent()) return;
+        if (financeAccessLost(e)) {
+          hideFinanceData();
+          setError(e);
+          return;
+        }
+        setReads((before) => {
+          const values = { ...before.values };
+          delete values[name];
+          return { ...before, values, errors: { ...before.errors, [name]: e } };
+        });
       }
-    } catch (e) {
-      if (mounted.current && request === generation.current) {
-        setError(e);
-        setData(null);
-      }
-    } finally {
-      if (mounted.current && request === generation.current) setLoading(false);
     }
-  }, [service, workspace.id, range.from, range.to]);
+
+    // A source updates its own result as soon as it settles. The completion
+    // promise still lets a write wait for its refreshed data.
+    await Promise.all([
+      read("clients", () => service.listClients(workspace.id)),
+      read("profile", () => service.getProfile(workspace.id)),
+      read("rates", () => service.listRates(workspace.id)),
+      read("plans", () => service.listProjectPlans(workspace.id)),
+      read("expenses", () => service.listExpenses(workspace.id, range.from, range.to)),
+      read("invoices", () => service.listInvoices(workspace.id)),
+      read("offers", () => service.listOffers(workspace.id)),
+      read("overview", () => service.overview(workspace.id, range.from, range.to)),
+    ]);
+    if (isCurrent()) setLoading(false);
+  }, [service, workspace.id, range, rangeKey, hideFinanceData]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -174,14 +215,8 @@ function AuthorizedFinance({
         setError(e);
         // Mit Lesezugriff scheitert jede Änderung erwartbar an der Berechtigung: Die Meldung genügt, die Zahlen bleiben
         // stehen. Nur wer eben noch schreiben durfte, hat das Recht verloren – dann verschwinden die Finanzdaten sofort.
-        if (
-          access !== "view" &&
-          typeof e === "object" &&
-          e !== null &&
-          "code" in e &&
-          e.code === "forbidden"
-        )
-          setData(null);
+        if (access !== "view" && financeAccessLost(e))
+          hideFinanceData();
       }
       return false;
     } finally {
@@ -200,6 +235,16 @@ function AuthorizedFinance({
     }
     setRange({ from, to });
   }
+  // The tab must have every relevant source before it can show any totals.
+  const matchesRange = (source: FinanceSource) =>
+    reads.rangeKey === rangeKey || (source !== "overview" && source !== "expenses");
+  const failedSource = TAB_SOURCES[tab].find((source) => matchesRange(source) && Object.hasOwn(reads.errors, source));
+  const missingSource = TAB_SOURCES[tab].find((source) => !matchesRange(source) || !Object.hasOwn(reads.values, source));
+  const data: FinanceData = {
+    clients: [], profile: null, rates: [], plans: [], expenses: [], invoices: [], offers: [],
+    overview: { workspace_id: workspace.id, currency: workspace.currency, ...range, projects: [] },
+    ...reads.values,
+  };
   return (
     <div className="finance-area">
       {access === "view" && <Notice kind="info">{t("readOnly")}</Notice>}
@@ -293,12 +338,9 @@ function AuthorizedFinance({
           <p>{t("scope")}</p>
         </form>
       )}
-      {loading &&
-      (!data ||
-        data.overview.from !== range.from ||
-        data.overview.to !== range.to) ? (
+      {missingSource && !failedSource && (loading || !matchesRange(missingSource)) ? (
         <Spinner label={t("loading")} />
-      ) : !data ? (
+      ) : missingSource && !failedSource ? (
         <button className="button secondary" onClick={() => void load()}>
           {t("retry")}
         </button>
@@ -330,12 +372,17 @@ function AuthorizedFinance({
             id="finance-content"
             aria-labelledby={`finance-tab-${tab}`}
           >
-            {tab === "overview" && <Overview />}
-            {tab === "clients" && <Clients />}
-            {tab === "planning" && <Planning />}
-            {tab === "invoices" && <Invoices />}
-            {tab === "offers" && <Offers />}
-            {tab === "company" && <Company />}
+            {failedSource ? <>
+              <Notice>{financeError(reads.errors[failedSource], locale)}</Notice>
+              <button className="button secondary" disabled={loading} onClick={() => void load()}>{t("retry")}</button>
+            </> : <>
+              {tab === "overview" && <Overview />}
+              {tab === "clients" && <Clients />}
+              {tab === "planning" && <Planning />}
+              {tab === "invoices" && <Invoices />}
+              {tab === "offers" && <Offers />}
+              {tab === "company" && <Company />}
+            </>}
           </div>
         </FinanceContext.Provider>
       )}

@@ -84,8 +84,8 @@ describe('database authorization', () => {
   it('only lists workspaces, projects and memberships for the current tenant', async () => {
     expect((await rows('select id from public.workspaces')).map(x=>x.id)).toEqual([workspace]);
     expect((await rows('select id from public.projects')).map(x=>x.id)).toEqual([project]);
-    expect(await rows('select * from public.memberships where workspace_id=$1',[foreignWorkspace])).toEqual([]);
-    expect(await rows('select * from public.memberships where workspace_id=$1',[workspace])).toHaveLength(3);
+    expect(await rows('select user_id from public.memberships where workspace_id=$1',[foreignWorkspace])).toEqual([]);
+    expect(await rows('select user_id from public.memberships where workspace_id=$1',[workspace])).toHaveLength(3);
   });
   it('does not let a member create projects or elevate membership', async () => {
     await expect(attempt("insert into public.projects(workspace_id,code,name) values($1,'BAD','Bad')",[workspace])).rejects.toThrow();
@@ -140,13 +140,93 @@ describe('database authorization', () => {
     await db.query("update public.invitations set expires_at=now()-interval '1 second' where workspace_id=$1",[workspace]);
     await login(outsider);
     expect((await first('select public.accept_invitations() as n')).n).toBe(0);
-    expect(await rows('select * from public.memberships where workspace_id=$1',[workspace])).toHaveLength(0);
+    expect(await rows('select user_id from public.memberships where workspace_id=$1',[workspace])).toHaveLength(0);
   });
   it('enables RLS everywhere and pins privileged function search paths', async () => {
     await db.exec('reset role');
     expect(await rows("select relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private') and relkind='r' and not relrowsecurity")).toEqual([]);
     expect(await rows("select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and prosecdef and not coalesce(proconfig @> array['search_path=\"\"'],false)")).toEqual([]);
     expect(await rows("select proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and prosecdef and has_function_privilege('anon',p.oid,'execute')")).toEqual([]);
+  });
+});
+
+describe('database private workspace details', () => {
+  it('shows ratings only with the strengths permission and keeps a normal task update usable', async () => {
+    await login(owner);
+    const task = await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,rating) values($1,$2,'Review design',4) returning id",[workspace,project]);
+    await login(member);
+    expect(await rows('select id,title from public.tasks where id=$1',[task.id])).toEqual([{id:task.id,title:'Review design'}]);
+    await expect(attempt('select rating from public.tasks where id=$1',[task.id])).rejects.toMatchObject({code:'42501'});
+    await expect(attempt('update public.tasks set rating=4 where id=$1',[task.id])).rejects.toMatchObject({code:'42501'});
+    const updated = await first("update public.tasks set status='doing' where id=$1 returning status",[task.id]);
+    expect(updated.status).toBe('doing');
+    expect(await rows('select rating from public.list_workspace_tasks($1,0,1000) where id=$2',[workspace,task.id])).toEqual([{rating:null}]);
+    await login(manager);
+    expect(await rows('select rating from public.list_workspace_tasks($1,0,1000) where id=$2',[workspace,task.id])).toEqual([{rating:4}]);
+    await db.query('update public.tasks set rating=5 where id=$1',[task.id]);
+    expect(await rows('select rating from public.list_workspace_tasks($1,0,1000) where id=$2',[workspace,task.id])).toEqual([{rating:5}]);
+    await login(outsider);
+    expect(await rows('select id from public.list_workspace_tasks($1,0,1000)',[workspace])).toEqual([]);
+  });
+
+  it('shows opening balances and vacation entitlements only to the member and HR', async () => {
+    await login(owner);
+    await db.query('select public.set_vacation_entitlement($1,$2,28)',[workspace,member]);
+    await db.query("select public.set_work_schedule($1,$2,null,'2026-10-05',120)",[workspace,member]);
+    await db.query('select public.set_vacation_entitlement($1,$2,32)',[workspace,manager]);
+    await login(member);
+    await expect(attempt('select vacation_days_per_year,balance_start_on,balance_start_minutes from public.memberships where workspace_id=$1',[workspace])).rejects.toMatchObject({code:'42501'});
+    const select = 'select user_id,vacation_days_per_year,balance_start_on::text as balance_start_on,balance_start_minutes from public.list_workspace_members($1) where user_id=$2';
+    expect(await first(select,[workspace,member])).toEqual({user_id:member,vacation_days_per_year:'28.0',balance_start_on:'2026-10-05',balance_start_minutes:120});
+    expect(await first(select,[workspace,manager])).toEqual({user_id:manager,vacation_days_per_year:null,balance_start_on:null,balance_start_minutes:null});
+    await login(manager);
+    expect(await first(select,[workspace,member])).toMatchObject({vacation_days_per_year:'28.0',balance_start_minutes:120});
+    await login(outsider);
+    expect(await rows(select,[workspace,member])).toEqual([]);
+  });
+
+  it('keeps HR details out of team administration responses and the general audit log', async () => {
+    await login(owner);
+    await db.query('select public.set_vacation_entitlement($1,$2,28)',[workspace,member]);
+    await db.query("select public.set_work_schedule($1,$2,null,'2026-10-05',120)",[workspace,member]);
+    const teamOnly = {projects:'view',tasks:'edit',time_team:'none',absences_team:'none',planning:'none',strengths:'none',finance:'none',team:'edit',settings:'none'};
+    await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,manager,teamOnly]);
+    await login(manager);
+    const response = await first("select * from public.set_member_rights($1,$2,'mitarbeit')",[workspace,member]);
+    expect(response).toMatchObject({rights_template:'mitarbeit',vacation_days_per_year:null,balance_start_on:null,balance_start_minutes:null});
+    expect(await rows("select action from public.audit_log where workspace_id=$1 and action in ('vacation_entitlement','work_schedule')",[workspace])).toEqual([]);
+    expect(await rows("select action from public.audit_log where workspace_id=$1 and action='rights_change'",[workspace])).toHaveLength(2);
+    await login(owner);
+    expect(await rows("select action from public.audit_log where workspace_id=$1 and action in ('vacation_entitlement','work_schedule')",[workspace])).toHaveLength(2);
+  });
+
+  it('shares the absence calendar while reserving notes and decision details for the member and HR', async () => {
+    await login(manager);
+    const ids = await rows<{id:string}>(`insert into public.absences(workspace_id,user_id,starts_on,ends_on,kind,note) values
+      ($1,$2,'2027-02-01','2027-02-01','sick','Private note'),($1,$3,'2027-02-02','2027-02-02','sick','Own note') returning id`,[workspace,manager,member]);
+    await login(member);
+    await expect(attempt('select note,decided_by,decided_at from public.absences where id=$1',[ids[0]!.id])).rejects.toMatchObject({code:'42501'});
+    const read = "select kind,note,decided_by from public.list_workspace_absences($1,'2027-02-01','2027-02-06') where id=$2";
+    expect(await first(read,[workspace,ids[0]!.id])).toEqual({kind:'sick',note:'',decided_by:null});
+    expect(await first(read,[workspace,ids[1]!.id])).toEqual({kind:'sick',note:'Own note',decided_by:manager});
+    await login(manager);
+    expect(await first(read,[workspace,ids[0]!.id])).toEqual({kind:'sick',note:'Private note',decided_by:manager});
+    await login(outsider);
+    expect(await rows(read,[workspace,ids[0]!.id])).toEqual([]);
+  });
+
+  it('ends notification access when a membership is disabled', async () => {
+    const time = await entry();
+    await db.query("select public.submit_entries($1,'2026-10-13','2026-10-13')",[workspace]);
+    await login(owner);
+    await db.query('select public.review_entry($1,true)',[time.id]);
+    await login(member);
+    expect(await rows('select kind from public.notifications where workspace_id=$1',[workspace])).toEqual([{kind:'entries_approved'}]);
+    await login(owner);
+    await db.query("select public.set_member_role($1,$2,'disabled')",[workspace,member]);
+    await login(member);
+    expect(await rows('select kind from public.notifications where workspace_id=$1',[workspace])).toEqual([]);
+    await expect(attempt('select public.mark_notifications_read($1)',[workspace])).rejects.toMatchObject({code:'42501'});
   });
 });
 
@@ -228,15 +308,23 @@ describe('database rights per account', () => {
     await expect(attempt("update public.memberships set rights_template='lesen',permissions=$3 where workspace_id=$1 and user_id=$2",[workspace,member,matrix()])).rejects.toThrow(/memberships_rights_shape/);
     await login(member);
   });
-  it('lets an assignee without task rights complete a repeating task; the follow-up is created for them', async () => {
+  it('lets a read-only assignee change only the status and roll the saved series once', async () => {
     await login(owner);
     await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[workspace,member,matrix({ tasks:'view' })]);
     const id=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,due_date,repeat,assignee_id) values($1,$2,'Wochenbericht Audit','2026-10-16','weekly',$3) returning id",[workspace,project,member])).id;
+    const unassigned=(await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Teamaufgabe') returning id",[workspace,project])).id;
     await login(member);
     await expect(attempt("insert into public.tasks(workspace_id,project_id,title) values($1,$2,'Nicht erlaubt')",[workspace,project])).rejects.toThrow();
+    await expect(attempt("update public.tasks set title='Anderer Titel' where id=$1",[id])).rejects.toMatchObject({code:'42501'});
+    await expect(attempt("update public.tasks set status='done',repeat='monthly' where id=$1",[id])).rejects.toMatchObject({code:'42501'});
+    expect(await rows("update public.tasks set status='done' where id=$1 returning status",[unassigned])).toEqual([]);
+    expect(await rows("update public.tasks set status='doing',title='Wochenbericht Audit',due_date='2026-10-16' where id=$1 returning status",[id])).toEqual([{status:'doing'}]);
     expect(await rows("update public.tasks set status='done' where id=$1 returning status",[id])).toEqual([{status:'done'}]);
     const next=await first<{due:string;status:string;repeat:string;assignee_id:string}>("select due_date::text as due,status,repeat,assignee_id from public.tasks where workspace_id=$1 and title='Wochenbericht Audit' and id<>$2",[workspace,id]);
     expect(next).toMatchObject({due:'2026-10-23',status:'todo',repeat:'weekly',assignee_id:member});
+    expect(await rows("update public.tasks set status='todo' where id=$1 returning status",[id])).toEqual([{status:'todo'}]);
+    expect(await rows("update public.tasks set status='done' where id=$1 returning status",[id])).toEqual([{status:'done'}]);
+    expect(await rows("select id from public.tasks where workspace_id=$1 and title='Wochenbericht Audit'",[workspace])).toHaveLength(2);
   });
   it('shows vacation accounts to their owner and to people with the team-absence right only', async () => {
     await login(owner);
@@ -295,7 +383,7 @@ describe('database member offboarding', () => {
     await login(member);
     expect(await rows('select * from public.workspaces where id=$1',[workspace])).toHaveLength(0);
     for (const table of ['memberships','projects','tasks','time_entries','running_timers','invitations','audit_log']) {
-      expect(await rows(`select * from public.${table} where workspace_id=$1`,[workspace])).toHaveLength(0);
+      expect(await rows(`select workspace_id from public.${table} where workspace_id=$1`,[workspace])).toHaveLength(0);
     }
     await expect(attempt("insert into public.time_entries(workspace_id,project_id,work_date,minutes) values($1,$2,'2026-10-13',1)",[workspace,project])).rejects.toThrow();
     await expect(attempt("select * from public.start_timer($1,$2,'Hidden timer',true)",[workspace,project])).rejects.toThrow(/Berechtigung/);
@@ -452,10 +540,10 @@ describe('database entries and workflow', () => {
     await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on) values($1,'2026-12-22','2026-12-21')",[workspace])).rejects.toThrow();
     await login(manager);
     await db.query("insert into public.absences(workspace_id,user_id,starts_on,ends_on,kind) values($1,$2,'2026-11-02','2026-11-02','sick')",[workspace,member]);
-    expect(await rows('select * from public.absences where workspace_id=$1 order by starts_on',[workspace])).toHaveLength(2);
+    expect(await rows('select id from public.absences where workspace_id=$1 order by starts_on',[workspace])).toHaveLength(2);
     expect(await rows('delete from public.absences where id=$1 returning id',[own.id])).toHaveLength(1);
     await login(outsider);
-    expect(await rows('select * from public.absences where workspace_id=$1',[workspace])).toHaveLength(0);
+    expect(await rows('select id from public.absences where workspace_id=$1',[workspace])).toHaveLength(0);
   });
   it('stores holiday locations: managers for anyone, members only for themselves, owners/managers for the workspace default', async () => {
     await login(member);
@@ -474,18 +562,20 @@ describe('database entries and workflow', () => {
   });
   it('runs vacation requests through approval, notifies, protects decided absences and keeps entitlements with the management', async () => {
     await login(member);
-    const req=await first<{id:string;status:string;decided_by:string|null}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,note) values($1,'2027-02-01','2027-02-05','vacation','Ski') returning *",[workspace]);
-    expect(req.status).toBe('requested');expect(req.decided_by).toBeNull();
-    const sick=await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-02-08','2027-02-08','sick') returning *",[workspace]);
+    const req=await first<{id:string;status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,note) values($1,'2027-02-01','2027-02-05','vacation','Ski') returning id,status",[workspace]);
+    expect(req.status).toBe('requested');
+    const decision="select decided_by from public.list_workspace_absences($1,'2027-02-01','2027-02-05') where id=$2";
+    expect((await first(decision,[workspace,req.id])).decided_by).toBeNull();
+    const sick=await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-02-08','2027-02-08','sick') returning status",[workspace]);
     expect(sick.status).toBe('approved');
     await expect(attempt("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-03-01','2027-03-02','vacation','am')",[workspace])).rejects.toThrow();
-    expect((await first<{half_day:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-03-01','2027-03-01','vacation','pm') returning *",[workspace])).half_day).toBe('pm');
+    expect((await first<{half_day:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind,half_day) values($1,'2027-03-01','2027-03-01','vacation','pm') returning half_day",[workspace])).half_day).toBe('pm');
     // Ein Mitglied kann sich nicht selbst genehmigen – der Trigger setzt den Status zurück.
     expect((await first<{status:string}>("update public.absences set status='approved' where id=$1 returning status",[req.id])).status).toBe('requested');
     await login(manager);
     expect((await first<{entry_count:number}>("select entry_count from public.notifications where user_id=$1 and kind='absence_requested' and read_at is null",[manager])).entry_count).toBe(2);
-    const decided=await first<{status:string;decided_by:string}>("update public.absences set status='approved' where id=$1 returning *",[req.id]);
-    expect(decided.status).toBe('approved');expect(decided.decided_by).toBe(manager);
+    const decided=await first<{status:string}>("update public.absences set status='approved' where id=$1 returning status",[req.id]);
+    expect(decided.status).toBe('approved');expect((await first(decision,[workspace,req.id])).decided_by).toBe(manager);
     await login(member);
     expect(await rows("select kind from public.notifications where user_id=$1 and kind='absence_approved' and read_at is null",[member])).toHaveLength(1);
     await expect(attempt("update public.absences set ends_on='2027-02-10' where id=$1",[req.id])).rejects.toThrow(/Leitung/);
@@ -498,7 +588,7 @@ describe('database entries and workflow', () => {
     expect((await first<{carried_over:string}>("insert into public.vacation_balances(workspace_id,user_id,year,carried_over,adjustment) values($1,$2,2027,3,-1) returning *",[workspace,member])).carried_over).toBe('3.0');
     expect((await first<{absence_approval:boolean}>('select * from public.set_absence_approval($1,false)',[workspace])).absence_approval).toBe(false);
     await login(member);
-    expect((await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-04-01','2027-04-02','vacation') returning *",[workspace])).status).toBe('approved');
+    expect((await first<{status:string}>("insert into public.absences(workspace_id,starts_on,ends_on,kind) values($1,'2027-04-01','2027-04-02','vacation') returning status",[workspace])).status).toBe('approved');
     expect(await rows('select * from public.vacation_balances where workspace_id=$1',[workspace])).toHaveLength(1);
     await login(manager);
     expect((await first<{absence_approval:boolean}>('select * from public.set_absence_approval($1,true)',[workspace])).absence_approval).toBe(true);
@@ -542,20 +632,21 @@ describe('database entries and workflow', () => {
   });
   it('tracks the task lifecycle in the trigger and lets only the management rate', async () => {
     await login(manager);
-    const t=await first<{id:string;started_at:string|null;done_at:string|null;reopened_count:number;tags:string[]}>("insert into public.tasks(workspace_id,project_id,title,tags) values($1,$2,'Lifecycle','{motion,3d}') returning *",[workspace,project]);
+    const t=await first<{id:string;started_at:string|null;done_at:string|null;tags:string[]}>("insert into public.tasks(workspace_id,project_id,title,tags) values($1,$2,'Lifecycle','{motion,3d}') returning id,started_at,done_at,tags",[workspace,project]);
     expect(t.started_at).toBeNull();expect(t.done_at).toBeNull();expect(t.tags).toEqual(['motion','3d']);
     await expect(attempt("insert into public.tasks(workspace_id,project_id,title,tags) values($1,$2,'Bad','{Motion}')",[workspace,project])).rejects.toThrow();
-    const doing=await first<{started_at:string|null;done_at:string|null}>("update public.tasks set status='doing' where id=$1 returning *",[t.id]);
+    const doing=await first<{started_at:string|null;done_at:string|null}>("update public.tasks set status='doing' where id=$1 returning started_at,done_at",[t.id]);
     expect(doing.started_at).not.toBeNull();expect(doing.done_at).toBeNull();
-    const done=await first<{done_at:string|null;reopened_count:number}>("update public.tasks set status='done', rating=4 where id=$1 returning *",[t.id]);
+    const done=await first<{done_at:string|null;reopened_count:number}>("update public.tasks set status='done', rating=4 where id=$1 returning done_at,reopened_count",[t.id]);
     expect(done.done_at).not.toBeNull();expect(done.reopened_count).toBe(0);
-    const reopened=await first<{done_at:string|null;reopened_count:number;rating:number}>("update public.tasks set status='doing' where id=$1 returning *",[t.id]);
-    expect(reopened.done_at).toBeNull();expect(reopened.reopened_count).toBe(1);expect(reopened.rating).toBe(4);
+    const reopened=await first<{done_at:string|null;reopened_count:number}>("update public.tasks set status='doing' where id=$1 returning done_at,reopened_count",[t.id]);
+    expect(reopened.done_at).toBeNull();expect(reopened.reopened_count).toBe(1);
+    expect((await first('select rating from public.list_workspace_tasks($1,0,1000) where id=$2',[workspace,t.id])).rating).toBe(4);
     // Zeitstempel und Zähler lassen sich nicht vom Client setzen.
-    expect((await first<{reopened_count:number}>("update public.tasks set reopened_count=99, done_at=now() where id=$1 returning *",[t.id])).reopened_count).toBe(1);
+    expect((await first<{reopened_count:number}>("update public.tasks set reopened_count=99, done_at=now() where id=$1 returning reopened_count",[t.id])).reopened_count).toBe(1);
     await login(member);
     await expect(attempt("update public.tasks set rating=1 where id=$1",[t.id])).rejects.toThrow(/Leitung/);
-    expect((await first<{status:string;rating:number}>("update public.tasks set status='done' where id=$1 returning *",[t.id])).rating).toBe(4);
+    expect((await first<{status:string}>("update public.tasks set status='done' where id=$1 returning status",[t.id])).status).toBe('done');
     await expect(attempt("update public.tasks set rating=6 where id=$1",[t.id])).rejects.toThrow();
   });
   it('keeps time suggestions private to their owner, deduplicates by external id and books drafts only on acceptance', async () => {
@@ -614,6 +705,12 @@ describe('database entries and workflow', () => {
     expect((await first<{due:string}>("select due_date::text as due from public.tasks where title='Jahrhundertwende' and id<>$1",[capped])).due).toBe('2100-12-31');
     await expect(attempt("insert into public.tasks(workspace_id,project_id,title,repeat) values($1,$2,'Kaputt','daily')",[workspace,project])).rejects.toThrow();
     await login(member);
+  });
+  it('uses the saved series for a follow-up when an editor changes the completed task', async () => {
+    await login(manager);
+    const task=await first<{id:string}>("insert into public.tasks(workspace_id,project_id,title,due_date,repeat,assignee_id) values($1,$2,'Bericht','2026-10-16','weekly',$3) returning id",[workspace,project,member]);
+    expect(await rows("update public.tasks set title='Oktoberbericht',due_date='2026-10-19',status='done' where id=$1 returning title,status",[task.id])).toEqual([{title:'Oktoberbericht',status:'done'}]);
+    expect(await rows("select title,due_date::text as due,repeat from public.tasks where workspace_id=$1 and id<>$2",[workspace,task.id])).toEqual([{title:'Bericht',due:'2026-10-23',repeat:'weekly'}]);
   });
   it('approves a submitted batch in one call, skipping entries decided in the meantime', async () => {
     const a=await entry(60); const b=await entry(30); const c=await entry(45);

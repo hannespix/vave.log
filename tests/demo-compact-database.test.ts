@@ -42,7 +42,7 @@ describe('Kompakte Beispieldaten',()=>{
  });
  it('jede Person hat Arbeitszeitmodell, Rolle und Stundensatz; zwei arbeiten Teilzeit',async()=>{
   const w=await create();
-  const people=await rows('select display_name,demo_title,work_schedule,weekly_capacity_minutes,location,vacation_days_per_year,role from public.memberships where workspace_id=$1 and is_demo order by email',[w.id]);
+  const people=await rows('select display_name,demo_title,work_schedule,weekly_capacity_minutes,location,vacation_days_per_year,role from public.list_workspace_members($1) where is_demo order by email',[w.id]);
   expect(people.map(p=>p.display_name)).toEqual(['Mara Lindqvist','Jonas Brecht','Aiko Tanaka','Leon Hartmann','Sofia Marini','Tobias Keller','Nora Feld']);
   expect(people.map(p=>p.weekly_capacity_minutes)).toEqual([2400,2400,2400,2400,1920,2400,1440]);
   expect(people.every(p=>p.demo_title&&p.location==='DE-HE'&&Number(p.vacation_days_per_year)===30)).toBe(true);

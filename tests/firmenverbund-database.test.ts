@@ -2,6 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { Rights } from '../src/shared/rights';
 
 // Zwei Firmen: Frankfurt (owner, pm, shared) und Shanghai (owner, lead, shared). `outsider` gehört zu keiner.
 const owner='00000000-0000-4000-8000-000000000001',pm='00000000-0000-4000-8000-000000000002',lead='00000000-0000-4000-8000-000000000003',shared='00000000-0000-4000-8000-000000000004',outsider='00000000-0000-4000-8000-000000000005';
@@ -14,6 +15,7 @@ async function attempt(sql:string,args:unknown[]=[]) {await db.exec('savepoint e
 const monday=(offsetWeeks=0) => one<{d:string}>("select to_char(date_trunc('week',(now() at time zone 'Europe/Berlin')::date)::date+$1::int,'YYYY-MM-DD') d",[offsetWeeks*7]).then(r=>r.d);
 const link=() => one('select * from public.link_workspaces($1,$2)',[ffm,sha]);
 const offer=(note='') => one<{id:string;status:string;summary:Record<string,any>}>('select * from public.offer_project_handover($1,$2,$3)',[project,sha,note]);
+const transferRights=(override:Partial<Rights>={})=>JSON.stringify({projects:'edit',tasks:'edit',time_team:'view',absences_team:'none',planning:'edit',strengths:'none',finance:'none',team:'none',settings:'none',...override});
 
 beforeAll(async()=>{
  db=new PGlite();await db.exec(`create role anon nologin;create role authenticated nologin;create schema auth;
@@ -110,11 +112,11 @@ describe('Firmen verknüpfen',()=>{
 
 describe('Projekt übergeben',()=>{
  beforeEach(async()=>{await link();});
- it('bietet mit Projektrecht an und hält eine Kurzfassung fest',async()=>{
+ it('bietet mit Übergaberechten an und hält eine Kurzfassung fest',async()=>{
   await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note) values($1,$2,current_date-3,600,'Arbeit')",[ffm,project]);
   await db.query("insert into public.tasks(workspace_id,project_id,title,status) values($1,$2,'Offen','todo'),($1,$2,'Fertig','done')",[ffm,project]);
   await login(shared);
-  await expect(attempt('select * from public.offer_project_handover($1,$2,$3)',[project,sha,''])).rejects.toThrow(/Berechtigung/);
+  await expect(attempt('select * from public.offer_project_handover($1,$2,$3)',[project,sha,''])).rejects.toMatchObject({code:'42501'});
   await login(pm);
   const h=await offer('Bitte ab Dezember übernehmen.');
   expect(h.status).toBe('offered');
@@ -127,6 +129,62 @@ describe('Projekt übergeben',()=>{
   // Schreiben geht nur über die Funktionen.
   await login(lead);
   await expect(attempt("update public.project_handovers set status='accepted',decided_at=now()")).rejects.toThrow(/permission denied/);
+ });
+ it.each([{tasks:'view'},{planning:'view'},{time_team:'none'}] as const)('verlangt auf beiden Seiten auch die Rechte für Aufgaben, Plan und Zeiten (%j)',async override=>{
+  await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[ffm,pm,transferRights(override)]);
+  await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[sha,lead,transferRights(override)]);
+  await login(pm);
+  await expect(attempt('select * from public.offer_project_handover($1,$2,$3)',[project,sha,''])).rejects.toMatchObject({code:'42501'});
+  await login();
+  const h=await offer();
+  await login(lead);
+  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toMatchObject({code:'42501'});
+  expect(await rows('select id from public.projects where workspace_id=$1',[sha])).toEqual([]);
+  expect((await one('select status from public.project_handovers where id=$1',[h.id])).status).toBe('offered');
+ });
+ it('prüft beim Annehmen erneut die Berechtigung der anbietenden Person',async()=>{
+  await login(pm);
+  const h=await offer();
+  await login();
+  await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[ffm,pm,transferRights({planning:'view'})]);
+  await login(lead);
+  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toMatchObject({code:'42501'});
+  expect(await rows('select id from public.projects where workspace_id=$1',[sha])).toEqual([]);
+  await login();
+  expect((await one('select status from public.projects where id=$1',[project])).status).toBe('active');
+  await db.query("select public.set_member_role($1,$2,'disabled')",[ffm,pm]);
+  await login(lead);
+  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toMatchObject({code:'42501'});
+ });
+ it('zeigt die Kurzfassung entsprechend den Rechten in der ausgewählten Firma',async()=>{
+  await db.query("insert into public.time_entries(workspace_id,project_id,work_date,minutes,note) values($1,$2,current_date-3,600,'Arbeit')",[ffm,project]);
+  const h=await offer();
+  await login(shared);
+  await expect(attempt('select summary from public.project_handovers where id=$1',[h.id])).rejects.toMatchObject({code:'42501'});
+  const preview=await one('select id,summary from public.list_project_handovers($1)',[sha]);
+  expect(preview).toMatchObject({id:h.id,summary:{name:'Expo Pavillon',open_tasks:0}});
+  for(const field of ['booked_minutes','budget_minutes','plan_rows','planned_minutes']) expect(preview.summary).not.toHaveProperty(field);
+  await login(lead);
+  expect((await one('select summary from public.list_project_handovers($1)',[sha])).summary).toMatchObject({booked_minutes:600,budget_minutes:6000,plan_rows:0,planned_minutes:0});
+  expect(await rows('select id from public.list_project_handovers($1)',[ffm])).toEqual([]);
+  await login(outsider);
+  expect(await rows('select id from public.list_project_handovers($1)',[sha])).toEqual([]);
+ });
+ it('gibt beim Ablehnen oder Zurückziehen keine zusätzlichen Kennzahlen aus',async()=>{
+  await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[ffm,pm,transferRights({planning:'view',time_team:'none'})]);
+  await db.query("select public.set_member_rights($1,$2,'individuell',$3)",[sha,lead,transferRights({planning:'none',time_team:'none'})]);
+  const h=await offer();
+  await login(pm);
+  const withdrawn=await one('select status,summary from public.withdraw_project_handover($1)',[h.id]);
+  expect(withdrawn).toMatchObject({status:'withdrawn',summary:{plan_rows:0}});
+  expect(withdrawn.summary).not.toHaveProperty('booked_minutes');
+  await login();
+  const again=await offer();
+  await login(lead);
+  const declined=await one('select status,summary from public.decline_project_handover($1)',[again.id]);
+  expect(declined.status).toBe('declined');
+  expect(declined.summary).not.toHaveProperty('booked_minutes');
+  expect(declined.summary).not.toHaveProperty('plan_rows');
  });
  it('legt das Projekt beim Annehmen in der Zielfirma an und archiviert das Original',async()=>{
   const week=await monday(),next=await monday(1),last=await monday(-1);
@@ -145,9 +203,9 @@ describe('Projekt übergeben',()=>{
   // In Shanghai gibt es das Kürzel schon.
   await db.query("insert into public.projects(workspace_id,code,name) values($1,'EXP','Anderes Projekt')",[sha]);
   await login(pm);const h=await offer();
-  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toThrow(/Berechtigung/);
+  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toMatchObject({code:'42501'});
   await login(shared);
-  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toThrow(/Berechtigung/);
+  await expect(attempt('select * from public.accept_project_handover($1)',[h.id])).rejects.toMatchObject({code:'42501'});
   await login(lead);
   const done=await one<{status:string;target_project_id:string;decided_by:string}>('select * from public.accept_project_handover($1)',[h.id]);
   expect(done.status).toBe('accepted');expect(done.decided_by).toBe(lead);

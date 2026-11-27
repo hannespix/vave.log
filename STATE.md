@@ -671,3 +671,11 @@ Fehler aus #89, gemeldet per Bildschirmfoto: Auf schmalen Schirmen standen Tages
 ## Kontrast und Darstellungsmodus (26.11.2026)
 
 Unter **Einstellungen → Darstellung** stehen **System**, **Hell** und **Dunkel** zur Auswahl. System folgt dem Betriebssystem auch bei geöffnetem VAVE.LOG. Eine manuelle Auswahl wird im Browser gespeichert. Gemeinsame Farbwerte verbessern in beiden Modi die Lesbarkeit von Text, Eingaben, Navigation und Statusanzeigen. Die Browsertests prüfen den Moduswechsel und den Kontrast der wichtigsten Ansichten auf Desktop und Mobil.
+
+## OWASP- und Agentik-Befunde (27.11.2026)
+
+- Leserechte für Personaldaten und Übergaben über abgesicherte Datenbankabfragen. Zugewiesene Aufgaben lassen sich über den Status abschließen, weitere Änderungen prüfen die Bearbeitungsrechte. Wiederholungen verwenden die gespeicherte Serie.
+- MCP erfordert einen ausdrücklich freigegebenen OAuth-Client, aktive Zustimmung und Workspace-Mitgliedschaft. Lesen und optionale Zeitvorschläge sind getrennt. Verbindliche Änderungen erfolgen in der Web-App. Widerruf, Umfang, parallele Aufrufe und Zeitbudget werden geprüft.
+- Rechnungsausstellung prüft die zugeordneten Zeiten unter Sperre. Zahlungswiederholungen verwenden Vorgangsschlüssel. DATEV-Buchungstexte werden für Tabellenprogramme abgesichert. Rechnungslisten laden seitenweise.
+- Anmeldung prüft Rückleitungsdaten vor der Kontoübernahme. Browser-Imports sind in Größe und Umfang begrenzt. Pages-Workflow bindet Build und Veröffentlichung an den geprüften Commit. CI-Actions und Basisimage sind festgelegt.
+- Beim Upgrade einer laufenden Instanz die neuen RPCs vor dem Web-Build installieren. Nach der Auslieferung zieht die abschließende Spaltenmigration die alten breiten Leserechte ein.

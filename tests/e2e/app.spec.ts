@@ -1,4 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
+import {createHash} from 'node:crypto';
 import {pickOption} from './select';
 import {goArea} from './nav';
 import {DEMO_MANIFEST,DEMO_EXPERIENCE_VERSION} from '../../src/shared/demo-data';
@@ -20,7 +21,7 @@ async function setup(page:Page,loggedIn=false,role:'owner'|'manager'|'member'='o
   if(url.pathname==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:req.method()==='PUT'?req.postDataJSON().data?.locale:'en'},created_at:'2026-10-01T10:00:00Z'};
   else if(url.pathname==='/rest/v1/rpc/accept_invitations')data=0;
   else if(url.pathname==='/rest/v1/workspaces')data=[{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-01T10:00:00Z'}];
-  else if(url.pathname==='/rest/v1/memberships')data=[{workspace_id:ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:'2026-10-01T10:00:00Z'}];
+  else if(url.pathname==='/rest/v1/rpc/list_workspace_members')data=[{workspace_id:ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:'2026-10-01T10:00:00Z'}];
   else if(url.pathname==='/rest/v1/projects')data=[{id:project,workspace_id:ws,code:'VAV-001',name:'Brand Experience',client:'VAVE',budget_minutes:600,status:'active',color:'#641dff',created_at:'2026-10-01T10:00:00Z'}];
   else if(url.pathname==='/rest/v1/running_timers'||url.pathname==='/rest/v1/workspace_demos')data=null;
   else if(url.pathname==='/rest/v1/time_entries'){
@@ -132,7 +133,7 @@ test('first start defaults to empty and opt-in demo populates actual team profil
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>r.fulfill({json:seeded?[workspace]:[],headers:{'access-control-expose-headers':'content-range','content-range':seeded?'0-0/1':'0-0/0'}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_create_workspace',r=>{input=r.request().postDataJSON();seeded=true;return r.fulfill({json:workspace})});
  await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:seeded?{workspace_id:ws,created_by:user,request_id:input?.p_request_id,locale:'en',experience_version:DEMO_EXPERIENCE_VERSION,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:workspace.created_at,archived_at:null}:null}));
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:'55555555-5555-4555-8555-555555555555',role:'manager',display_name:'Tobias Geisler',email:'sample-1@example.invalid',created_at:'',is_demo:true,demo_title:'Co-Founder & CEO',demo_studio:'',demo_origin:'public'}]}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:'55555555-5555-4555-8555-555555555555',role:'manager',display_name:'Tobias Geisler',email:'sample-1@example.invalid',created_at:'',is_demo:true,demo_title:'Co-Founder & CEO',demo_studio:'',demo_origin:'public'}]}));
  await page.goto('/');await expect(page.getByRole('radio',{name:/Start empty/})).toBeChecked();expect(input).toBeUndefined();
  await page.getByRole('radio',{name:/Explore with sample data/}).check();
  await expect(page.getByRole('combobox',{name:'Currency',exact:true})).toBeDisabled();
@@ -195,6 +196,45 @@ test('manager saves a real draft shape and must review before issuing',async({pa
  await dialog.getByRole('button',{name:'Issue invoice',exact:true}).click();await expect(dialog.getByRole('alert')).toBeVisible();expect(issued).toBe(1);await expect(dialog).toBeVisible();
 });
 
+test('a failed optional finance data source does not block unrelated tabs',async({page})=>{
+ await setup(page,true);
+ await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_offers',r=>r.fulfill({status:400,json:{code:'P0001',message:'FINANCE_LIMIT'}}));
+ await page.goto('/');
+ await goArea(page,'Finance');
+ await page.getByRole('tab',{name:'Invoices',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Manual draft',exact:true})).toBeVisible();
+ await page.getByRole('tab',{name:'Offers',exact:true}).click();
+ await expect(page.getByRole('tabpanel').getByRole('alert')).toBeVisible();
+ await expect(page.getByRole('tabpanel').getByRole('alert')).toContainText(/too many records/i);
+});
+
+test('company billing is available while invoice history is still loading',async({page})=>{
+ await setup(page,true);
+ let releaseInvoices!:()=>void;
+ let requestStarted!:()=>void;
+ const invoices=new Promise<void>(resolve=>{releaseInvoices=resolve});
+ const requested=new Promise<void>(resolve=>{requestStarted=resolve});
+ await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',async route=>{
+  requestStarted();
+  await invoices;
+  await route.fulfill({json:[]});
+ });
+ try{
+  await page.goto('/');
+  await goArea(page,'Finance');
+  await requested;
+  await page.getByRole('tab',{name:'Company',exact:true}).click();
+  await expect(page.getByRole('tabpanel').getByLabel('Legal company name')).toBeVisible();
+  await page.getByRole('tab',{name:'Invoices',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Manual draft',exact:true})).toHaveCount(0);
+  releaseInvoices();
+  await expect(page.getByRole('button',{name:'Manual draft',exact:true})).toBeVisible();
+ }finally{
+  releaseInvoices();
+ }
+});
+
 test('a bank statement proposes matches, books only confirmed payments and recognises them on reload',async({page},testInfo)=>{
  await setup(page,true,'manager');const payments:Record<string,unknown>[]=[];
  const inv=(id:string,number:string,total:number,name:string)=>({id,workspace_id:ws,client_id:null,project_id:null,language:'en',issue_date:'2026-10-01',due_date:'2026-10-15',service_from:'2026-09-01',service_to:'2026-09-30',payment_instructions:'',notes:'',created_at:'2026-10-01T09:00:00Z',status:'issued',number,currency:'EUR',lines:[],net_minor:total,tax_minor:0,total_minor:total,issuer_snapshot:null,customer_snapshot:{id:'c',workspace_id:ws,name,billing_address:'',contact_email:'',tax_id:'',language:'en',created_at:''},issued_at:'2026-10-01T09:00:00Z',cancellation_of:null,cancellation_reason:'',paid:false,cancellation_id:null,paid_minor:0,payments:[] as Record<string,unknown>[]});
@@ -217,6 +257,7 @@ test('a bank statement proposes matches, books only confirmed payments and recog
  await expect(dialog.getByText('Payments booked: 1. The invoices are updated.',{exact:true})).toBeVisible();
  // Erst wenn die Rechnungsliste neu geladen ist (Dialog nicht mehr beschäftigt), erkennt der zweite Import die Buchung.
  await expect(dialog.getByRole('button',{name:'Close',exact:true})).toBeEnabled();
+ expect(payments[0]?.p_operation_id).toMatch(/^[a-f0-9-]{36}$/);
  expect(payments).toHaveLength(1);expect(payments[0]).toMatchObject({p_workspace_id:ws,p_id:invoices[0].id,p_paid_on:'2026-10-14',p_amount_minor:119000});expect(String(payments[0].p_note)).toMatch(/^Bank statement · Müller & Söhne GmbH · Rechnung RE-2026-0007 · ref:[0-9a-z]{12}$/);
  await dialog.locator('input[type=file]').setInputFiles({name:'umsaetze.csv',mimeType:'text/csv',buffer:Buffer.from(csv,'utf8')});
  await expect(dialog.locator('.bank-summary')).toContainText('2 incoming payments · 0 matched · 1 already booked');
@@ -267,7 +308,7 @@ test('an older demo is replaced by the compact sample after confirmation, with t
  const invoice:Record<string,unknown>={id:draftId,workspace_id:ws,client_id:customer,project_id:project,language:'en',currency:'EUR',issue_date:'2026-10-13',due_date:'2026-11-13',service_from:'2026-10-01',service_to:'2026-10-13',notes:'Fictional demo',payment_instructions:'Do not pay',lines:[line],net_minor:25000,tax_minor:4750,total_minor:29750,status:'draft',number:null,is_demo:true,created_at:'2026-10-13T09:00:00Z',issued_at:null,issuer_snapshot:null,customer_snapshot:null,cancellation_of:null,cancellation_id:null,cancellation_reason:'',paid:false};
  await page.route('https://test.supabase.co/rest/v1/workspace_demos*',r=>r.fulfill({json:{workspace_id:ws,created_by:user,request_id:ws,locale:'en',experience_version:upgraded?DEMO_EXPERIENCE_VERSION:2,manifest_version:DEMO_MANIFEST.version,manifest:DEMO_MANIFEST,created_at:'',archived_at:null,refreshed_on:refreshed?new Date().toISOString().slice(0,10):null}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_refresh_workspace',r=>{expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});refreshed++;return r.fulfill({json:{people:1,absences:1,tasks_moved:0,tasks_tagged:0,entries:5}})});
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},...(upgraded?[{workspace_id:ws,user_id:person,role:'member',display_name:'Elena Weber',email:'elena@example.invalid',created_at:'',is_demo:true,demo_title:'Finance & Operations Lead',demo_studio:'Frankfurt',demo_origin:'fictional'}]:[])]}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},...(upgraded?[{workspace_id:ws,user_id:person,role:'member',display_name:'Elena Weber',email:'elena@example.invalid',created_at:'',is_demo:true,demo_title:'Finance & Operations Lead',demo_studio:'Frankfurt',demo_origin:'fictional'}]:[])]}));
  await page.route('https://test.supabase.co/rest/v1/rpc/demo_reset_workspace',r=>{
   expect(r.request().postDataJSON()).toEqual({p_workspace_id:ws});upgraded++;
   entries.push({id:'88888888-8888-4888-8888-888888888888',workspace_id:ws,project_id:project,user_id:person,work_date:'2026-10-13',minutes:120,note:'Sample concept workshop',billable:true,status:'submitted',timer_id:null,created_at:''});return r.fulfill({json:null});
@@ -316,11 +357,11 @@ async function connectedSetup(page:Page,role:'owner'|'member'='owner'){
   if(r.request().method()==='POST'){const body=r.request().postDataJSON();savedProjects.push(body);Object.assign(projects.find(p=>p.id===body.id)!,body);return r.fulfill({json:{...projects.find(p=>p.id===body.id)}});}
   return r.fulfill({json:projects,headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}});
  });
- await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{
+ await page.route('https://test.supabase.co/rest/v1/{tasks,rpc/list_workspace_tasks}*',r=>{
   if(r.request().method()==='POST'){const body=r.request().postDataJSON();createdTasks.push(body);tasks.push({...body,created_at:'',created_by:user});return r.fulfill({json:body});}
   return r.fulfill({json:tasks,headers:{'content-range':`0-${tasks.length-1}/${tasks.length}`,'access-control-expose-headers':'content-range'}});
  });
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:currentRole,display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:currentRole,display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>new URL(r.request().url()).searchParams.get('select')==='currency'?r.fulfill({json:{currency:'EUR'}}):r.fallback());
  await page.route('https://test.supabase.co/rest/v1/rpc/finance_list_invoices',r=>r.fulfill({json:[]}));
  const insight={project:projects[0],as_of:'2026-10-13',progress_date:'2026-10-13',total_minutes:2400,first_work_date:'2026-09-16',last_work_date:'2026-10-12',recent_daily:[{work_date:'2026-09-16',minutes:800},{work_date:'2026-10-05',minutes:800},{work_date:'2026-10-12',minutes:800}],tasks:{total:4,done:1,doing:1,overdue:1,estimated:4,estimated_minutes:6000,done_estimated_minutes:2400,missing_estimates:0,missing_due_dates:0,unassigned:0}};
@@ -350,7 +391,7 @@ test('authorized workspace deep links survive reload and cross-workspace history
  const state=await connectedSetup(page);const other='77777777-7777-4777-8777-777777777777';
  await page.route('https://test.supabase.co/rest/v1/workspaces*',r=>r.fulfill({json:[{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:''},{id:other,name:'VAVE Shanghai',timezone:'Asia/Shanghai',currency:'EUR',created_by:user,created_at:''}]}));
  await page.route('https://test.supabase.co/rest/v1/projects*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:state.projects.map(p=>({...p,workspace_id:id})),headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}})});
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>{const id=new URL(r.request().url()).searchParams.get('workspace_id')?.slice(3)??ws;return r.fulfill({json:[{workspace_id:id,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}})});
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>{const id=new URL(r.request().url()).searchParams.get('p_workspace_id')??ws;return r.fulfill({json:[{workspace_id:id,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}})});
  await page.goto(`/#w=${other}&view=tasks&project=${project}&q=sketch`);
  await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',other);await expect(page.getByLabel('Search tasks',{exact:true})).toHaveValue('sketch');
  await page.reload();await expect(page.locator('#workspace-select')).toHaveAttribute('data-value',other);await expect(page.getByLabel('Project',{exact:true})).toHaveAttribute('data-value',project);
@@ -445,10 +486,17 @@ test('a token-hash link from the confirmation email signs the person in on any d
  let verify:Record<string,unknown>|null=null;
  await page.route('https://test.supabase.co/auth/v1/verify',r=>{
   verify=r.request().postDataJSON();
-  const payload=btoa(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'}));
-  return r.fulfill({json:{access_token:`eyJhbGciOiJIUzI1NiJ9.${payload}.test`,token_type:'bearer',expires_in:3600,expires_at:2100000000,refresh_token:'test-refresh-token',user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}}});
+  return r.fulfill({json:recoverySession()});
  });
- await page.goto('/?token_hash=pkce_abc123&type=signup');
+ await page.goto('/#token_hash=pkce_abc123&type=signup');
+ const review=page.getByRole('button',{name:'Verify email link',exact:true});
+ await expect(review).toBeVisible();
+ expect(verify).toBeNull();
+ expect(page.url()).not.toContain('token_hash');
+ await review.click();
+ await expect(page.getByText('Account owner@example.test',{exact:true})).toBeVisible();
+ expect(await page.evaluate(() => localStorage.getItem('sb-test-auth-token'))).toBeNull();
+ await page.getByRole('button',{name:'Continue with this account',exact:true}).click();
  await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
  expect(verify).toMatchObject({token_hash:'pkce_abc123',type:'signup'});
  expect(page.url()).not.toContain('token_hash');
@@ -457,15 +505,18 @@ test('a token-hash link from the confirmation email signs the person in on any d
 // Passwort zurücksetzen. Feldfall 16.11.2026: Der Link wurde in einem anderen Browser geöffnet als dem, der ihn angefordert
 // hatte; der Tausch scheiterte, die App zeigte wegen `?reset=1` trotzdem „Neues Passwort“ und das Speichern brach mit
 // „Session not found“ ab. Das Formular erscheint jetzt nur nach einem geprüften Link.
-const recoveryToken=()=>{const payload=btoa(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'}));return `eyJhbGciOiJIUzI1NiJ9.${payload}.test`};
-test('a reset link from the email opens the new-password form on any device and saves the password',async({page})=>{
+const recoveryToken=()=>{const payload=Buffer.from(JSON.stringify({sub:user,aud:'authenticated',role:'authenticated',exp:2100000000,iss:'https://test.supabase.co/auth/v1'})).toString('base64url');return `eyJhbGciOiJIUzI1NiJ9.${payload}.test`};
+const recoverySession=()=>({access_token:recoveryToken(),token_type:'bearer',expires_in:3600,expires_at:2100000000,refresh_token:'test-refresh-token',user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}});
+test('a legacy reset link can be verified and updates the displayed account password',async({page})=>{
  await setup(page,false);let saved:Record<string,unknown>|null=null;
  await page.route('https://test.supabase.co/auth/v1/user',r=>{if(r.request().method()==='PUT'&&r.request().postDataJSON().password)saved=r.request().postDataJSON();return r.fallback()});
+ await page.route('https://test.supabase.co/auth/v1/token?grant_type=refresh_token',r=>r.fulfill({json:recoverySession()}));
  await page.goto(`/?reset=1#access_token=${recoveryToken()}&refresh_token=test-refresh-token&expires_in=3600&expires_at=2100000000&token_type=bearer&type=recovery`);
+ await page.getByRole('button',{name:'Verify email link',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
+ await expect(page.getByText('Account owner@example.test',{exact:true})).toBeVisible();
  expect(page.url()).not.toContain('access_token');expect(page.url()).not.toContain('reset=1');
- // Neu laden mitten im Zurücksetzen: das Formular bleibt.
- await page.reload();await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
+ expect(await page.evaluate(() => localStorage.getItem('sb-test-auth-token'))).toBeNull();
  await page.getByLabel('New password',{exact:true}).fill('correct horse battery');await page.getByLabel('Repeat password',{exact:true}).fill('correct horse battery');
  await page.getByRole('button',{name:'Save password',exact:true}).click();
  await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
@@ -475,25 +526,50 @@ test('a reset link from the email opens the new-password form on any device and 
 test('a token-hash reset link works the same way and can be cancelled',async({page})=>{
  await setup(page,false);let verify:Record<string,unknown>|null=null;
  await page.route('https://test.supabase.co/auth/v1/verify',r=>{verify=r.request().postDataJSON();
-  return r.fulfill({json:{access_token:recoveryToken(),token_type:'bearer',expires_in:3600,expires_at:2100000000,refresh_token:'test-refresh-token',user:{id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'}}});});
+  return r.fulfill({json:recoverySession()});});
  await page.goto('/?reset=1&token_hash=abc123&type=recovery');
+ await page.getByRole('button',{name:'Verify email link',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();expect(verify).toMatchObject({token_hash:'abc123',type:'recovery'});
  await page.getByRole('button',{name:'Cancel and keep my password',exact:true}).click();
- await expect(page.getByRole('navigation',{name:'Main navigation'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeVisible();
+});
+test('a browser-initiated reset exchanges the code with the original PKCE verifier',async({page})=>{
+ await setup(page);
+ let challenge = '';
+ await page.route('https://test.supabase.co/auth/v1/recover*',r=>{
+  const request=r.request().postDataJSON(); expect(request.code_challenge_method).toBe('s256'); challenge=request.code_challenge;
+  return r.fulfill({json:{}});
+ });
+ await page.route('https://test.supabase.co/auth/v1/token?grant_type=pkce',r=>{
+  const request=r.request().postDataJSON(); expect(createHash('sha256').update(request.code_verifier).digest('base64url')).toBe(challenge);
+  return r.fulfill({json:recoverySession()});
+ });
+ await page.goto('/');
+ await page.getByRole('button',{name:'Forgot password?',exact:true}).click();
+ await page.getByLabel('Email address',{exact:true}).fill('owner@example.test');
+ await page.getByRole('button',{name:'Request link',exact:true}).click();
+ await expect(page.getByText(/Only the link from the most recent email is valid/)).toBeVisible();
+ expect(challenge).toBeTruthy();
+ await page.goto('/?reset=1&code=test-recovery-code');
+ await page.getByRole('button',{name:'Verify email link',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole('heading',{name:'Your new password.'})).toBeVisible();
 });
 test('a stale or foreign reset link never shows the password form: signed-out people get a fresh-link offer',async({page})=>{
  await setup(page,false);let recover:Record<string,unknown>|null=null;
  await page.route('https://test.supabase.co/auth/v1/recover*',r=>{recover=r.request().postDataJSON();return r.fulfill({json:{}})});
  // So kam der Feldfall zurück: Marker und ein Code, den dieser Browser nicht einlösen kann.
  await page.goto('/?reset=1&code=0a1b2c3d-foreign-browser');
+ await page.getByRole('button',{name:'Verify email link',exact:true}).click();
  await expect(page.getByText(/This reset link is no longer valid/)).toBeVisible();
  await expect(page.getByRole('heading',{name:'Your new password.'})).toHaveCount(0);
  expect(page.url()).not.toContain('reset=1');expect(page.url()).not.toContain('code=');
  await page.getByRole('button',{name:'Request a new link',exact:true}).click();
  await page.getByLabel('Email address',{exact:true}).fill('owner@example.test');
  await page.getByRole('button',{name:'Request link',exact:true}).click();
- await expect(page.getByText(/only the link from the most recent email is valid/)).toBeVisible();
- expect(recover).toMatchObject({email:'owner@example.test'});expect((recover as Record<string,unknown>|null)?.code_challenge??null).toBeNull(); // kein an diesen Browser gebundener Schlüssel
+ await expect(page.getByText(/Only the link from the most recent email is valid/)).toBeVisible();
+ expect(recover).toMatchObject({email:'owner@example.test',code_challenge_method:'s256'});
  await expect(page.getByText(/This reset link is no longer valid/)).toHaveCount(0);
 });
 test('an expired reset link names the next step instead of the confirmation hint',async({page})=>{
@@ -511,9 +587,11 @@ test('with an existing sign-in a stale reset marker opens the app, not the passw
 });
 test('saving a new password without a live session returns to sign-in with a fresh-link offer',async({page})=>{
  await setup(page,false);
+ await page.route('https://test.supabase.co/auth/v1/token?grant_type=refresh_token',r=>r.fulfill({json:recoverySession()}));
  await page.route('https://test.supabase.co/auth/v1/user',r=>r.request().method()==='PUT'?r.fulfill({status:403,json:{code:403,error_code:'session_not_found',msg:'Session from session_id claim in JWT does not exist'}}):r.fallback());
  await page.route('https://test.supabase.co/auth/v1/logout*',r=>r.fulfill({status:204,body:''}));
  await page.goto(`/?reset=1#access_token=${recoveryToken()}&refresh_token=test-refresh-token&expires_in=3600&expires_at=2100000000&token_type=bearer&type=recovery`);
+ await page.getByRole('button',{name:'Verify email link',exact:true}).click();
  await page.getByLabel('New password',{exact:true}).fill('correct horse battery');await page.getByLabel('Repeat password',{exact:true}).fill('correct horse battery');
  await page.getByRole('button',{name:'Save password',exact:true}).click();
  await expect(page.getByText(/This reset link is no longer valid/)).toBeVisible();
@@ -604,7 +682,13 @@ test('the review queue surfaces old submissions and approvals can be revoked',as
 
 test('task cards drag between columns like a kanban board, with escape and a plain click still opening the editor',async({page,isMobile})=>{
  const state=await connectedSetup(page);const saved:Record<string,unknown>[]=[];
- await page.route('https://test.supabase.co/rest/v1/tasks*',async r=>{if(r.request().method()!=='POST')return r.fallback();const body=r.request().postDataJSON();saved.push(body);Object.assign(state.tasks.find(x=>x.id===body.id)!,body);await new Promise(done=>setTimeout(done,150));return r.fulfill({json:{...body,created_at:'',created_by:user}});});
+ await page.route('https://test.supabase.co/rest/v1/tasks*',async r=>{
+  if(r.request().method()!=='PATCH')return r.fallback();
+  const filter=new URL(r.request().url()).searchParams;
+  const task=state.tasks.find(x=>`eq.${x.id}`===filter.get('id'))!;
+  const body=r.request().postDataJSON();saved.push(body);Object.assign(task,body);
+  await new Promise(done=>setTimeout(done,150));return r.fulfill({json:{status:task.status}});
+ });
  await page.goto('/');await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:'Tasks',exact:true}).click();
  const card=page.locator('[data-task-card="10000000-0000-4000-8000-000000000001"]');const doing=page.locator('section[data-drop-status="doing"]');
  await expect(card).toBeVisible();
@@ -626,7 +710,7 @@ test('task cards drag between columns like a kanban board, with escape and a pla
  await drag(doing,'drop');
  await expect(doing.getByText('Brand sketch',{exact:true})).toBeVisible();
  await expect(page.locator('.task-card-ghost')).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect.poll(()=>saved.length).toBe(1);expect(saved[0]).toMatchObject({id:'10000000-0000-4000-8000-000000000001',status:'doing',title:'Brand sketch'});
+ await expect.poll(()=>saved.length).toBe(1);expect(saved[0]).toEqual({status:'doing'});
  await expect(page.getByText('Task status updated.',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Brand sketch',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
 });
@@ -705,10 +789,10 @@ test('timers start straight from project cards, task cards and the time dialog, 
 
 test('holiday locations are set per person and as workspace default, and the utilization report counts public holidays',async({page})=>{
  await connectedSetup(page);const calls:{fn:string;body:Record<string,unknown>}[]=[];let location:string|null=null,defaultLocation:string|null=null;
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/set_member_location',r=>{const body=r.request().postDataJSON();calls.push({fn:'member',body});location=body.p_location;return r.fulfill({json:{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',location}});});
  await page.route('https://test.supabase.co/rest/v1/rpc/set_workspace_location',r=>{const body=r.request().postDataJSON();calls.push({fn:'workspace',body});defaultLocation=body.p_location;return r.fulfill({json:{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-01T10:00:00Z',default_location:defaultLocation}});});
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Team');
  const cell=page.getByLabel('Location of Studio Owner',{exact:true});await expect(cell).toContainText('Default: no location');
  await pickOption(cell,/^Frankfurt/,'Frank');
@@ -729,8 +813,8 @@ test('holiday locations are set per person and as workspace default, and the uti
 
 test('absences: dragging across days in the calendar opens the form with person and period',async({page})=>{
  await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';const posted:Record<string,unknown>[]=[];
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'approved',created_at:''}});}return r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'approved',created_at:''}});}return r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}});});
  await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Absences');
  const row=page.locator('.absence-grid tbody tr').filter({hasText:'Mara Lenz'});
@@ -753,9 +837,9 @@ test('absences: dragging across days in the calendar opens the form with person 
 
 test('absences: the request is composed with kind pills, a range calendar and a live summary',async({page})=>{
  await connectedSetup(page,'member');const other='20000000-0000-4000-8000-000000000002';const posted:Record<string,unknown>[]=[];
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'member',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'member',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-HE'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
  const absences=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-21',ends_on:'2026-10-22',kind:'vacation',note:'',status:'approved',half_day:'',created_at:''}];
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'requested',created_at:''}});}return r.fulfill({json:absences,headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();posted.push(body);return r.fulfill({json:{...body,id:'30000000-0000-4000-8000-000000000009',status:'requested',created_at:''}});}return r.fulfill({json:absences,headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}});});
  await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Absences');
  // Eigene Karte: 30 Tage frei; daneben, wer bald weg ist.
@@ -793,8 +877,8 @@ test('absences: calendar, request with preview, approval and the yearly account'
  await connectedSetup(page);const other='20000000-0000-4000-8000-000000000002';
  let absences:Record<string,unknown>[]=[{id:'30000000-0000-4000-8000-000000000001',workspace_id:ws,user_id:other,starts_on:'2026-10-19',ends_on:'2026-10-23',kind:'vacation',note:'Herbst',status:'requested',half_day:'',created_at:''}];
  const posted:Record<string,unknown>[]=[],patched:Record<string,unknown>[]=[];
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-BW'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>{const m=r.request().method();if(m==='POST'){const body=r.request().postDataJSON();posted.push(body);const row={...body,id:'30000000-0000-4000-8000-00000000000'+(posted.length+1),status:'approved',created_at:''};absences.push(row);return r.fulfill({json:row});}if(m==='PATCH'){const body=r.request().postDataJSON();patched.push(body);const id=new URL(r.request().url()).searchParams.get('id')!.replace('eq.','');absences=absences.map(a=>a.id===id?{...a,...body}:a);return r.fulfill({json:absences.find(a=>a.id===id)});}return r.fulfill({json:absences,headers:{'content-range':`0-${absences.length-1}/${absences.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',vacation_days_per_year:30,location:'DE-BW'},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',vacation_days_per_year:28}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>{const m=r.request().method();if(m==='POST'){const body=r.request().postDataJSON();posted.push(body);const row={...body,id:'30000000-0000-4000-8000-00000000000'+(posted.length+1),status:'approved',created_at:''};absences.push(row);return r.fulfill({json:row});}if(m==='PATCH'){const body=r.request().postDataJSON();patched.push(body);const id=new URL(r.request().url()).searchParams.get('id')!.replace('eq.','');absences=absences.map(a=>a.id===id?{...a,...body}:a);return r.fulfill({json:absences.find(a=>a.id===id)});}return r.fulfill({json:absences,headers:{'content-range':`0-${absences.length-1}/${absences.length}`,'access-control-expose-headers':'content-range'}});});
  await page.route('https://test.supabase.co/rest/v1/vacation_balances*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,year:2026,carried_over:3,adjustment:0,note:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Absences');
  await expect(page.getByRole('heading',{level:1,name:'Who is in when.'})).toBeVisible();
@@ -828,9 +912,9 @@ test('absences: calendar, request with preview, approval and the yearly account'
 test('work schedule dialog saves the model and the time account shows target, actual and flextime balance',async({page})=>{
  await connectedSetup(page);const calls:Record<string,unknown>[]=[];
  let membership:Record<string,unknown>={workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'};
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[membership],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[membership],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/rpc/set_work_schedule',r=>{const body=r.request().postDataJSON();calls.push(body);membership={...membership,work_schedule:body.p_schedule,weekly_capacity_minutes:(body.p_schedule as number[]).reduce((a,b)=>a+b,0),balance_start_on:body.p_balance_start_on,balance_start_minutes:body.p_balance_start_minutes};return r.fulfill({json:membership});});
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/time_entries*',r=>{const from=new URL(r.request().url()).searchParams.get('work_date')??'';const rows=[{id:'20000000-0000-4000-8000-000000000011',workspace_id:ws,project_id:project,user_id:user,work_date:'2026-10-12',minutes:540,note:'Mo',billable:true,status:'draft',timer_id:null,created_at:''},{id:'20000000-0000-4000-8000-000000000012',workspace_id:ws,project_id:project,user_id:user,work_date:'2026-10-06',minutes:300,note:'Vorwoche',billable:true,status:'approved',timer_id:null,created_at:''}].filter(e=>!from.startsWith('gte.')||e.work_date>=from.slice(4));return r.fulfill({json:rows,headers:{'content-range':`0-${rows.length-1}/${rows.length}`,'access-control-expose-headers':'content-range'}});});
  await page.goto('/');await goArea(page,'Team');
  await page.getByRole('button',{name:'Work schedule of Studio Owner',exact:true}).click();
@@ -855,10 +939,10 @@ test('work schedule dialog saves the model and the time account shows target, ac
 test('planning cockpit shows load per person and week and reassigns a task from the cell',async({page})=>{
  await connectedSetup(page);const saved:Record<string,unknown>[]=[];
  const tasks=[{id:'10000000-0000-4000-8000-000000000001',workspace_id:ws,project_id:project,title:'Brand sketch',status:'todo',assignee_id:user,due_date:'2026-10-16',estimated_minutes:600,created_by:user,created_at:''},{id:'10000000-0000-4000-8000-000000000002',workspace_id:ws,project_id:secondProject,title:'Museum prototype',status:'doing',assignee_id:null,due_date:'2026-10-13',estimated_minutes:480,created_by:user,created_at:''},{id:'10000000-0000-4000-8000-000000000003',workspace_id:ws,project_id:project,title:'Open end',status:'todo',assignee_id:user,due_date:null,estimated_minutes:null,created_by:user,created_at:''}];
- await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);Object.assign(tasks.find(x=>x.id===body.id)!,body);return r.fulfill({json:body});}return r.fulfill({json:tasks,headers:{'content-range':`0-${tasks.length-1}/${tasks.length}`,'access-control-expose-headers':'content-range'}});});
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{tasks,rpc/list_workspace_tasks}*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);Object.assign(tasks.find(x=>x.id===body.id)!,body);return r.fulfill({json:body});}return r.fulfill({json:tasks,headers:{'content-range':`0-${tasks.length-1}/${tasks.length}`,'access-control-expose-headers':'content-range'}});});
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[{task_id:'10000000-0000-4000-8000-000000000001',minutes:120,entries:1,last_work_date:'2026-10-12'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Planning');await page.getByRole('button',{name:'Short term',exact:true}).click();
  await expect(page.getByRole('heading',{level:1,name:'Who has room, where it gets tight.'})).toBeVisible();
  // Woche 12.–18.10.: Brand sketch Rest 480 (600 − 120) bis Fr 16.10. → 8 h von 40 h; „Open end“ ohne Schätzung zählt als +1?.
@@ -882,10 +966,10 @@ test('planning cockpit shows load per person and week and reassigns a task from 
 
 test('long-term outlook stacks project demand against team supply and applies a scenario without saving',async({page})=>{
  await connectedSetup(page);
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,location:'DE-BW'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/finance_project_plans*',r=>r.fulfill({json:[{workspace_id:ws,project_id:project,client_id:null,billing_mode:'hourly',default_bill_rate_minor:null,fixed_fee_minor:0,planned_expenses_minor:0,lines:[{label:'Design',kind:'employee',user_id:user,planned_minutes:3000,cost_rate_minor:null,bill_rate_minor:null}],created_at:''}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
  await page.route('https://test.supabase.co/rest/v1/project_effort*',r=>r.fulfill({json:[{project_id:project,minutes:600,entries:3,first_work_date:'2026-10-01',last_work_date:'2026-10-12'}],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
- await page.route('https://test.supabase.co/rest/v1/absences*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/{absences,rpc/list_workspace_absences}*',r=>r.fulfill({json:[],headers:{'content-range':'*/0','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Planning');
  await page.getByRole('button',{name:'Long term',exact:true}).click();
  await expect(page.getByText('DEMAND VS. SUPPLY',{exact:true})).toBeVisible();
@@ -934,11 +1018,11 @@ test('situation board flags burning projects with reasons and links into tasks a
 test('tags, ratings and strength profiles: recommendation in the task dialog, profile dialog in the team',async({page})=>{
  const state=await connectedSetup(page);const saved:Record<string,unknown>[]=[];
  const other='20000000-0000-4000-8000-000000000002';
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',weekly_capacity_minutes:2400}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400},{workspace_id:ws,user_id:other,role:'member',display_name:'Mara Lenz',email:'mara@example.test',created_at:'',weekly_capacity_minutes:2400}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
  // Mara hat drei erledigte Motion-Aufgaben, pünktlich, bewertet.
  for(let i=0;i<3;i++)state.tasks.push({id:`10000000-0000-4000-8000-00000000002${i}`,workspace_id:ws,project_id:project,title:`Motion ${i}`,status:'done',assignee_id:other,due_date:'2026-10-10',estimated_minutes:600,tags:['motion'],rating:5,started_at:'2026-10-01T08:00:00Z',done_at:'2026-10-08T10:00:00Z',reopened_count:0,created_by:user,created_at:''} as typeof state.tasks[number]);
  await page.route('https://test.supabase.co/rest/v1/task_effort*',r=>r.fulfill({json:[0,1,2].map(i=>({task_id:`10000000-0000-4000-8000-00000000002${i}`,minutes:540,entries:2,last_work_date:'2026-10-08'})),headers:{'content-range':'0-2/3','access-control-expose-headers':'content-range'}}));
- await page.route('https://test.supabase.co/rest/v1/tasks*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);state.tasks.push({...body,created_by:user,created_at:''});return r.fulfill({json:body});}return r.fallback();});
+ await page.route('https://test.supabase.co/rest/v1/{tasks,rpc/list_workspace_tasks}*',r=>{if(r.request().method()==='POST'){const body=r.request().postDataJSON();saved.push(body);state.tasks.push({...body,created_by:user,created_at:''});return r.fulfill({json:body});}return r.fallback();});
  await page.goto(`/#w=${ws}&view=tasks`);
  await page.getByRole('button',{name:'New task',exact:true}).click();
  const dialog=page.getByRole('dialog');await dialog.getByLabel('Task',{exact:true}).fill('Motion reel');
@@ -971,7 +1055,7 @@ test('AI suggestions inbox: adjust, accept as draft, dismiss, accept the whole d
  await inbox.getByRole('button',{name:'All under Time',exact:true}).click();
  const full=page.locator('.suggestions-inbox');await expect(full.locator('.suggestion-day')).toHaveCount(2);
  const first=full.locator('.suggestion').first(); // neuester Tag zuerst, darin der ChatGPT-Vorschlag
- await expect(first).toContainText('ChatGPT');await expect(first).toContainText('Confidence 82 %');await expect(first.getByRole('link',{name:/Kalender: Jour fixe/})).toHaveAttribute('href','https://calendar.example.test/1');
+ await expect(first).toContainText('Source ChatGPT');await expect(first).toContainText('Estimated confidence 82 %');await expect(first.getByRole('link',{name:/Kalender: Jour fixe.*calendar\.example\.test/})).toHaveAttribute('href','https://calendar.example.test/1');
  await first.getByLabel('Minutes',{exact:true}).fill('75');await first.getByLabel('Description',{exact:true}).fill('Jour fixe Brand – Abstimmung');
  await first.getByRole('button',{name:'Accept',exact:true}).click();await expect(page.getByText('Suggestion accepted as draft.',{exact:true})).toBeVisible();
  expect(accepted[0]).toEqual({p_id:'50000000-0000-4000-8000-000000000001',p_project_id:project,p_task_id:null,p_work_date:'2026-10-13',p_minutes:75,p_note:'Jour fixe Brand – Abstimmung',p_billable:true});
@@ -999,7 +1083,7 @@ test('capacity grid keeps its week columns readable on a phone and scrolls sidew
 });
 test('team list on a phone shows role and rights per person without sideways scrolling',async({page})=>{
  await setup(page,true);const other='33333333-3333-4333-8333-333333333333';
- await page.route('https://test.supabase.co/rest/v1/memberships*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:other,role:'manager',display_name:'Pia Planer',email:'pia@example.test',created_at:''}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
+ await page.route('https://test.supabase.co/rest/v1/rpc/list_workspace_members*',r=>r.fulfill({json:[{workspace_id:ws,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''},{workspace_id:ws,user_id:other,role:'manager',display_name:'Pia Planer',email:'pia@example.test',created_at:''}],headers:{'content-range':'0-1/2','access-control-expose-headers':'content-range'}}));
  await page.goto('/');await goArea(page,'Team');
  const rights=page.getByRole('button',{name:'Rights of Pia Planer',exact:true});await expect(rights).toBeVisible();
  await expect(page.getByRole('button',{name:'Rights of Studio Owner',exact:true})).toHaveCount(0);

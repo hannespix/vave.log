@@ -75,13 +75,32 @@ function hash(value: string): string {
   return (a.toString(36).padStart(7, "0") + b.toString(36).padStart(7, "0")).slice(0, 12);
 }
 const clean = (value: string, max: number) => value.replace(/\s+/g, " ").trim().slice(0, max);
-const transaction = (t: Omit<BankTransaction, "key">, bankRef: string): BankTransaction => ({
-  ...t,
-  name: clean(t.name, 140),
-  purpose: clean(t.purpose, 420),
-  iban: t.iban.replace(/\s+/g, "").toUpperCase().slice(0, 34),
-  key: hash([bankRef, t.date, t.amount_minor, t.currency, t.credit ? "C" : "D", fold(t.name), fold(t.purpose)].join("|")),
-});
+function transaction(t: Omit<BankTransaction, "key">, bankRef: string, unreferenced?: Map<string, number>): BankTransaction {
+  let key = hash([bankRef, t.date, t.amount_minor, t.currency, t.credit ? "C" : "D", fold(t.name), fold(t.purpose)].join("|"));
+  if (unreferenced) {
+    // Keep the first receipt reference compatible with old imports. Multiple
+    // indistinguishable lines in one export can represent separate movements.
+    const occurrence = unreferenced.get(key) ?? 0;
+    unreferenced.set(key, occurrence + 1);
+    if (occurrence) key = hash(`statement-entry|${key}|${occurrence}`);
+  }
+  return {
+    ...t, key,
+    name: clean(t.name, 140),
+    purpose: clean(t.purpose, 420),
+    iban: t.iban.replace(/\s+/g, "").toUpperCase().slice(0, 34),
+  };
+}
+
+export async function bankPaymentOperationId(tx: BankTransaction): Promise<string> {
+  const identity = new TextEncoder().encode(`vave.log/bank-payment/v1/${tx.key}`);
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", identity));
+  // UUID version 8 leaves room for an application-defined hash.
+  bytes[6] = (bytes[6]! & 0x0f) | 0x80;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes.subarray(0, 16), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
+}
 
 /** Betrag als Text („1.234,56“, „1234.56“, „-12,5“) exakt in Kleinsteinheiten. */
 export function amountToMinor(raw: string, currency: string): number | null {
@@ -166,6 +185,7 @@ export function parseCamt(xml: string): ParsedStatement {
   const entries = [...walk(doc, "Ntry")];
   if (!kid(doc, "Document") || !entries.length) throw new StatementError(kid(doc, "Document") ? "noRows" : "format");
   const transactions: BankTransaction[] = [];
+  const unreferenced = new Map<string, number>();
   let skipped = 0;
   for (const entry of entries) {
     const status = txt(entry, "Sts") || txt(entry, "Sts", "Cd");
@@ -190,12 +210,14 @@ export function parseCamt(xml: string): ParsedStatement {
         txt(entry, "AddtlNtryInf"),
       ].filter(Boolean).join(" ");
       const e2e = txt(d, "Refs", "EndToEndId");
+      const accountRef = txt(d, "Refs", "AcctSvcrRef"), txRef = txt(d, "Refs", "TxId");
+      const hasReference = entryRef || accountRef || txRef || (e2e && e2e !== "NOTPROVIDED");
       transactions.push(transaction({
         date, amount_minor: amount, currency, credit,
         name: party(kid(related, counter)) || party(kid(related, credit ? "UltmtDbtr" : "UltmtCdtr")),
         iban: txt(related, `${counter}Acct`, "Id", "IBAN"),
         purpose: e2e && e2e !== "NOTPROVIDED" ? `${purpose} ${e2e}` : purpose,
-      }, `${entryRef}|${txt(d, "Refs", "AcctSvcrRef")}|${txt(d, "Refs", "TxId")}|${index}`));
+      }, `${entryRef}|${accountRef}|${txRef}|${index}`, hasReference ? undefined : unreferenced));
     });
   }
   return { format: "camt", transactions, skipped };
@@ -270,6 +292,7 @@ export function parseBankCsv(text: string): ParsedStatement {
   }
   if (headerRow < 0) throw new StatementError("format");
   const transactions: BankTransaction[] = [];
+  const unreferenced = new Map<string, number>();
   let skipped = 0;
   const get = (row: string[], column: Column) => (map[column] === undefined ? "" : (row[map[column]!] ?? "").trim());
   for (const row of rows.slice(headerRow + 1)) {
@@ -286,11 +309,12 @@ export function parseBankCsv(text: string): ParsedStatement {
       amount = credit ? Math.abs(credit) : debit ? -Math.abs(debit) : null;
     }
     if (!date || amount === null || amount === 0) { if (row.some((v) => v.trim())) skipped++; continue; }
+    const ref = get(row, "ref");
     transactions.push(transaction({
       date, amount_minor: Math.abs(amount), currency, credit: amount > 0,
       name: get(row, "name"), iban: get(row, "iban"),
-      purpose: [get(row, "purpose"), get(row, "ref")].filter(Boolean).join(" "),
-    }, get(row, "ref")));
+      purpose: [get(row, "purpose"), ref].filter(Boolean).join(" "),
+    }, ref, ref && ref !== "NOTPROVIDED" ? undefined : unreferenced));
   }
   if (!transactions.length) throw new StatementError("noRows");
   return { format: "csv", transactions, skipped };

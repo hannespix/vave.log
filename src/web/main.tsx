@@ -7,49 +7,62 @@ import './theme.css';
 import './styles.css';
 import './appearance';
 import { AuthForm, ConfirmEmail, OAuthConsent, PasswordReset, Setup, type AuthNotice, type RuntimeConfig } from './auth';
+import { AuthLinkReview } from './auth-link';
 import { Spinner, Notice } from './components';
 const WorkspaceApp = React.lazy(() => import('./workspace').then(module => ({ default: module.WorkspaceApp })));
-import { appPath, errorMessage, parseAuthLink, stripAuthLink } from './helpers';
+import { appPath, errorMessage, parseAuthLink, stripAuthLink, type AuthLink } from './helpers';
 import { PwaProvider } from './pwa';
 
-// Merkt je Browser-Tab, dass gerade ein geprüfter Link zum Zurücksetzen eingelöst wurde (Wert: Konto-ID).
-const RECOVERY_KEY = 'vave-log.recovery';
+// Only a browser-bound recovery can survive a page reload in the same tab.
+const RECOVERY_KEY = 'vave-log.pkce-recovery';
 function pendingRecovery() { try { return window.sessionStorage.getItem(RECOVERY_KEY); } catch { return null; } }
 function rememberRecovery(userId?: string) { try { if (userId) window.sessionStorage.setItem(RECOVERY_KEY, userId); else window.sessionStorage.removeItem(RECOVERY_KEY); } catch { /* ohne Speicher gilt das Formular nur bis zum Neuladen */ } }
 
-function Connected({ config }: { config: RuntimeConfig }) {
+function captureAuthLink() {
+  const { search, hash, pathname, origin } = window.location;
+  const clean = stripAuthLink(search, hash, pathname);
+  if (clean === pathname + search + hash) return null;
+  // Keep email credentials in memory and clear the address before creating any Auth client.
+  window.history.replaceState(window.history.state, '', origin + clean);
+  return parseAuthLink(search, hash);
+}
+
+function canReview(link: AuthLink) {
+  const methods = [Boolean(link.code), Boolean(link.tokenHash && link.type), Boolean(link.legacy)];
+  return !link.errorCode && !link.errorDescription && methods.filter(Boolean).length === 1;
+}
+
+function Connected({ config, initialLink }: { config: RuntimeConfig; initialLink: AuthLink | null }) {
   const { t } = useI18n();
-  // Vor dem Client lesen: supabase-js räumt Token aus der Adresse, sobald es sie verarbeitet hat.
-  const [link] = useState(() => parseAuthLink(window.location.search, window.location.hash));
-  // Implizite Rückleitung statt PKCE: Der Link aus einer Auth-E-Mail muss auf jedem Gerät funktionieren, nicht nur in dem
-  // Browser, der ihn angefordert hat. PKCE band ihn an einen dort gespeicherten Schlüssel – am Handy geöffnet oder nach
-  // einer zweiten Anforderung scheiterte der Tausch („code challenge does not match“).
-  const client = useMemo(() => createClient(config.supabaseUrl, config.supabasePublishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } }), [config.supabaseUrl, config.supabasePublishableKey]);
-  const [session, setSession] = useState<Session | null>(null); const [ready, setReady] = useState(false); const [error, setError] = useState(''); const [recovery, setRecovery] = useState(false); const [linkNotice, setLinkNotice] = useState<AuthNotice | null>(null);
-  const resetFailed = () => setLinkNotice({ text: t('Dieser Link zum Zurücksetzen gilt nicht mehr: Er ist abgelaufen, wurde schon verwendet oder es gibt eine neuere E-Mail. Fordere einen neuen Link an und nimm den aus der neuesten E-Mail.'), resend: false, forgot: true });
-  // Das Formular „Neues Passwort“ erscheint nur nach einem geprüften Link (Ereignis PASSWORD_RECOVERY, eingelöster
-  // Token-Hash oder Token im Fragment) – nie allein wegen `?reset=1`. Vorher zeigte ein abgelaufener Link das Formular
-  // trotzdem, sobald im Browser noch irgendeine Anmeldung lag, und das Speichern scheiterte mit „Session not found“.
-  // Fehlerrückleitungen von Supabase (`error_code`) werden zu einem Hinweis mit dem passenden nächsten Schritt.
-  useEffect(() => { let alive = true; let authEvent = 0; const { data } = client.auth.onAuthStateChange((event, next) => { authEvent++; if (!alive) return; setSession(next); setReady(true); if (event === 'PASSWORD_RECOVERY') { rememberRecovery(next?.user.id); setRecovery(true); } if (event === 'SIGNED_OUT') { rememberRecovery(); setRecovery(false); } }); const initialEvent = authEvent;
-    const clean = () => window.history.replaceState({}, '', stripAuthLink(window.location.search, window.location.hash));
-    const expired = () => setLinkNotice({ text: t('Der Link ist abgelaufen oder wurde bereits verwendet. Melde dich einfach an – falls deine E-Mail-Adresse noch nicht bestätigt ist, fordere einen neuen Link an.'), resend: true });
-    const failed = Boolean(link.errorCode || link.errorDescription);
-    if (failed) { clean(); if (link.reset) resetFailed(); else if (['otp_expired', 'access_denied'].includes(link.errorCode)) expired(); else setLinkNotice({ text: t('Der Link konnte nicht verarbeitet werden: {reason}', { reason: link.errorDescription || link.errorCode }), resend: false }); }
-    const start = link.tokenHash && link.type ? client.auth.verifyOtp({ token_hash: link.tokenHash, type: link.type }).then(({ data, error }) => { if (!alive) return; clean(); if (error) { if (link.type === 'recovery') resetFailed(); else expired(); } else if (link.type === 'recovery') { rememberRecovery(data.user?.id); setRecovery(true); } }).catch(() => { if (alive) { clean(); if (link.type === 'recovery') resetFailed(); else expired(); } }) : Promise.resolve();
-    void start.then(() => client.auth.initialize()).then(async init => { const { data, error } = await client.auth.getSession(); if (!alive) return;
-      if (link.reset && !link.tokenHash && !failed) { clean(); if (!init?.error && data.session && link.recoveryToken) { rememberRecovery(data.session.user.id); setRecovery(true); } else resetFailed(); }
-      // Seite während des Zurücksetzens neu geladen: das Formular bleibt, solange dieselbe Anmeldung besteht.
-      if (data.session && pendingRecovery() === data.session.user.id) setRecovery(true); else if (!data.session) rememberRecovery();
-      if (initialEvent !== authEvent) return; if (error) setError(errorMessage(error)); setSession(data.session); setReady(true); }).catch(e => { if (alive) { setError(errorMessage(e)); setReady(true); } }); return () => { alive = false; data.subscription.unsubscribe(); };
-  // oxlint-disable-next-line react-hooks/exhaustive-deps -- t nur für Hinweistexte; der Link wird einmal beim Start gelesen.
+  const noticeFor = (reset: boolean): AuthNotice => reset
+    ? { text: t('Dieser Link zum Zurücksetzen gilt nicht mehr: Er ist abgelaufen, wurde schon verwendet oder es gibt eine neuere E-Mail. Fordere einen neuen Link an und nimm den aus der neuesten E-Mail.'), resend: false, forgot: true }
+    : { text: t('Der Link ist abgelaufen oder wurde bereits verwendet. Melde dich einfach an – falls deine E-Mail-Adresse noch nicht bestätigt ist, fordere einen neuen Link an.'), resend: true };
+  const [link, setLink] = useState(() => initialLink && canReview(initialLink) ? initialLink : null);
+  const [linkNotice, setLinkNotice] = useState<AuthNotice | null>(() => initialLink && !canReview(initialLink) ? noticeFor(initialLink.reset) : null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [recoveryUser, setRecoveryUser] = useState(pendingRecovery);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState('');
+  const client = useMemo(() => createClient(config.supabaseUrl, config.supabasePublishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce' } }), [config.supabaseUrl, config.supabasePublishableKey]);
+  useEffect(() => {
+    const { data } = client.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setReady(true);
+      const pending = pendingRecovery();
+      if (!next || (pending && pending !== next.user.id)) { rememberRecovery(); setRecoveryUser(null); }
+    });
+    return () => data.subscription.unsubscribe();
   }, [client]);
   // Abmelden gilt für dieses Gerät. Die Vorgabe von supabase-js beendet sonst alle Anmeldungen der Person – auch am Handy.
   async function signOut() { const { error } = await client.auth.signOut({ scope: 'local' }); if (error) { setError(errorMessage(error)); return; } setSession(null); }
-  useLocaleMetadata(client, session?.user);
+  useLocaleMetadata(client, link ? undefined : session?.user);
   if (!ready) return <div className="boot"><Spinner label={t('Dein Workspace wird vorbereitet …')}/></div>;
+  if (link) return <AuthLinkReview client={client} config={config} link={link} onCancel={() => setLink(null)} onInvalid={() => { setLinkNotice(noticeFor(link.reset)); setLink(null); }} onSession={(next, recovery) => { rememberRecovery(recovery ? next.user.id : undefined); setRecoveryUser(recovery ? next.user.id : null); setSession(next); setLink(null); }}/>;
   if (!session) return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<AuthForm client={client} config={config} notice={linkNotice} onNoticeDone={() => setLinkNotice(null)}/></>;
-  if (recovery) return <PasswordReset client={client} done={() => { rememberRecovery(); setRecovery(false); window.history.replaceState({}, '', appPath()); }} expired={() => { rememberRecovery(); setRecovery(false); setSession(null); resetFailed(); }}/>;
+  if (recoveryUser === session.user.id) {
+    const finish = () => { rememberRecovery(); setRecoveryUser(null); };
+    return <PasswordReset client={client} email={session.user.email ?? ''} done={finish} cancel={finish} expired={() => { finish(); setSession(null); setLinkNotice(noticeFor(true)); }}/>;
+  }
   if (!session.user.email_confirmed_at) return <ConfirmEmail session={session} signOut={() => void signOut()}/>;
   if (window.location.pathname === appPath('oauth/consent')) return <OAuthConsent key={session.user.id} client={client} session={session}/>;
   return <>{error && <div className="global-alert"><Notice>{error}</Notice></div>}<React.Suspense fallback={<div className="boot"><Spinner label={t('Dein Workspace wird geladen …')}/></div>}><WorkspaceApp key={session.user.id} client={client} session={session} config={config} signOut={signOut}/></React.Suspense></>;
@@ -63,7 +76,7 @@ function inlineConfig(): RuntimeConfig | null {
     return typeof value.configured === 'boolean' && typeof value.supabaseUrl === 'string' && typeof value.supabasePublishableKey === 'string' && typeof value.appUrl === 'string' ? value as RuntimeConfig : null;
   } catch { return null; }
 }
-function Root() {
+function Root({ initialLink }: { initialLink: AuthLink | null }) {
   const { t } = useI18n();
   const [config, setConfig] = useState<RuntimeConfig | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   useEffect(() => { const controller = new AbortController(); setLoading(true); setError('');
@@ -76,6 +89,18 @@ function Root() {
   }, []);
   if (loading) return <div className="boot"><span className="boot-word">VAVE<span>.LOG</span></span><Spinner label={t('Ein Moment für deinen Flow …')}/></div>;
   if (error || !config?.configured) return <Setup error={error} onRetry={() => window.location.reload()}/>;
-  return <Connected config={config}/>;
+  return <Connected config={config} initialLink={initialLink}/>;
 }
-createRoot(document.getElementById('root')!).render(<React.StrictMode><I18nProvider><PwaProvider><Root/></PwaProvider></I18nProvider></React.StrictMode>);
+
+function Embedded() {
+  const { t } = useI18n();
+  return <div className="boot"><a className="button primary" href={appPath()} target="_blank" rel="noopener noreferrer">{t('VAVE.LOG in einem eigenen Tab öffnen')}</a></div>;
+}
+
+const root = createRoot(document.getElementById('root')!);
+if (window.self !== window.top) {
+  root.render(<I18nProvider><Embedded/></I18nProvider>);
+} else {
+  const initialLink = captureAuthLink();
+  root.render(<React.StrictMode><I18nProvider><PwaProvider><Root initialLink={initialLink}/></PwaProvider></I18nProvider></React.StrictMode>);
+}

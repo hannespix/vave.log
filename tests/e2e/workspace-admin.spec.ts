@@ -18,7 +18,7 @@ async function setup(page:Page,{role='owner',archivedOnly=false,running=0,twoAct
   if(url.pathname==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:''};
   else if(url.pathname==='/rest/v1/rpc/accept_invitations')data=0;
   else if(url.pathname==='/rest/v1/workspaces')data=visible().map(w=>({...w,timezone:'Europe/Berlin',currency:'EUR',created_by:user}));
-  else if(url.pathname==='/rest/v1/memberships')data=[{workspace_id:url.searchParams.get('workspace_id')?.slice(3)||ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
+  else if(url.pathname==='/rest/v1/rpc/list_workspace_members')data=[{workspace_id:url.searchParams.get('p_workspace_id')||ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
   else if(url.pathname==='/rest/v1/running_timers'||url.pathname==='/rest/v1/workspace_demos')data=null;
   else if(url.pathname==='/rest/v1/rpc/list_owned_workspaces'){state.lists++;data=state.owned;}
   else if(url.pathname==='/rest/v1/rpc/delete_workspace'){

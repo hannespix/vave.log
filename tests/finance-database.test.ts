@@ -17,6 +17,61 @@ afterAll(async()=>{await db?.close()});
 beforeEach(async()=>{await db.exec('begin');await login(owner);w=(await one<{id:string}>("select * from public.create_workspace('Studio','UTC','EUR')")).id;await db.query("select public.invite_member($1,'g@test.org','manager')",[w]);await db.query("select public.invite_member($1,'m@test.org','member')",[w]);await login(manager);await db.exec('select public.accept_invitations()');await login(member);await db.exec('select public.accept_invitations()');await login(owner);p=(await one<{id:string}>("insert into public.projects(workspace_id,code,name)values($1,'A','A')returning id",[w])).id;c=(await one<{id:string}>("insert into public.finance_clients(workspace_id,name,billing_address)values($1,'Customer','Street 2')returning id",[w])).id;await db.query("insert into public.finance_billing_profiles(workspace_id,legal_name,billing_address,tax_id)values($1,'Issuer','Street 1','DE123')",[w]);await login(other);fw=(await one<{id:string}>("select * from public.create_workspace('Other','UTC','USD')")).id;fp=(await one<{id:string}>("insert into public.projects(workspace_id,code,name)values($1,'B','B')returning id",[fw])).id;fc=(await one<{id:string}>("insert into public.finance_clients(workspace_id,name,billing_address)values($1,'Other','Elsewhere')returning id",[fw])).id;await login(manager)});
 afterEach(async()=>{await db.exec('rollback')});
 describe('finance authorization and documents',()=>{
+ it.each([false,true])('rechecks the service period when approved time moves after drafting (grouped: %s)',async grouped=>{
+  const entry=await approved();
+  await db.query("insert into public.finance_staff_rates(workspace_id,user_id,effective_from,bill_rate_minor) values($1,$2,'2026-01-01',5000)",[w,member]);
+  const line={...draft().lines[0],...(grouped?{time_entry_ids:[entry]}:{time_entry_id:entry})};
+  const invoice=await save(draft({lines:[line]}));
+  await db.query('select public.revoke_approval($1)',[entry]);
+  await login(member);
+  await db.query("update public.time_entries set work_date='2026-10-14' where id=$1",[entry]);
+  await db.query("select public.submit_entries($1,'2026-10-14','2026-10-14')",[w]);
+  await login(manager);
+  await db.query('select public.review_entry($1,true)',[entry]);
+  await expect(attempt('select public.finance_issue_invoice($1,$2)',[w,invoice.id])).rejects.toThrow(/FINANCE_VALIDATION/);
+  expect(await one('select status,number from public.finance_invoices where id=$1',[invoice.id])).toEqual({status:'draft',number:null});
+  expect(await rows('select 1 from public.finance_time_claims where invoice_id=$1',[invoice.id])).toEqual([]);
+ });
+ it('records an operation once, rejects a changed replay and preserves the receipt after deletion',async()=>{
+  const invoice=await issue((await save()).id), second=await issue((await save()).id);
+  const operation='12340000-0000-4000-8000-000000000001';
+  const sql='select public.finance_record_payment($1,$2,$3,$4,$5,$6) v';
+  const args=[w,invoice.id,'2026-10-20',5500,'Deposit',operation];
+  const first=(await one<{v:{paid:boolean;paid_minor:number;payments:{id:string}[]}}>(sql,args)).v;
+  const replay=(await one<{v:typeof first}>(sql,args)).v;
+  expect(first).toMatchObject({paid:false,paid_minor:5500});
+  expect(first.payments).toHaveLength(1);
+  expect(replay).toEqual(first);
+  for(const changes of [[w,second.id,'2026-10-20',5500,'Deposit',operation],[w,invoice.id,'2026-10-21',5500,'Deposit',operation],[w,invoice.id,'2026-10-20',4500,'Deposit',operation],[w,invoice.id,'2026-10-20',5500,'Other note',operation]]){
+   await expect(attempt(sql,changes)).rejects.toThrow(/FINANCE_CONFLICT/);
+  }
+  await db.query('select public.finance_delete_payment($1,$2)',[w,first.payments[0]!.id]);
+  const afterRemoval=(await one<{v:typeof first}>(sql,args)).v;
+  expect(afterRemoval).toMatchObject({paid:false,paid_minor:0,payments:[]});
+  await login(member);
+  await expect(attempt(sql,args)).rejects.toThrow(/FINANCE_FORBIDDEN/);
+ });
+ it('pages more than 1,000 invoices in stable order, including ties at page boundaries',async()=>{
+  await db.exec('reset role');
+  await db.query("insert into public.finance_invoices(workspace_id,client_id,project_id,currency,language,issue_date,due_date,service_from,service_to) select $1,$2,$3,'EUR','en','2026-10-13','2026-11-13','2026-10-01','2026-10-13' from generate_series(1,1002)",[w,c,p]);
+  const expected=await rows<{id:string}>('select id from public.finance_invoices where workspace_id=$1 order by created_at desc,id',[w]);
+  await login(manager);
+  const sql='select public.finance_list_invoices($1,$2,$3,$4) v';
+  type PageInvoice={id:string;created_at:string;status:string;payments:unknown[]};
+  let cursor:PageInvoice|undefined;
+  const ids:string[]=[];
+  for(let page=0;page<11;page++){
+   const result=(await one<{v:PageInvoice[]}>(sql,[w,100,cursor?.created_at??null,cursor?.id??null])).v;
+   expect(result).toHaveLength(page===10?2:100);
+   expect(result[0]).toMatchObject({status:'draft',payments:[]});
+   ids.push(...result.map(i=>i.id));
+   cursor=result.at(-1);
+  }
+  expect(ids).toEqual(expected.map(i=>i.id));
+  await expect(attempt(sql,[w,101,null,null])).rejects.toThrow(/FINANCE_VALIDATION/);
+  await login(member);
+  await expect(attempt(sql,[w,100,null,null])).rejects.toThrow(/FINANCE_FORBIDDEN/);
+ });
  it('does not expose finance to members, outsiders, disabled or anonymous roles',async()=>{for(const id of [member,other]){await login(id);expect(await rows('select * from public.finance_clients where workspace_id=$1',[w])).toEqual([]);await expect(attempt('select public.finance_save_draft($1::jsonb)',[JSON.stringify(draft())])).rejects.toThrow(/FINANCE_FORBIDDEN/)}await login(owner);await db.query("select public.set_member_role($1,$2,'disabled')",[w,manager]);await login(manager);expect(await rows('select * from public.finance_billing_profiles')).toEqual([]);await expect(attempt('select public.finance_list_invoices($1)',[w])).rejects.toThrow(/FINANCE_FORBIDDEN/);await login('','anon');await expect(attempt('select * from public.finance_clients')).rejects.toThrow(/permission denied/);await expect(attempt('select public.finance_list_invoices($1)',[w])).rejects.toThrow(/permission denied/)});
  it('allows only owners to change company identity',async()=>{expect(await rows("update public.finance_billing_profiles set legal_name='Spoof' where workspace_id=$1 returning *",[w])).toEqual([]);await expect(attempt("insert into public.finance_billing_profiles(workspace_id,legal_name)values($1,'Spoof')",[w])).rejects.toThrow();await login(owner);expect(await rows("update public.finance_billing_profiles set legal_name='Updated' where workspace_id=$1 returning *",[w])).toHaveLength(1)});
  it('rejects foreign tenant references and unknown invoice control keys',async()=>{for(const input of [draft({client_id:fc}),draft({project_id:fp}),draft({status:'issued'}),draft({total_minor:1}),draft({issue_date:'2026-02-30'}),draft({due_date:'2026-10-12'}),draft({service_to:'2026-09-01'}),draft({lines:[{...draft().lines[0],quantity:-1}]}),draft({lines:[{...draft().lines[0],tax_basis_points:10001}]})])await expect(attempt('select public.finance_save_draft($1::jsonb)',[JSON.stringify(input)])).rejects.toThrow();await expect(attempt("insert into public.finance_project_plans(workspace_id,project_id,client_id)values($1,$2,$3)",[w,p,fc])).rejects.toThrow();await expect(attempt("insert into public.finance_staff_rates(workspace_id,user_id,effective_from)values($1,$2,'2026-01-01')",[w,other])).rejects.toThrow()});

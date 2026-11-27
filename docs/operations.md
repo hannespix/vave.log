@@ -7,21 +7,23 @@
 - Öffentliche Registrierung darf Konten erzeugen, aber verschafft keinen Zugriff auf bestehende Workspaces. Ein neuer Workspace ist strikt getrennt.
 
 ## Datenbank
-Migrationen aus `supabase/migrations/` mit der Supabase CLI (`supabase link`, `supabase db push`) oder kontrolliert über das Dashboard anwenden. Vor jeder späteren Migration Datenbanksicherung und Test auf einer separaten Umgebung. Versionsverzeichnis vollständig aufbewahren. Der SQL-Code verlangt bestätigte E-Mail-Konten für das Anlegen von Workspaces und die Annahme von Einladungen.
+Migrationen aus `supabase/migrations/` mit der Supabase CLI (`supabase link`, `supabase db push`) oder kontrolliert über das Dashboard anwenden. Vor jeder späteren Migration Datenbanksicherung und Test auf einer separaten Umgebung. Versionsverzeichnis vollständig aufbewahren. Beim Upgrade einer laufenden Instanz zuerst die neuen Lese-RPCs installieren, anschließend das passende Web-Build ausliefern und danach `20261127112202_activate_scoped_column_access.sql` anwenden. Die letzte Migration entzieht die bisherigen breiten Spaltenrechte. Der SQL-Code verlangt bestätigte E-Mail-Konten für das Anlegen von Workspaces und die Annahme von Einladungen.
 
 ## Auth
-In Supabase Auth die Site URL auf `APP_URL` setzen, nur die exakten Callback-URLs für diese Installation freigeben. E-Mail-Bestätigung aktivieren, anonymen Login deaktivieren. Für reale Teamanmeldungen eigenen SMTP-Dienst einrichten; Standard-Mailversand ist begrenzt. Auth-Rate-Limits und Passwortschutz einschalten, sinnvolle Token-Laufzeit (z. B. 15 Minuten) konfigurieren. Selbstregistrierung nach Einrichtung bei Bedarf einschränken. Der erste verifiziert angemeldete Benutzer erstellt seinen Workspace und wird ausschließlich dort owner.
+In Supabase Auth die Site URL auf `APP_URL` setzen, nur die exakten Callback-URLs für diese Installation freigeben. E-Mail-Bestätigung aktivieren, anonymen Login deaktivieren. Für reale Teamanmeldungen eigenen SMTP-Dienst einrichten; Standard-Mailversand ist begrenzt. Auth-Rate-Limits und Schutz vor kompromittierten Passwörtern einschalten, MFA für privilegierte Nutzer vorsehen und eine sinnvolle Token-Laufzeit (z. B. 15 Minuten) konfigurieren. Selbstregistrierung nach Einrichtung bei Bedarf einschränken. Der erste verifiziert angemeldete Benutzer erstellt seinen Workspace und wird ausschließlich dort owner.
 
 Die konkreten Produktions-Redirects, Hilfe bei `Cannot GET` auf localhost und alle 13 gebrandeten Auth-E-Mails stehen in [Auth-E-Mail-Einrichtung](auth-email-setup.md). Neue Free-Projekte benötigen seit 3. Juni 2026 einen eigenen SMTP-Dienst, um Vorlagen anpassen zu können. Die Dateien im Repository sind vorbereitet; GitHub/Sites aktiviert sie nicht automatisch in Supabase.
 
 Einladungen sind als E-Mail-Zuordnung gespeichert, schicken aber bewusst keine Nachricht aus dieser Anwendung. Owner teilt den App-Link; der Empfänger meldet sich mit der bestätigten eingeladenen E-Mail an. `accept_invitations` fügt ihn dem Workspace hinzu. Rolle kommt aus der Einladung, nie aus Nutzermetadaten.
 
 ## MCP / OAuth
-Supabase OAuth 2.1 Server ist laut aktueller Anbieter-Dokumentation **Beta**. In Auth > OAuth Server aktivieren, Authorization Path `/oauth/consent` setzen. Asymmetrischen JWT-Signierschlüssel (ES256/RS256) verwenden. Clients gezielt registrieren oder Dynamic Client Registration aktivieren. Keine Wildcard-Redirects. Nutzer müssen im Consent-Screen den konkreten Client und seine Rechte bestätigen. Standard-OIDC-Scopes beschränken Profilinformationen; Zugriff auf Anwendungsdaten folgt den angezeigten Workspace-Rollen/RLS-Regeln.
+In **Auth → OAuth Server** OAuth 2.1 aktivieren und den Authorization Path `/oauth/consent` einstellen. Einen asymmetrischen JWT-Signierschlüssel einsetzen. Einen bestimmten OAuth-Client mit dessen exakter Callback-URL registrieren.
 
-Der Pfad `/mcp` ist auf der Sites-Plattform reserviert. Deshalb nutzt die Anwendung plattformübergreifend `/api/mcp`. MCP-URL: `https://DEINE-DOMAIN/api/mcp`. Ein kompatibler Streamable-HTTP/OAuth-Client entdeckt die Autorisierung über `/.well-known/oauth-protected-resource/api/mcp`. KI-Nutzung setzt Unterstützung dieser Standards im jeweiligen Client voraus; nicht jedes Produkt unterstützt benutzerdefinierte MCP-Server.
+Ein Workspace-Owner öffnet **Einstellungen → MCP-Freigaben** und trägt die registrierte Client-ID ein. Standard einer neuen Freigabe ist Lesen. Mit der ausdrücklichen Option **Zeitvorschläge erlauben** kann der Benutzer über MCP auch persönliche Vorschläge einreichen und anschließend in der Web-App prüfen. Bestehende OAuth-Verbindungen brauchen diese neue Workspace-Freigabe. Der Benutzer bestätigt die Verbindung zusätzlich über OAuth. Der Server behandelt die vom Workspace zurückgegebenen Namen und Titel als untrusted data.
 
-Verbindungen lassen sich in der GUI widerrufen. Bereits ausgestellte JWTs können bis zum Ablauf gültig bleiben; keine sofortige Zugriffssperre behaupten. Rollenänderungen wirken für Datenbankzugriffe unmittelbar über die Membership-Tabelle. Betrieb erfordert einen vollständigen echten OAuth-Login-Test auf der endgültigen Domain.
+Der MCP-Endpunkt des Node-/Worker-Hosts ist `https://DEINE-DOMAIN/api/mcp`. Streamable HTTP unterstützt OAuth-Discovery über `/.well-known/oauth-protected-resource/api/mcp`. GitHub Pages liefert die Web-App aus. Für MCP muss der erreichbare Node-/Worker-Host des Betreibers verwendet werden. Die Zulassung zum Workspace erfordert den freigegebenen Client, eine gültige Zustimmung und eine aktive Mitgliedschaft. Die Probe muss sowohl reguläre Browser-Sitzungen als auch OAuth-Tokens verwenden.
+
+Der Connector kann Workspaces, Projekte, Aufgaben, eigene Zeiten und eigene Abwesenheiten mit begrenzten Feldern lesen. Verbindliche Buchungen, Rechnungen, Rollen und Löschungen werden in der Web-App ausgeführt. Der Widerruf in **Verbundene Apps** und das Entfernen der Workspace-Freigabe wirken bei der nächsten Datenbankabfrage. Mit `MCP_DISABLED=true` kann der Betreiber den HTTP-MCP-Endpunkt pausieren. Für einen projektweiten Stopp inklusive der Data API setze als Projektadministrator `private.vave_mcp_control.enabled` auf `false`. Die HTTP-Quoten gelten am Node-/Worker-Host. Die Datenbank prüft auch direkte Anfragen an die eng begrenzten MCP-RPCs. Den PostgREST Pre-Request-Hook `public.vave_request_gate` mit den Migrationen installieren und beim Freigabetest prüfen. Das Supabase-Projekt ist für VAVE.LOG vorgesehen, da der Hook die API-Grenze setzt.
 
 ## Ausführen
 ```
@@ -31,7 +33,7 @@ npm start
 ```
 `npm start` liest lokale `.env`; Docker bekommt Variablen über die Plattform. `NODE_ENV=production` erzwingt HTTPS. Bei Entwicklung mit Vite auf Port 5173 `APP_URL=http://localhost:5173` setzen und beide Entwicklungsprozesse starten.
 
-Node hinter einem kontrollierten Reverse Proxy betreiben. Host-Header erhalten. `TRUST_PROXY_HOPS` nur entsprechend der tatsächlichen festen Proxy-Kette setzen; Standard 0. Webserver/Plattform mit Request-Größenlimit, Timeouts und globalem Rate-Limit konfigurieren. Die Anwendung beschränkt MCP auf 64 KiB/Request und 120 authentifizierte Aufrufe/Minute je Prozess/Person. Vor der Auth-Prüfung gelten 180 Versuche/Minute je vertrauenswürdiger Client-IP sowie 1.000 Versuche/Minute je Instanz. Node verwendet die kontrollierte Proxy-Konfiguration; der Sites-Worker verwendet den von Cloudflare gesetzten CF-Connecting-IP-Header. Ohne sichere Client-IP teilen sich Anfragen ein restriktives Kontingent. Die Zähler gelten je Prozess/Worker-Isolate und ersetzen keinen globalen Schutz über mehrere Instanzen; auf der Plattform zusätzlich ein verteiltes Rate-Limit einrichten.
+Node hinter einem kontrollierten Reverse Proxy betreiben. Host-Header beibehalten und `TRUST_PROXY_HOPS` entsprechend der tatsächlich vertrauenswürdigen Proxy-Kette setzen. Der Server begrenzt Eingaben auf 64 KiB, Antworten auf 256 KiB und MCP-Aufrufe auf zehn Sekunden. Er begrenzt parallele Anfragen pro Prozess und pro Benutzer-Client-Kombination. Vor der Auth-Prüfung und je Client gelten zusätzliche Quoten. Für mehrere Instanzen ein gemeinsames Rate-Limit am Proxy ergänzen. Das Protokoll enthält redigierte Ereignisse mit Request-ID, Client-ID und Werkzeugnamen.
 
 ## Sites-Worker
 
@@ -59,6 +61,12 @@ Vor Echtbetrieb Restore-Test aus einer Sicherung in separatem Supabase-Projekt d
 5. Echte GUI-Anmeldung, Passwortreset, OAuth-Zustimmung/-Ablehnung und Widerruf testen.
 6. Finanz-/Demo-Transaktionen mit `tests/live/agency-smoke.sql` prüfen (sämtliche synthetischen Daten werden zurückgerollt); Konkurrenzfälle zusätzlich mit mehreren Verbindungen testen.
 7. Backup wiederherstellen; SMTP, HTTPS, Logs, Alarmierung und Zuständigkeit prüfen.
+8. Das Docker-Image für die Zielarchitektur bauen und mit aktueller
+   [Grype-Datenbank](https://github.com/anchore/grype) auf App- und OS-Pakete prüfen.
+   `docker build --pull -t vave-log:release .` baut das Release-Image.
+   `grype docker:vave-log:release --fail-on high` prüft es auf hohe und kritische
+   Befunde. Beim Aktualisieren des Basis-Digests die festgelegten Alpine-Pakete und
+   ihre Sicherheitskorrekturen erneut prüfen.
 
 ## Quellen
 - https://supabase.com/docs/guides/auth/oauth-server/getting-started

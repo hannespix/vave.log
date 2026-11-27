@@ -4,10 +4,10 @@ import type { Invoice } from "../../shared/finance-types";
 import { Dialog, Notice } from "../components";
 import { SelectMenu, type SelectOption } from "../select-menu";
 import {
-  StatementError, decodeStatement, matchTransactions, openAmount, parseStatement, paymentNote,
-  type MatchConfidence, type MatchProposal, type MatchReason, type ParsedStatement,
+  StatementError, bankPaymentOperationId, decodeStatement, matchTransactions, openAmount, parseStatement, paymentNote,
+  type BankTransaction, type MatchConfidence, type MatchProposal, type MatchReason, type ParsedStatement,
 } from "./bank-import";
-import type { FinanceKey } from "./catalog";
+import { ft, type FinanceKey } from "./catalog";
 import { useFinance } from "./context";
 import { decimalToMinor, displayDate, minorInput, money } from "./documents";
 
@@ -35,7 +35,7 @@ export function BankReconcileDialog({ onClose }: { onClose: () => void }) {
     [partial, setPartial] = useState(0);
   const clientName = (i: Invoice) => i.customer_snapshot?.name || data.clients.find((c) => c.id === i.client_id)?.name || "";
   const open = data.invoices.filter((i) => openAmount(i) > 0);
-  const byId = new Map(open.map((i) => [i.id, i] as const));
+  const byId = new Map(data.invoices.map((i) => [i.id, i] as const));
   const fmt = (minor: number, currency: string) => money(minor, currency, locale);
   const options = (currency: string): SelectOption[] => [
     { value: "", label: t("bankNoMatch") },
@@ -83,13 +83,14 @@ export function BankReconcileDialog({ onClose }: { onClose: () => void }) {
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setRowError("");
-    let payments: { invoice_id: string; paid_on: string; amount_minor: number; note: string }[];
+    let payments: { invoice_id: string; paid_on: string; amount_minor: number; note: string; transaction: BankTransaction }[];
     try {
       payments = selected.map(({ row, index }) => {
         const tx = proposals[index].transaction;
         const amount = decimalToMinor(row.amount.replace(",", "."), tx.currency);
         if (amount < 1 || amount > tx.amount_minor) throw new Error("amount");
-        return { invoice_id: row.invoiceId, paid_on: tx.date, amount_minor: amount, note: paymentNote(tx, t("bankNote")) };
+        const language = byId.get(row.invoiceId)?.language ?? "en";
+        return { invoice_id: row.invoiceId, paid_on: tx.date, amount_minor: amount, note: paymentNote(tx, ft(language, "bankNote")), transaction: tx };
       });
     } catch {
       setRowError(t("bankErrorAmount"));
@@ -99,8 +100,9 @@ export function BankReconcileDialog({ onClose }: { onClose: () => void }) {
     let count = 0;
     void run(async () => {
       // Nacheinander: jede Zahlung sperrt ihre Rechnung; bei einem Fehler bleibt der Rest offen.
-      for (const payment of payments) {
-        await service.recordPayment({ workspace_id: workspace.id, ...payment });
+      for (const { transaction, ...payment } of payments) {
+        const operation_id = await bankPaymentOperationId(transaction);
+        await service.recordPayment({ workspace_id: workspace.id, ...payment, operation_id });
         count++;
       }
     }, () => setDone(payments.length)).then((ok) => { if (!ok) setPartial(count); });

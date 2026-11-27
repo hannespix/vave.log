@@ -1,6 +1,8 @@
 import {describe,it,expect,vi} from 'vitest';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
-import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {InMemoryTransport} from '@modelcontextprotocol/sdk/inMemory.js';
+import {createMcpServer} from '../src/server/mcp.js';
+import {resolveLocale} from '../src/shared/i18n.js';
 import {createHttpHandler} from '../src/server/http.js';
 import {AppError,type Service} from '../src/shared/service.js';
 import type {FinanceService} from '../src/shared/finance-service.js';
@@ -9,11 +11,15 @@ import type {DemoService} from '../src/shared/demo-service.js';
 const id='11111111-1111-4111-8111-111111111111';
 const config={supabaseUrl:'https://test.supabase.co',supabasePublishableKey:'sb_publishable_test',appUrl:'https://log.example.com',configured:true};
 async function connect(finance:Partial<FinanceService>,locale='en',service:Partial<Service>={},demo?:Partial<DemoService>,workspaceAdmin?:Partial<WorkspaceAdminService>){
- const handler=createHttpHandler(config,{authenticate:async()=>({userId:id,service:service as Service,finance:finance as FinanceService,...(demo?{demo:demo as DemoService}:{}),...(workspaceAdmin?{workspaceAdmin:workspaceAdmin as WorkspaceAdminService}:{})})});
- const transport=new StreamableHTTPClientTransport(new URL(config.appUrl+'/api/mcp'),{requestInit:{headers:{Authorization:'Bearer test-token','Accept-Language':locale}},fetch:async(input,init)=>handler(new Request(input,init))});
- const client=new Client({name:'agency-test',version:'1.0.0'});await client.connect(transport);return client;
+ const server=createMcpServer(service as Service,{locale:resolveLocale(locale),finance:finance as FinanceService,
+   ...(demo?{demo:demo as DemoService}:{}),...(workspaceAdmin?{workspaceAdmin:workspaceAdmin as WorkspaceAdminService}:{})});
+ const [clientTransport,serverTransport]=InMemoryTransport.createLinkedPair();
+ const client=new Client({name:'agency-test',version:'1.0.0'});
+ await server.connect(serverTransport);
+ await client.connect(clientTransport);
+ return client;
 }
-describe('agency MCP wire contract',()=>{
+describe('internal agency tool contracts',()=>{
  it('exposes complete demo enrichment with strict input and the same scoped service',async()=>{
   const upgrade=vi.fn(async()=>{});const c=await connect({},'en',{}, {upgrade});
   try{const {tools}=await c.listTools();expect(tools).toHaveLength(66);
@@ -70,7 +76,7 @@ describe('agency MCP wire contract',()=>{
   try{const r=await other.callTool({name:'finance_issue_invoice',arguments:{workspace_id:id,id}});expect(r.isError).toBe(true);expect(JSON.stringify(r)).not.toContain('secret')}finally{await other.close()}
  });
  it('chooses English for unsupported primary languages, ignoring fallback entries',async()=>{
-  const h=createHttpHandler(config);
+  const h=createHttpHandler(config,{audit:()=>undefined});
   for(const [language,message]of [['fr-FR,de;q=0.9','Please sign in.'],['de-DE,en;q=0.5','Bitte anmelden.'],['zh-TW','请登录。']]){
    const r=await h(new Request(config.appUrl+'/api/mcp',{method:'POST',headers:{'accept-language':language}}));expect(await r.json()).toEqual({error:message});
   }

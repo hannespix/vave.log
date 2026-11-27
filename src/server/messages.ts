@@ -12,6 +12,8 @@ const copy={
  setup:['The backend is not configured yet.','Backend noch nicht eingerichtet.','后端尚未配置。'],
  missing:['Not found.','Nicht gefunden.','未找到。'],
  method:['Only POST is supported. This MCP server is stateless.','Nur POST wird unterstützt. Der MCP-Server arbeitet ohne Sessions.','仅支持 POST；MCP 服务器不保留会话。'],
+ auth_unavailable:['Sign-in or the connector service is temporarily unavailable.','Anmeldung oder MCP-Dienst kurzzeitig nicht verfügbar.','登录或连接服务暂时不可用。'],
+ deadline:['The request took too long. Narrow the scope and retry.','Die Anfrage hat zu lange gedauert. Umfang verkleinern und erneut versuchen.','请求超时，请缩小范围后重试。'],
  busy:['Server is busy. Try again shortly.','Server ausgelastet. Bitte erneut versuchen.','服务器繁忙，请稍后重试。'],
  json:['JSON is required.','JSON erwartet.','需要 JSON 数据。'],
  invalid:['Invalid or oversized JSON.','Ungültiges oder zu großes JSON.','JSON 无效或过大。'],

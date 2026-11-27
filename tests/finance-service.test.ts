@@ -3,6 +3,34 @@ import { it,expect } from 'vitest';
 import { createFinanceService } from '../src/shared/finance-service';
 const w='00000000-0000-4000-8000-000000000001',id='00000000-0000-4000-8000-000000000002';
 function service(fetcher:(url:URL,init:RequestInit)=>Response){return createFinanceService(createClient('https://example.supabase.co','test',{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:async(url,init)=>fetcher(new URL(String(url)),init??{})}}))}
+it('continues fetching invoice pages past the previous aggregate limit',async()=>{
+ const created_at='2026-10-13T10:00:00+00:00';
+ const records=Array.from({length:1002},(_,i)=>({id:'a0000000-0000-4000-8000-'+String(i).padStart(12,'0'),created_at,workspace_id:w}));
+ const offsets:number[]=[];
+ const s=service((url,init)=>{
+  const body=JSON.parse(String(init.body));
+  const offset=body.p_before_id?records.findIndex(row=>row.id===body.p_before_id)+1:0;
+  expect(url.pathname).toBe('/rest/v1/rpc/finance_list_invoices');
+  expect(body).toEqual({p_workspace_id:w,p_page_size:100,p_before_created_at:offset?created_at:null,p_before_id:offset?records[offset-1]?.id:null});
+  offsets.push(offset);
+  return new Response(JSON.stringify(records.slice(offset,offset+100)),{headers:{'content-type':'application/json'}});
+ });
+ expect((await s.listInvoices(w)).map(row=>row.id)).toEqual(records.map(row=>row.id));
+ expect(offsets).toEqual([0,100,200,300,400,500,600,700,800,900,1000]);
+});
+it('forwards a caller-supplied payment operation ID unchanged across retries',async()=>{
+ const operation_id='a0000000-0000-4000-8000-000000000003';
+ const requests:unknown[]=[];
+ const s=service((url,init)=>{
+  expect(url.pathname).toBe('/rest/v1/rpc/finance_record_payment');
+  requests.push(JSON.parse(String(init.body)));
+  return new Response(JSON.stringify({id,workspace_id:w,paid_minor:5500}),{headers:{'content-type':'application/json'}});
+ });
+ const input={workspace_id:w,invoice_id:id,paid_on:'2026-10-20',amount_minor:5500,note:'Deposit',operation_id};
+ await s.recordPayment(input);
+ await s.recordPayment(input);
+ expect(requests).toEqual(Array.from({length:2},()=>({p_workspace_id:w,p_id:id,p_paid_on:'2026-10-20',p_amount_minor:5500,p_note:'Deposit',p_operation_id:operation_id})));
+});
 it('rejects control-field injection before issuing any API request',async()=>{let calls=0;const s=service(()=>{calls++;return new Response('{}')});await expect(async()=>s.saveInvoiceDraft({workspace_id:w,client_id:id,project_id:null,language:'en',issue_date:'2026-10-13',due_date:'2026-10-13',service_from:'2026-10-13',service_to:'2026-10-13',notes:'',payment_instructions:'',lines:[],status:'issued'} as never)).rejects.toMatchObject({code:'validation'});expect(calls).toBe(0)});
 it('issues via the scoped RPC and never sends client totals',async()=>{let request:{path:string;body:any}|undefined;const s=service((url,init)=>{request={path:url.pathname,body:JSON.parse(String(init.body))};return new Response(JSON.stringify({id,workspace_id:w,status:'issued'}),{status:200,headers:{'content-type':'application/json'}})});expect((await s.issueInvoice(w,id)).id).toBe(id);expect(request).toEqual({path:'/rest/v1/rpc/finance_issue_invoice',body:{p_workspace_id:w,p_id:id}})});
 it('maps SQL errors into controlled English without SQL details',async()=>{const s=service(()=>new Response(JSON.stringify({code:'P0001',message:'FINANCE_CONFLICT',details:'secret SQL relation'}),{status:400,headers:{'content-type':'application/json'}}));await expect(s.issueInvoice(w,id)).rejects.toMatchObject({code:'conflict',message:'This financial record changed or is already in use.'})});
