@@ -34,6 +34,10 @@ async function allRows<T>(page:(from:number,to:number)=>PromiseLike<{data:unknow
 }
 function parse<T>(schema:z.ZodType<T>,value:unknown):T{const r=schema.safeParse(value);if(!r.success)throw new AppError('Bitte Eingaben prüfen: '+r.error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('; ').slice(0,350),'validation');return r.data;}
 
+const absenceWriteFields = 'id,workspace_id,user_id,starts_on,ends_on,kind,created_at,status,half_day';
+const taskWriteFields = 'id,workspace_id,project_id,title,status,assignee_id,due_date,created_by,created_at,estimated_minutes,is_milestone,repeat,tags,started_at,done_at,reopened_count';
+type AbsenceWriteResult = Omit<Absence, 'note' | 'decided_by' | 'decided_at'>;
+
 /** Both the browser and MCP use a publishable key plus the acting user's access token.
  * Access checks belong to Postgres RLS/RPC, never to a client-supplied role. */
 export function createService(client:SupabaseClient){
@@ -41,7 +45,7 @@ export function createService(client:SupabaseClient){
  const rpcVoid=async(name:string,args:Record<string,unknown>)=>{const {error}=await client.rpc(name,args);fail(error)};
  return {
   listWorkspaces:()=>rows<Workspace>(client.from('workspaces').select('*',{count:'exact'}).order('created_at').order('id').limit(1001)),
-  getMemberships:(workspaceId:string)=>rows<Membership>(client.from('memberships').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).order('created_at').order('user_id').limit(1001)),
+  getMemberships:(workspaceId:string)=>rows<Membership>(client.rpc('list_workspace_members',{p_workspace_id:parse(uuid,workspaceId)},{get:true,count:'exact'}).order('created_at').order('user_id').limit(1001)),
   createWorkspace:(input:{name:string;timezone:string;currency:string})=>{const v=parse(workspaceSchema,input);return rpc<Workspace>('create_workspace',{p_name:v.name,p_timezone:v.timezone,p_currency:v.currency})},
   acceptInvitations:()=>rpc<number>('accept_invitations'),
   inviteMember:async(input:{workspace_id:string;email:string;role:'manager'|'member';template?:string})=>{const v=parse(inviteSchema,input);await rpcVoid('invite_member',{p_workspace_id:v.workspace_id,p_email:v.email,p_role:v.role,...(v.template?{p_template:v.template}:{})})},
@@ -59,10 +63,23 @@ export function createService(client:SupabaseClient){
   listProjectEffort:(workspaceId:string)=>rows<{project_id:string;minutes:number;entries:number;first_work_date:string;last_work_date:string}>(client.from('project_effort').select('project_id,minutes,entries,first_work_date,last_work_date',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).limit(1001)),
   setWorkSchedule:(input:{workspace_id:string;user_id:string;schedule:number[]|null;balance_start_on:string|null;balance_start_minutes:number})=>{const v=parse(workScheduleSchema,input);return rpc<Membership>('set_work_schedule',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_schedule:v.schedule,p_balance_start_on:v.balance_start_on,p_balance_start_minutes:v.balance_start_minutes})},
   setMemberCapacity:(input:{workspace_id:string;user_id:string;minutes:number|null})=>{const v=parse(z.strictObject({workspace_id:uuid,user_id:uuid,minutes:z.number().int().min(0).max(6000).nullable()}),input);return rpc<Membership>('set_member_capacity',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_minutes:v.minutes})},
-  listAbsences:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to});return rows<Absence>(client.from('absences').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).lte('starts_on',v.to).gte('ends_on',v.from).order('starts_on').order('id').limit(1001))},
-  saveAbsence:(input:AbsenceInput&{id?:string})=>one<Absence>(client.from('absences').upsert(parse(absenceSchema,input)).select().single()),
+  listAbsences:(workspaceId:string,from:string,to:string)=>{
+   const v=parse(dateRangeSchema,{from,to});
+   return rows<Absence>(client.rpc('list_workspace_absences',{p_workspace_id:parse(uuid,workspaceId),p_from:v.from,p_to:v.to},{get:true,count:'exact'}).order('starts_on').order('id').limit(1001));
+  },
+  saveAbsence:async(input:AbsenceInput&{id?:string}):Promise<Absence>=>{
+   const v=parse(absenceSchema,input);
+   if(v.id){
+    const {id,...fields}=v;
+    const {data,error}=await client.from('absences').update(fields).eq('id',id).eq('workspace_id',v.workspace_id).select(absenceWriteFields);
+    fail(error);
+    if(Array.isArray(data)&&data.length===1)return {...(data[0] as AbsenceWriteResult),note:v.note};
+   }
+   const created=await one<AbsenceWriteResult>(client.from('absences').insert(v).select(absenceWriteFields).single());
+   return {...created,note:v.note};
+  },
   deleteAbsence:async(id:string)=>{await one(client.from('absences').delete().eq('id',parse(uuid,id)).select('id').single())},
-  decideAbsence:(input:{id:string;approve:boolean})=>{const v=parse(z.strictObject({id:uuid,approve:z.boolean()}),input);return one<Absence>(client.from('absences').update({status:v.approve?'approved':'declined'}).eq('id',v.id).select().single())},
+  decideAbsence:(input:{id:string;approve:boolean})=>{const v=parse(z.strictObject({id:uuid,approve:z.boolean()}),input);return one<AbsenceWriteResult>(client.from('absences').update({status:v.approve?'approved':'declined'}).eq('id',v.id).select(absenceWriteFields).single())},
   listVacationBalances:(workspaceId:string,year:number)=>rows<VacationBalance>(client.from('vacation_balances').select('*',{count:'exact'}).eq('workspace_id',parse(uuid,workspaceId)).eq('year',parse(z.number().int().min(2000).max(2100),year)).order('user_id').limit(1001)),
   saveVacationBalance:(input:VacationBalance)=>one<VacationBalance>(client.from('vacation_balances').upsert(parse(vacationBalanceSchema,input)).select().single()),
   setVacationEntitlement:(input:{workspace_id:string;user_id:string;days:number|null})=>{const v=parse(z.strictObject({workspace_id:uuid,user_id:uuid,days:z.number().min(0).max(100).multipleOf(0.5).nullable()}),input);return rpc<Membership>('set_vacation_entitlement',{p_workspace_id:v.workspace_id,p_user_id:v.user_id,p_days:v.days})},
@@ -91,11 +108,26 @@ export function createService(client:SupabaseClient){
    if(keep.length){const{error}=await client.from('capacity_cells').upsert(keep,{onConflict:'row_id,week_start'});fail(error);}
    for(const c of drop){const{error}=await client.from('capacity_cells').delete().eq('row_id',c.row_id).eq('week_start',c.week_start);fail(error);}},
   importPlan:(workspaceId:string,plan:PlanImport)=>rpc<PlanImportResult>('import_capacity_plan',{p_workspace_id:parse(uuid,workspaceId),p_plan:parse(planImportSchema,plan)}),
-  listTasks:(workspaceId:string)=>{const w=parse(uuid,workspaceId);return allRows<Task>((from,to)=>client.from('tasks').select('*').eq('workspace_id',w).order('created_at').order('id').range(from,to));},
-  // Erst ändern, dann anlegen: Ein Upsert ist für die Datenbank immer auch ein Einfügen und braucht das Recht, Aufgaben
-  // anzulegen. Wer nur die eigene Aufgabe bearbeiten darf (zugewiesen, ohne Aufgabenrecht), scheiterte damit an jedem Statuswechsel.
-  saveTask:async(input:TaskInput&{id?:string})=>{const v=parse(taskSchema,input);if(v.id){const{id,...fields}=v;const{data,error}=await client.from('tasks').update(fields).eq('id',id).eq('workspace_id',v.workspace_id).select();fail(error);if(Array.isArray(data)&&data.length===1)return data[0] as Task;}return one<Task>(client.from('tasks').upsert(v).select().single());},
+  listTasks:(workspaceId:string)=>{
+   const w=parse(uuid,workspaceId);
+   return allRows<Task>((from,to)=>client.rpc('list_workspace_tasks',{p_workspace_id:w,p_offset:from,p_limit:to-from+1},{get:true}).order('created_at').order('id'));
+  },
+  saveTask:async(input:TaskInput&{id?:string}):Promise<Task>=>{
+   const v=parse(taskSchema,input);
+   const submittedRating=v.rating===undefined?{}:{rating:v.rating};
+   if(v.id){
+    const {id,...fields}=v;
+    const {data,error}=await client.from('tasks').update(fields).eq('id',id).eq('workspace_id',v.workspace_id).select(taskWriteFields);
+    fail(error);
+    if(Array.isArray(data)&&data.length===1)return {...(data[0] as Task),...submittedRating};
+   }
+   const created=await one<Task>(client.from('tasks').insert(v).select(taskWriteFields).single());
+   return {...created,...submittedRating};
+  },
   deleteTask:async(id:string)=>{await one(client.from('tasks').delete().eq('id',parse(uuid,id)).select('id').single())},
+  setTaskStatus:(id:string,workspaceId:string,status:Task['status'])=>one<{status:Task['status']}>(
+    client.from('tasks').update({status:parse(taskSchema.shape.status,status)})
+      .eq('id',parse(uuid,id)).eq('workspace_id',parse(uuid,workspaceId)).select('status').single()),
   listEntries:(workspaceId:string,from:string,to:string)=>{const v=parse(dateRangeSchema,{from,to}),w=parse(uuid,workspaceId);return readTimeEntryPages((start,end)=>client.from('time_entries').select('*',{count:'exact'}).eq('workspace_id',w).gte('work_date',v.from).lte('work_date',v.to).order('work_date',{ascending:false}).order('created_at',{ascending:false}).order('id').range(start,end),fail,code=>new AppError(code==='time_entry_limit'?'Mehr als 50.000 Zeiteinträge. Bitte Zeitraum verkleinern.':'Zeiteinträge konnten nicht vollständig geladen werden. Bitte neu laden und erneut versuchen.',code))},
   saveEntry:(input:EntryInput&{id?:string})=>one<TimeEntry>(client.from('time_entries').upsert(parse(entrySchema,input)).select().single()),
   deleteEntry:async(id:string)=>{await one(client.from('time_entries').delete().eq('id',parse(uuid,id)).select('id').single())},
@@ -120,7 +152,7 @@ export function createService(client:SupabaseClient){
   listSisters:(workspaceId:string)=>rpc<SisterWorkspace[]>('sister_workspaces',{p_workspace_id:parse(uuid,workspaceId)}),
   linkWorkspaces:async(input:{workspace_id:string;other_workspace_id:string})=>{const v=parse(z.strictObject({workspace_id:uuid,other_workspace_id:uuid}),input);await rpcVoid('link_workspaces',{p_workspace_id:v.workspace_id,p_other_workspace_id:v.other_workspace_id})},
   unlinkWorkspaces:async(input:{workspace_id:string;other_workspace_id:string})=>{const v=parse(z.strictObject({workspace_id:uuid,other_workspace_id:uuid}),input);await rpcVoid('unlink_workspaces',{p_workspace_id:v.workspace_id,p_other_workspace_id:v.other_workspace_id})},
-  listHandovers:(workspaceId:string)=>{const id=parse(uuid,workspaceId);return rows<ProjectHandover>(client.from('project_handovers').select('*',{count:'exact'}).or(`source_workspace_id.eq.${id},target_workspace_id.eq.${id}`).order('offered_at',{ascending:false}).limit(100))},
+  listHandovers:(workspaceId:string)=>rpc<ProjectHandover[]>('list_project_handovers',{p_workspace_id:parse(uuid,workspaceId)}),
   offerHandover:(input:{project_id:string;target_workspace_id:string;note?:string})=>{const v=parse(z.strictObject({project_id:uuid,target_workspace_id:uuid,note:z.string().trim().max(1000).default('')}),input);return rpc<ProjectHandover>('offer_project_handover',{p_project_id:v.project_id,p_target_workspace_id:v.target_workspace_id,p_note:v.note})},
   acceptHandover:(id:string)=>rpc<ProjectHandover>('accept_project_handover',{p_handover_id:parse(uuid,id)}),
   declineHandover:(id:string)=>rpc<ProjectHandover>('decline_project_handover',{p_handover_id:parse(uuid,id)}),

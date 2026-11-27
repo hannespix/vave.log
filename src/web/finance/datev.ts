@@ -33,8 +33,12 @@ const translit = (value: string) =>
     .normalize("NFD")
     // oxlint-disable-next-line no-control-regex -- bewusst: alles außerhalb druckbarem ASCII entfernen
     .replace(/[^\x20-\x7e]/g, "");
-const field = (value: string, max: number) =>
-  `"${translit(value).slice(0, max).replaceAll('"', "")}"`;
+function field(value: string, max: number): string {
+  const text = translit(value).replaceAll('"', "");
+  // Check the final printable text, after characters that hid its prefix are gone.
+  const literal = /^ *[=+@-]/.test(text) ? "'" + text : text;
+  return '"' + literal.slice(0, max) + '"';
+}
 const amount = (minor: number) => {
   const abs = Math.abs(minor);
   return `${Math.trunc(abs / 100)},${String(abs % 100).padStart(2, "0")}`;

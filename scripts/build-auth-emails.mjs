@@ -218,10 +218,8 @@ function translated(template, locale) {
 // unexpected JSON metadata types for comparison; metadata is never output.
 // Only canonical de/zh select a branch; missing/unknown values use English.
 const localized = variants => `{{ if and .Data (eq (printf "%s" .Data.locale) "de") }}${variants.de}{{ else if and .Data (eq (printf "%s" .Data.locale) "zh") }}${variants.zh}{{ else }}${variants.en}{{ end }}`;
-// Token-Hash-Links landen auf der Site und werden erst dort von der App eingelöst (verifyOtp). So verbraucht
-// kein Link-Scanner im Mailprogramm den Token, und der Link funktioniert auf jedem Gerät. `?reset=1` bringt den
-// Passwortreset in den richtigen Bildschirm, bevor der Token eingelöst ist.
-const actionLink = template => `{{ .SiteURL }}/?${template.link === 'recovery' ? 'reset=1&amp;' : ''}token_hash={{ .TokenHash }}&amp;type=${template.link}`;
+// Das Fragment bleibt beim Aufruf im Browser. Die App löst den Einmal-Token nach Bestätigung auch geräteübergreifend ein.
+const actionLink = template => `{{ .SiteURL }}/#token_hash={{ .TokenHash }}&amp;type=${template.link}`;
 const paragraph = text => `<p style="margin:0 0 18px;color:#3e4439;font-size:16px;line-height:26px;">${escape(text)}</p>`;
 function card(template, locale) {
   const strings = languages[locale];

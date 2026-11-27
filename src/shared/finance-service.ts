@@ -15,11 +15,22 @@ function parse<T>(schema:z.ZodType<T>,input:unknown):T{const v=schema.safeParse(
 async function one<T>(query:PromiseLike<Result>):Promise<T>{const r=await query;fail(r.error);if(r.data===null)throw new FinanceError('not_found');return r.data as T}
 async function optional<T>(query:PromiseLike<Result>):Promise<T|null>{const r=await query;fail(r.error);return r.data as T|null}
 async function list<T>(query:PromiseLike<Result>):Promise<T[]>{const r=await query;fail(r.error);if((r.count??0)>1000||(Array.isArray(r.data)&&r.data.length>1000))throw new FinanceError('result_limit');return (r.data??[]) as T[]}
+const INVOICE_PAGE_SIZE=100;
+const MAX_INVOICES=10_000;
+type InvoiceCursor=Pick<Invoice,'id'|'created_at'>;
 /** User-scoped client only. Postgres authorizes every financial read/write. */
 export function createFinanceService(client:SupabaseClient){
  const id=(v:string)=>parse(financeUuid,v);
  const rpc=<T>(name:string,args:Record<string,unknown>)=>one<T>(client.rpc(name,args));
  const scoped=(workspace_id:string,invoice_id:string)=>({p_workspace_id:id(workspace_id),p_id:id(invoice_id)});
+ async function listInvoicePage(workspace_id:string,before?:InvoiceCursor):Promise<Invoice[]>{
+  const page=await rpc<Invoice[]>('finance_list_invoices',{
+   p_workspace_id:id(workspace_id),p_page_size:INVOICE_PAGE_SIZE,
+   p_before_created_at:before?.created_at??null,p_before_id:before?id(before.id):null,
+  });
+  if(!Array.isArray(page)||page.length>INVOICE_PAGE_SIZE)throw new FinanceError('database');
+  return page;
+ }
  const service={
   listClients:(workspace_id:string)=>list<FinanceClient>(client.from('finance_clients').select('*',{count:'exact'}).eq('workspace_id',id(workspace_id)).order('name').order('id').limit(1001)),
   saveClient:(input:FinanceClientInput)=>one<FinanceClient>(client.from('finance_clients').upsert(parse(clientSchema,input)).select().single()),
@@ -33,7 +44,24 @@ export function createFinanceService(client:SupabaseClient){
   listExpenses:(workspace_id:string,from:string,to:string)=>{const range=parse(financeRangeSchema,{from,to});return list<Expense>(client.from('finance_expenses').select('*',{count:'exact'}).eq('workspace_id',id(workspace_id)).gte('expense_date',range.from).lte('expense_date',range.to).order('expense_date',{ascending:false}).order('id').limit(1001))},
   saveExpense:(input:ExpenseInput)=>one<Expense>(client.from('finance_expenses').upsert(parse(expenseSchema,input)).select().single()),
   deleteExpense:async(workspace_id:string,expense_id:string):Promise<void>=>{await one(client.from('finance_expenses').delete().eq('workspace_id',id(workspace_id)).eq('id',id(expense_id)).select('id').single())},
-  listInvoices:(workspace_id:string)=>rpc<Invoice[]>('finance_list_invoices',{p_workspace_id:id(workspace_id)}),
+  listInvoicePage,
+  async listInvoices(workspace_id:string):Promise<Invoice[]>{
+   const invoices:Invoice[]=[],seen=new Set<string>();
+   let before:InvoiceCursor|undefined;
+   while(true){
+    const page=await listInvoicePage(workspace_id,before);
+    if(invoices.length+page.length>MAX_INVOICES)throw new FinanceError('result_limit');
+    for(const invoice of page){
+     if(!invoice||typeof invoice.id!=='string'||seen.has(invoice.id))throw new FinanceError('database');
+     seen.add(invoice.id);
+     invoices.push(invoice);
+    }
+    if(page.length<INVOICE_PAGE_SIZE)return invoices;
+    const last=page.at(-1)!;
+    if(typeof last.created_at!=='string'||!Number.isFinite(Date.parse(last.created_at)))throw new FinanceError('database');
+    before=last;
+   }
+  },
   getInvoice:(workspace_id:string,invoice_id:string)=>rpc<Invoice>('finance_get_invoice',scoped(workspace_id,invoice_id)),
   saveInvoiceDraft:(input:InvoiceDraftInput)=>rpc<Invoice>('finance_save_draft',{p_input:parse(invoiceDraftSchema,input)}),
   draftFromTime:(input:TimeInvoiceInput)=>rpc<Invoice>('finance_draft_from_time',{p_input:parse(timeInvoiceSchema,input)}),
@@ -45,7 +73,13 @@ export function createFinanceService(client:SupabaseClient){
   decideOffer:(workspace_id:string,offer_id:string,accepted:boolean)=>rpc<Offer>('finance_decide_offer',{...scoped(workspace_id,offer_id),p_accepted:accepted}),
   offerToProject:(input:{workspace_id:string;offer_id:string;code:string})=>{const v=parse(offerCodeSchema,input);return rpc<Offer>('finance_offer_project',{p_workspace_id:v.workspace_id,p_id:v.offer_id,p_code:v.code})},
   deleteOffer:async(workspace_id:string,offer_id:string)=>{await optional(client.rpc('finance_delete_offer',scoped(workspace_id,offer_id)))},
-  recordPayment:(input:{workspace_id:string;invoice_id:string;paid_on:string;amount_minor:number;note:string})=>{const v=parse(paymentSchema,input);return rpc<Invoice>('finance_record_payment',{p_workspace_id:v.workspace_id,p_id:v.invoice_id,p_paid_on:v.paid_on,p_amount_minor:v.amount_minor,p_note:v.note})},
+  recordPayment:(input:z.input<typeof paymentSchema>)=>{
+   const v=parse(paymentSchema,input);
+   return rpc<Invoice>('finance_record_payment',{
+    p_workspace_id:v.workspace_id,p_id:v.invoice_id,p_paid_on:v.paid_on,p_amount_minor:v.amount_minor,
+    p_note:v.note,p_operation_id:v.operation_id??crypto.randomUUID(),
+   });
+  },
   deletePayment:(workspace_id:string,payment_id:string)=>rpc<Invoice>('finance_delete_payment',scoped(workspace_id,payment_id)),
   setInvoicePaid:(workspace_id:string,invoice_id:string,paid:boolean)=>{if(typeof paid!=='boolean')throw new FinanceError('validation');return rpc<Invoice>('finance_set_paid',{...scoped(workspace_id,invoice_id),p_paid:paid})},
   overview:async(workspace_id:string,from:string,to:string):Promise<FinanceOverview>=>{

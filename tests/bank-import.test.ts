@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Invoice } from '../src/shared/finance-types';
 import {
-  StatementError, amountToMinor, bookedRefs, decodeStatement, isoDate, matchTransactions, mentionsNumber,
+  StatementError, amountToMinor, bankPaymentOperationId, bookedRefs, decodeStatement, isoDate, matchTransactions, mentionsNumber,
   nameScore, openAmount, parseStatement, paymentNote, type BankTransaction,
 } from '../src/web/finance/bank-import';
 
@@ -76,6 +76,21 @@ describe('Beträge und Daten', () => {
 });
 
 describe('Kontoauszüge lesen', () => {
+  it('uses stable payment operation IDs across normalized exports and keeps distinct movements separate', async () => {
+    const header = 'Buchungsdatum;Betrag;Bankreferenz;Gegenpartei\n';
+    const first = parseStatement(header + '14.10.2026;250,00;bank-101;Kanzlei West\n14.10.2026;250,00;bank-102;Kanzlei West');
+    const second = parseStatement(header + '2026-10-14;250.00;bank-101;Kanzlei West');
+    const ids = await Promise.all(first.transactions.map(bankPaymentOperationId));
+    expect(ids[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(await bankPaymentOperationId(second.transactions[0]!)).toBe(ids[0]);
+    expect(ids[1]).not.toBe(ids[0]);
+  });
+  it('preserves separate rows when a statement contains identical movements without a bank reference', async () => {
+    const csv = 'Buchungsdatum;Betrag;Gegenpartei\n14.10.2026;250,00;Kanzlei West\n14.10.2026;250,00;Kanzlei West';
+    const ids = await Promise.all(parseStatement(csv).transactions.map(bankPaymentOperationId));
+    expect(new Set(ids).size).toBe(2);
+    expect(await Promise.all(parseStatement(csv).transactions.map(bankPaymentOperationId))).toEqual(ids);
+  });
   it('CAMT.053.001.08: Gutschriften und Lastschriften, nur gebuchte, Entities und Party-Namen', () => {
     const s = parseStatement(camt08);
     expect(s.format).toBe('camt');

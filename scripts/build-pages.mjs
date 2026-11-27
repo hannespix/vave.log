@@ -19,7 +19,7 @@ if (!existsSync(join(out, 'index.html'))) throw Error(`No build found in ${out}.
 // shape to the server response; an unconfigured bundle shows the setup state.
 const configured = Boolean(supabaseUrl && supabasePublishableKey);
 mkdirSync(join(out, 'api'), {recursive: true});
-writeFileSync(join(out, 'api', 'config'), JSON.stringify({configured, appUrl, supabaseUrl, supabasePublishableKey}));
+writeFileSync(join(out, 'api', 'config'), JSON.stringify({configured, appUrl, supabaseUrl, supabasePublishableKey, mcpAvailable:false}));
 
 // Manifest and service worker are written for the base path so installs and
 // offline assets work on a project site.
@@ -40,7 +40,7 @@ const csp = `default-src 'self'; script-src 'self'; worker-src 'self'; manifest-
 // The same public configuration also travels inside the document: the app
 // reads it from this <meta> and skips the extra config round-trip on start.
 // (A <script> would be blocked by the CSP above; a meta element is data.)
-const configMeta = JSON.stringify({configured, appUrl, supabaseUrl, supabasePublishableKey}).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+const configMeta = JSON.stringify({configured, appUrl, supabaseUrl, supabasePublishableKey, mcpAvailable:false}).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
 const index = readFileSync(join(out, 'index.html'), 'utf8')
   .replace('<head>', `<head><meta http-equiv="Content-Security-Policy" content="${csp}"/><meta name="vave-config" content="${configMeta}"/>`)
   // The touch icon is generated after the Vite build, so Vite leaves its URL alone.

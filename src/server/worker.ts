@@ -4,7 +4,7 @@ import {staticAssetHeaders} from './static-headers.js';
 let active:{key:string;config:Config;handler:ReturnType<typeof createHttpHandler>}|undefined;
 export default {
  async fetch(request:Request,env:Record<string,string|undefined>){
-  const config=readConfig({NODE_ENV:'production',APP_URL:env.APP_URL||siteOrigin,SUPABASE_URL:env.SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY:env.SUPABASE_PUBLISHABLE_KEY});
+  const config=readConfig({NODE_ENV:'production',APP_URL:env.APP_URL||siteOrigin,SUPABASE_URL:env.SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY:env.SUPABASE_PUBLISHABLE_KEY,MCP_DISABLED:env.MCP_DISABLED});
   const key=JSON.stringify(config);if(active?.key!==key)active={key,config,handler:createHttpHandler(config)};
   const url=new URL(request.url);
   // Cloudflare replaces CF-Connecting-IP at ingress; do not use X-Forwarded-For.

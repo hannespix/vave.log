@@ -12,7 +12,14 @@ export const projectSchema = z.strictObject({id:uuid.optional(),workspace_id:uui
 export const taskSchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,project_id:uuid,title:text(240).min(1),status:z.enum(['todo','doing','done']),assignee_id:uuid.nullable(),due_date:date.nullable(),estimated_minutes:z.number().int().min(1).max(6000000).nullable().optional(),is_milestone:z.boolean().optional(),repeat:z.enum(['','weekly','biweekly','monthly']).optional(),tags:z.array(z.string().trim().toLowerCase().min(1).max(30)).max(10).optional(),rating:z.number().int().min(1).max(5).nullable().optional()});
 export const entrySchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,project_id:uuid,work_date:date,minutes:z.number().int().min(1).max(1440),note:text(2000),billable:z.boolean(),task_id:uuid.nullable().optional(),phase_id:uuid.nullable().optional(),service_type_id:uuid.nullable().optional()});
 /** Nur http(s): eine Adresse wird später als Link gezeigt, `javascript:` und `data:` haben dort nichts verloren. */
-export const isWebUrl = (value: string) => /^https?:\/\//i.test(value.trim());
+export function parseWebUrl(value: unknown): URL | null {
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value.trim())) return null;
+  try {
+    const url = new URL(value);
+    return url.username || url.password ? null : url;
+  } catch { return null; }
+}
+export const isWebUrl = (value: string) => parseWebUrl(value) !== null;
 export const absenceSchema = z.strictObject({id:uuid.optional(),workspace_id:uuid,user_id:uuid,starts_on:date,ends_on:date,kind:z.enum(['vacation','sick','holiday','other']),note:text(500),half_day:z.enum(['','am','pm']).optional(),status:z.enum(['requested','approved','declined']).optional()}).refine(v=>v.ends_on>=v.starts_on,'Das Ende liegt vor dem Beginn.').refine(v=>(Date.parse(v.ends_on)-Date.parse(v.starts_on))/86400000<=366,'Eine Abwesenheit dauert höchstens ein Jahr.').refine(v=>!v.half_day||v.starts_on===v.ends_on,'Ein halber Tag gilt nur für einen einzelnen Tag.');
 export const vacationBalanceSchema = z.strictObject({workspace_id:uuid,user_id:uuid,year:z.number().int().min(2000).max(2100),carried_over:z.number().min(-100).max(100).multipleOf(0.5),adjustment:z.number().min(-100).max(100).multipleOf(0.5),note:text(300)});
 export const timerSchema = z.strictObject({workspace_id:uuid,project_id:uuid,note:text(2000),billable:z.boolean(),task_id:uuid.nullable().optional()});

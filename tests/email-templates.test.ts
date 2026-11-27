@@ -45,9 +45,9 @@ describe('localized Supabase email artifacts', () => {
         expect(html.match(/\{\{ \.Token \}\}/g)).toHaveLength(1);
         expect(html).not.toContain('.ConfirmationURL');
       } else if (authKeys.includes(key)) {
-        // Token-Hash-Links auf die Site: die App löst den Token ein, kein Link-Scanner. Button, Textlink und sichtbarer Link.
+        // Der Token steht nur im Fragment; die App fragt vor dem Einlösen nach.
         const type = { confirmation: 'signup', invite: 'invite', magic_link: 'magiclink', recovery: 'recovery', email_change: 'email_change' }[key];
-        const link = `{{ .SiteURL }}/?${key === 'recovery' ? 'reset=1&amp;' : ''}token_hash={{ .TokenHash }}&amp;type=${type}`;
+        const link = `{{ .SiteURL }}/#token_hash={{ .TokenHash }}&amp;type=${type}`;
         expect(html.split(`href="${link}"`)).toHaveLength(3);
         expect(html.match(/\{\{ \.TokenHash \}\}/g)).toHaveLength(3);
         expect(html).not.toContain('.ConfirmationURL');

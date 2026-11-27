@@ -36,7 +36,7 @@ async function setup(page:Page,role:'owner'|'member'='owner'):Promise<Recorded>{
   if(path==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'};
   else if(path==='/rest/v1/rpc/accept_invitations')data=0;
   else if(path==='/rest/v1/workspaces')data=[{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-01T10:00:00Z'}];
-  else if(path==='/rest/v1/memberships')data=members;
+  else if(path==='/rest/v1/rpc/list_workspace_members')data=members;
   else if(path==='/rest/v1/projects')data=projects;
   else if(path==='/rest/v1/running_timers'||path==='/rest/v1/workspace_demos')data=null;
   else if(path==='/rest/v1/service_types')data=types;

@@ -2,8 +2,12 @@
 
 Neben der privaten Sites-Bereitstellung kann die Web-App als rein statische Seite
 auf GitHub Pages laufen. Der Workflow `.github/workflows/pages.yml` deployt
-automatisch **nach jedem Merge auf `main`, sobald der CI-Lauf „Verify VAVE.LOG“
-grün ist** (zusätzlich manuell über *Run workflow*).
+automatisch nach einem erfolgreichen Push-CI-Lauf „Verify VAVE.LOG“ auf `main`
+im eigenen Repository, wenn der geprüfte Commit beim Start noch die aktuelle
+Revision ist. *Run workflow* kann dieselbe Revision von `main` erneut
+veröffentlichen, wenn der Push-CI-Lauf für sie grün war.
+Der Build läuft mit Leserechten. Der getrennte Veröffentlichungsjob erhält
+Pages-Schreibrecht und OIDC und veröffentlicht das Pages-Artefakt dieses Builds.
 
 ## Was auf Pages läuft — und was nicht
 
@@ -15,6 +19,10 @@ grün ist** (zusätzlich manuell über *Run workflow*).
 - **Nicht enthalten:** der MCP-Endpoint `/api/mcp` (KI-Clients brauchen weiter die
   Node-/Worker-Bereitstellung), `/healthz` sowie serverseitige Security-Header —
   die Content-Security-Policy steckt stattdessen als `<meta>`-Tag im Dokument.
+- Die statische Seite setzt `no-referrer` im Dokument. Im eingebetteten Kontext
+  zeigt die App vor der Authentifizierung einen Link zum Öffnen in einem eigenen
+  Tab. Für einen HTTP-Header mit `frame-ancestors 'none'` und einen separaten
+  Origin kommt ein entsprechend konfigurierbarer Host infrage.
 - Service Worker, Manifest und Offline-Seite werden auf den Pages-Basispfad
   (`/vave.log/`) umgeschrieben; die PWA bleibt installierbar.
 - App-interne Links (Passwort-Reset-Redirect `?reset=1`, `/oauth/consent`,
@@ -26,10 +34,11 @@ grün ist** (zusätzlich manuell über *Run workflow*).
 
 ## Einmalige Einrichtung
 
-1. **Pages aktivieren:** Settings → Pages → Source „GitHub Actions“
-   (der Workflow versucht das über `configure-pages` selbst; schlägt das fehl,
-   einmal manuell umstellen). Für private Repositories setzt GitHub Pages einen
-   bezahlten Plan voraus.
+1. **Pages aktivieren.** Unter Settings → Pages als Source „GitHub Actions“
+   wählen. Die Umgebung `github-pages` unter Settings → Environments auf den
+   Branch `main` beschränken. `main` mit einem Ruleset schützen, das Änderungen
+   über geprüfte Pull Requests verlangt. Für private Repositories setzt GitHub
+   Pages einen bezahlten Plan voraus.
 2. **Konfiguration:** Die öffentliche Client-Konfiguration des Projekts
    `vave-log` (Supabase-URL und Publishable Key — dieselben Werte, die jeder
    Browser ohnehin erhält) ist im Workflow hinterlegt; es ist nichts weiter zu

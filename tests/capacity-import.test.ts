@@ -170,4 +170,13 @@ describe('Excel-Datei lesen', () => {
     expect(cellRef('A1')).toEqual({ row: 0, col: 0 }); expect(cellRef('AN134')).toEqual({ row: 133, col: 39 }); expect(cellRef('1A')).toBeNull();
     expect(gridFromText('\tRolle\tName\tKW 9\tKW 10\r\nRelaunch\t\t\t\t\r\n\tPM\tAna\t7,5\t8\n')).toEqual([[null, 'Rolle', 'Name', 'KW 9', 'KW 10'], ['Relaunch', null, null, null, null], [null, 'PM', 'Ana', 7.5, 8]]);
   });
+  it('begrenzt Zellkoordinaten auf 10.000 Zeilen und 1.024 Spalten', () => {
+    expect(cellRef('AMJ10000')).toEqual({row:9999,col:1023});
+    expect(cellRef('A10001')).toBeNull();
+    expect(cellRef('AMK2')).toBeNull();
+    expect(cellRef('A0')).toBeNull();
+  });
+  it('meldet Tabellengrößen über der Spaltengrenze verständlich', () => {
+    expect(() => gridFromText(Array(1025).fill('1').join('\t'))).toThrow(XlsxError);
+  });
 });

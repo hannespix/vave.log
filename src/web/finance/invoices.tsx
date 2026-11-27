@@ -311,6 +311,7 @@ function InvoiceDetail({
   const { data, locale, workspace, t, run, service, busy, isDemo } =
       useFinance(),
     [confirm, setConfirm] = useState<"issue" | "cancel" | "paid" | null>(null);
+  const paymentAttempt = useRef<{ fingerprint: string; operationId: string } | null>(null);
   const demo = isDemoInvoice(invoice, { isDemo });
   const draft = invoice.status === "draft",
     customer = draft
@@ -322,15 +323,24 @@ function InvoiceDetail({
     const form = e.currentTarget,
       f = new FormData(form);
     void run(
-      () =>
-        service.recordPayment({
+      () => {
+        const payment = {
           workspace_id: workspace.id,
           invoice_id: invoice.id,
           paid_on: formText(f, "paid_on"),
           amount_minor: formMoney(f, "amount", invoice.currency) as number,
           note: formText(f, "note"),
-        }),
-      () => form.isConnected && form.reset(),
+        };
+        const fingerprint = JSON.stringify(payment);
+        if (paymentAttempt.current?.fingerprint !== fingerprint) {
+          paymentAttempt.current = { fingerprint, operationId: crypto.randomUUID() };
+        }
+        return service.recordPayment({ ...payment, operation_id: paymentAttempt.current.operationId });
+      },
+      () => {
+        paymentAttempt.current = null;
+        if (form.isConnected) form.reset();
+      },
     );
   }
   function action(e: FormEvent<HTMLFormElement>) {

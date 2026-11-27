@@ -27,13 +27,13 @@ async function setup(page:Page,initial:Partial<State>={}):Promise<State>{
   if(path==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'};
   else if(path==='/rest/v1/rpc/accept_invitations')data=0;
   else if(path==='/rest/v1/workspaces')data=workspaces;
-  else if(path==='/rest/v1/memberships')data=[{workspace_id:scope(url)||ffm,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
+  else if(path==='/rest/v1/rpc/list_workspace_members')data=[{workspace_id:url.searchParams.get('p_workspace_id')||ffm,user_id:user,role:'owner',display_name:'Studio Owner',email:'owner@example.test',created_at:''}];
   else if(path==='/rest/v1/projects')data=state.projects.filter(p=>p.workspace_id===(scope(url)||ffm));
   else if(path==='/rest/v1/running_timers'||path==='/rest/v1/workspace_demos')data=null;
   else if(path==='/rest/v1/rpc/sister_workspaces')data=state.linked?sister(body().p_workspace_id):[];
   else if(path==='/rest/v1/rpc/link_workspaces'){state.calls.push({fn:'link',body:body()});state.linked=true;data=null;}
   else if(path==='/rest/v1/rpc/unlink_workspaces'){state.calls.push({fn:'unlink',body:body()});state.linked=false;data=null;}
-  else if(path==='/rest/v1/project_handovers')data=state.handovers;
+  else if(path==='/rest/v1/rpc/list_project_handovers')data=state.handovers.filter(h=>[h.source_workspace_id,h.target_workspace_id].includes(body().p_workspace_id));
   else if(path==='/rest/v1/rpc/offer_project_handover'){
    state.calls.push({fn:'offer',body:body()});
    const h={id:handoverId,source_workspace_id:ffm,source_project_id:expo,target_workspace_id:sha,target_project_id:null,status:'offered',note:body().p_note,offered_by:user,offered_at:'2026-10-13T09:00:00Z',decided_by:null,decided_at:null,
@@ -106,6 +106,26 @@ test('the receiving company sees the offer with its key figures and takes the pr
  expect(state.calls).toEqual([{fn:'accept',body:{p_handover_id:handoverId}}]);
  await expect(page.locator('.handover-panel')).toHaveCount(0);
  await expect(page.locator('.project-card').filter({hasText:'Expo Pavilion'})).toBeVisible();
+});
+
+test('a project editor can decline a scoped offer without the additional handover rights',async({page})=>{
+ const h=offered();
+ for(const key of ['budget_minutes','booked_minutes','plan_rows','planned_minutes']) delete h.summary[key];
+ const state=await setup(page,{linked:true,handovers:[h]});
+ await page.route(/\/rest\/v1\/(memberships|rpc\/list_workspace_members)(\?|$)/,r=>r.fulfill({json:[{
+  workspace_id:sha,user_id:user,role:'member',display_name:'Project editor',email:'editor@example.test',created_at:'',
+  rights_template:'individuell',permissions:{projects:'edit',tasks:'view',planning:'none',time_team:'none'}
+ }],headers:{'content-range':'0-0/1','access-control-expose-headers':'content-range'}}));
+ await page.goto(`/#w=${sha}&view=projects`);
+ const item=page.locator('.handover-incoming');
+ await expect(item).toContainText('EXP-002 · Expo Pavilion');
+ await expect(item.locator('.handover-facts')).toContainText('Open tasks');
+ await expect(item.locator('.handover-facts')).not.toContainText('75:00');
+ await expect(item.locator('.handover-facts')).not.toContainText('120:00');
+ await expect(item.getByRole('button',{name:'Accept',exact:true})).toHaveCount(0);
+ await item.getByRole('button',{name:'Decline',exact:true}).click();
+ await expect(page.getByText('Offer declined.',{exact:true})).toBeVisible();
+ expect(state.calls).toEqual([{fn:'decline',body:{p_handover_id:handoverId}}]);
 });
 
 test('without a sister company there is no handover entry and no panel',async({page})=>{

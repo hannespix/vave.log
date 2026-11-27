@@ -29,14 +29,14 @@ async function setup(page:Page,role:'owner'|'member'='owner'):Promise<Rec>{
   if(path==='/auth/v1/user')data={id:user,aud:'authenticated',role:'authenticated',email:'owner@example.test',email_confirmed_at:'2026-10-01T10:00:00Z',app_metadata:{},user_metadata:{display_name:'Studio Owner',locale:'en'},created_at:'2026-10-01T10:00:00Z'};
   else if(path==='/rest/v1/rpc/accept_invitations')data=0;
   else if(path==='/rest/v1/workspaces')data=[{id:ws,name:'VAVE Studio',timezone:'Europe/Berlin',currency:'EUR',created_by:user,created_at:'2026-10-01T10:00:00Z'}];
-  else if(path==='/rest/v1/memberships')data=[{workspace_id:ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,...(role==='member'?{rights_template:'individuell',permissions:{planning:'view'}}:{})}];
+  else if(path==='/rest/v1/rpc/list_workspace_members')data=[{workspace_id:ws,user_id:user,role,display_name:'Studio Owner',email:'owner@example.test',created_at:'',weekly_capacity_minutes:2400,...(role==='member'?{rights_template:'individuell',permissions:{planning:'view'}}:{})}];
   else if(path==='/rest/v1/projects')data=projects;
   else if(path==='/rest/v1/running_timers'||path==='/rest/v1/workspace_demos')data=null;
   else if(path==='/rest/v1/project_phases'){
    if(method==='POST'){const body=req.postDataJSON();rec.phases.push(body);const at=phases.findIndex(p=>p.id===body.id);const row={...body,id:body.id??'55555555-5555-4555-8555-555555555599',created_at:''};if(at>=0)phases[at]=row;else phases.push(row);data=row;}
    else if(method==='DELETE'){const id=url.searchParams.get('id')!.slice(3);rec.deleted.push(id);const at=phases.findIndex(p=>p.id===id);if(at>=0)phases.splice(at,1);data={id};}
    else data=phases;}
-  else if(path==='/rest/v1/tasks'){if(method==='PATCH'){const body=req.postDataJSON();rec.tasks.push(body);Object.assign(tasks[0],body);data=[tasks[0]];}else data=tasks;}
+  else if(path==='/rest/v1/tasks'||path==='/rest/v1/rpc/list_workspace_tasks'){if(method==='PATCH'){const body=req.postDataJSON();rec.tasks.push(body);Object.assign(tasks[0],body);data=[tasks[0]];}else data=tasks;}
   await route.fulfill(Array.isArray(data)?list(data):{json:data,headers:{'access-control-expose-headers':'content-range','content-range':'0-0/1'}});
  });
  return rec;

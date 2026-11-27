@@ -34,3 +34,17 @@ test('the service worker installs and takes control under the Pages base path', 
   expect(manifest).toMatchObject({start_url: '/vave.log/', scope: '/vave.log/', display: 'standalone'});
   for (const icon of manifest.icons) expect((await page.request.get(icon.src)).ok(), icon.src).toBe(true);
 });
+
+test('the static app requires a top-level tab before initializing sign-in', async ({page}) => {
+  let authRequests = 0;
+  await page.route('https://test.supabase.co/**', route => { authRequests++; return route.fulfill({json:{}}); });
+  await page.route('**/frame-test', route => route.fulfill({
+    contentType:'text/html', body:'<!doctype html><iframe title="Static app" src="/vave.log/"></iframe>',
+  }));
+  await page.goto('/frame-test');
+  const app = page.frameLocator('iframe');
+  await expect(app.getByRole('link',{name:'Open VAVE.LOG in its own tab',exact:true})).toHaveAttribute('href','/vave.log/');
+  await expect(app.locator('meta[name="referrer"]')).toHaveAttribute('content','no-referrer');
+  await expect(app.getByRole('button',{name:'Sign in',exact:true})).toHaveCount(0);
+  expect(authRequests).toBe(0);
+});

@@ -3,11 +3,12 @@ import { parseAuthLink, stripAuthLink } from '../src/web/helpers';
 
 describe('parseAuthLink', () => {
   it('reads token-hash links from the email templates', () => {
+    expect(parseAuthLink('', '#token_hash=preview_hash&type=signup')).toMatchObject({ tokenHash: 'preview_hash', type: 'signup' });
     expect(parseAuthLink('?token_hash=pkce_abc&type=signup', '')).toMatchObject({ tokenHash: 'pkce_abc', type: 'signup', reset: false, errorCode: '' });
-    expect(parseAuthLink('?reset=1&token_hash=xyz&type=recovery', '')).toMatchObject({ tokenHash: 'xyz', type: 'recovery', reset: true, recoveryToken: false });
+    expect(parseAuthLink('?reset=1&token_hash=xyz&type=recovery', '')).toMatchObject({ tokenHash: 'xyz', type: 'recovery', reset: true, legacy: null });
     // Standard-Link von Supabase: Rückleitung mit dem Token im Fragment.
-    expect(parseAuthLink('?reset=1', '#access_token=abc&refresh_token=def&type=recovery')).toMatchObject({ reset: true, recoveryToken: true, tokenHash: '' });
-    expect(parseAuthLink('', '#access_token=abc&type=signup').recoveryToken).toBe(false);
+    expect(parseAuthLink('?reset=1', '#access_token=abc&refresh_token=def&type=recovery')).toMatchObject({ reset: true, legacy: {access_token:'abc',refresh_token:'def'}, tokenHash: '' });
+    expect(parseAuthLink('', '#access_token=abc&type=signup').legacy).toBeNull();
   });
   it('reads Supabase error redirects from query or hash, as sent to the Site URL', () => {
     const url = '?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
@@ -17,8 +18,11 @@ describe('parseAuthLink', () => {
   });
   it('rejects unknown types and caps lengths', () => {
     expect(parseAuthLink('?token_hash=abc&type=evil', '').type).toBe('');
-    expect(parseAuthLink(`?token_hash=${'a'.repeat(400)}&type=magiclink`, '').tokenHash).toHaveLength(200);
+    expect(parseAuthLink(`?token_hash=${'a'.repeat(400)}&type=magiclink`, '').tokenHash).toBe('');
     expect(parseAuthLink(`?error_code=${'x'.repeat(100)}`, '').errorCode).toHaveLength(80);
+  });
+  it('reads the code and SDK flow identifier from a browser-initiated callback', () => {
+    expect(parseAuthLink('?code=confirmation_code&sb_flow_id=browser_flow', '')).toMatchObject({code:'confirmation_code',flowId:'browser_flow'});
   });
 });
 
@@ -29,5 +33,8 @@ describe('stripAuthLink', () => {
     expect(stripAuthLink('?error=access_denied&error_code=otp_expired&error_description=x', '#error=access_denied&error_code=otp_expired')).toBe('/');
     expect(stripAuthLink('?token_hash=abc&type=signup', '#w=ws-1&view=time')).toBe('/#w=ws-1&view=time');
     expect(stripAuthLink('', '#access_token=secret&type=signup')).toBe('/');
+  });
+  it('keeps the consent path and its identifier when removing callback parameters', () => {
+    expect(stripAuthLink('?authorization_id=consent-id&code=confirmation_code&sb_flow_id=browser_flow', '', '/vave.log/oauth/consent')).toBe('/vave.log/oauth/consent?authorization_id=consent-id');
   });
 });

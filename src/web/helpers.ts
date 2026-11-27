@@ -170,28 +170,40 @@ export function safeRedirect(url: string) { const parsed = new URL(url); if (!['
 
 export const AUTH_LINK_TYPES = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'] as const;
 export type AuthLinkType = typeof AUTH_LINK_TYPES[number];
-export interface AuthLink { tokenHash: string; type: AuthLinkType | ''; reset: boolean; recoveryToken: boolean; errorCode: string; errorDescription: string }
-/** Liest Auth-Parameter aus der Adresse: Token-Hash-Links der E-Mail-Vorlagen (`?token_hash=…&type=…`), `?reset=1`, die Rückkehr aus dem Standard-Link von Supabase (`#access_token=…&type=recovery`) und Fehlerrückleitungen (`error_code`/`error_description` in Query oder Hash). */
+export interface AuthLink {
+  tokenHash: string; type: AuthLinkType | ''; reset: boolean; code: string; flowId: string | undefined;
+  legacy: { access_token: string; refresh_token: string } | null;
+  errorCode: string; errorDescription: string;
+}
+const LINK_PARAMS = ['token_hash', 'type', 'error', 'error_code', 'error_description', 'code', 'sb_flow_id', 'reset',
+  'access_token', 'refresh_token', 'expires_in', 'expires_at', 'token_type', 'provider_token', 'provider_refresh_token'];
+const boundedAuthValue = (value: string, max: number) => value.length <= max ? value : '';
+
 export function parseAuthLink(search: string, hash: string): AuthLink {
-  const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const query = new URLSearchParams(search);
   const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-  const pick = (key: string) => query.get(key) ?? fragment.get(key) ?? '';
+  const pick = (key: string) => fragment.get(key) ?? query.get(key) ?? '';
   const type = pick('type');
+  const access_token = boundedAuthValue(fragment.get('access_token') ?? '', 16384);
+  const refresh_token = boundedAuthValue(fragment.get('refresh_token') ?? '', 2048);
+  const flowId = query.get('sb_flow_id');
   return {
-    tokenHash: pick('token_hash').slice(0, 200),
+    tokenHash: boundedAuthValue(pick('token_hash'), 200),
     type: (AUTH_LINK_TYPES as readonly string[]).includes(type) ? type as AuthLinkType : '',
-    reset: query.get('reset') === '1',
-    recoveryToken: fragment.has('access_token') && fragment.get('type') === 'recovery',
-    errorCode: pick('error_code').slice(0, 80),
+    reset: query.get('reset') === '1' || type === 'recovery',
+    code: boundedAuthValue(query.get('code') ?? '', 256),
+    flowId: flowId === null ? undefined : boundedAuthValue(flowId, 256),
+    legacy: access_token && refresh_token ? { access_token, refresh_token } : null,
+    errorCode: (pick('error_code') || pick('error')).slice(0, 80),
     errorDescription: pick('error_description').slice(0, 300),
   };
 }
-/** Adresse ohne Auth-Parameter – was nach dem Verarbeiten eines Links in der Leiste stehen bleibt. Auch `reset` fällt weg: ob gerade ein Passwort neu gesetzt wird, entscheidet der geprüfte Link, nicht die Adresse. */
-export function stripAuthLink(search: string, hash: string): string {
-  const query = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-  for (const key of ['token_hash', 'type', 'error', 'error_code', 'error_description', 'code', 'reset']) query.delete(key);
+export function stripAuthLink(search: string, hash: string, pathname = appPath()): string {
+  const query = new URLSearchParams(search);
   const fragment = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-  const keepHash = fragment.has('w') && !fragment.has('error') && !fragment.has('access_token');
+  const keepHash = !LINK_PARAMS.some((key) => fragment.has(key));
+  if (keepHash && !LINK_PARAMS.some((key) => query.has(key))) return pathname + search + hash;
+  for (const key of LINK_PARAMS) query.delete(key);
   const rest = query.toString();
-  return `${appPath()}${rest ? `?${rest}` : ''}${keepHash ? hash : ''}`;
+  return `${pathname}${rest ? `?${rest}` : ''}${keepHash ? hash : ''}`;
 }

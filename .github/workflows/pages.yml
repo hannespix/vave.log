@@ -5,7 +5,8 @@ name: Deploy to GitHub Pages
 # feature of the Node/Worker deployment (the document carries a <meta> CSP).
 #
 # Setup (once):
-#   1. Settings → Pages → Source: "GitHub Actions" (or let configure-pages enable it).
+#   1. Settings → Pages → Source: "GitHub Actions". Restrict the github-pages
+#      environment to the main branch.
 #   2. The vave-log public client configuration (Supabase URL + publishable
 #      key — the same values every browser receives) is baked in below;
 #      repo variables SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY override it,
@@ -19,33 +20,62 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-concurrency:
-  group: github-pages
-  cancel-in-progress: true
+permissions: {}
+env:
+  SOURCE_SHA: ${{ github.sha }}
 jobs:
-  deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+  build:
+    # deploy-pages records github.sha as the build version. A completed CI run
+    # for an older revision must not publish under the newer revision's SHA.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.id == github.event.repository.id &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_sha == github.sha &&
+          github.event.workflow_run.path == '.github/workflows/ci.yml' &&
+          github.event.workflow_run.conclusion == 'success'
+        )
+      )
+    permissions:
+      actions: read
+      contents: read
+      pages: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      artifact_name: ${{ steps.source.outputs.artifact_name }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Require successful push CI for a manual redeployment
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+            -f event=push -f branch=main -f status=success -f head_sha="$SOURCE_SHA" -f per_page=1 \
+            | jq -e --arg sha "$SOURCE_SHA" --argjson repo "$GITHUB_REPOSITORY_ID" \
+              'any(.workflow_runs[]; .head_sha == $sha and .head_repository.id == $repo and .head_branch == "main" and .event == "push" and .conclusion == "success")'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: actions/setup-node@v4
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Verify and identify the source revision
+        id: source
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          echo "artifact_name=github-pages-$SOURCE_SHA-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
-          cache: npm
-      - uses: actions/configure-pages@v5
+          package-manager-cache: false
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
         id: pages
-        with:
-          enablement: true
       - run: npm ci
       - name: Build static bundle
         run: npm run build:pages
@@ -54,8 +84,36 @@ jobs:
           APP_URL: ${{ steps.pages.outputs.base_url }}/
           SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://ieeujtmpxqxmfyietqgw.supabase.co' }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ayphPnwU01vo-dvSbEsuFg_48cjmqnk' }}
-      - uses: actions/upload-pages-artifact@v3
+      - name: Require current main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$SOURCE_SHA"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: ${{ steps.source.outputs.artifact_name }}
           path: dist/pages
-      - uses: actions/deploy-pages@v4
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Require current main revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$SOURCE_SHA"
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deployment
+        with:
+          artifact_name: ${{ needs.build.outputs.artifact_name }}
